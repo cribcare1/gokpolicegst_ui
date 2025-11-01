@@ -23,6 +23,15 @@ export default function AdminLogin() {
   const [rememberMe, setRememberMe] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  // Demo credentials for testing
+  const DEMO_CREDENTIALS = {
+    admin: {
+      username: 'admin',
+      password: 'admin123',
+      fullName: 'Demo Admin'
+    }
+  };
+
   const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
@@ -33,6 +42,35 @@ export default function AdminLogin() {
       password: password,
       role: "admin",
     };
+  
+    // Check for demo credentials first (development mode)
+    if (email === DEMO_CREDENTIALS.admin.username && password === DEMO_CREDENTIALS.admin.password) {
+      // Demo login - bypass API
+      const mockResponse = {
+        userId: 'demo-admin-001',
+        token: 'demo-token-' + Date.now(),
+        fullName: DEMO_CREDENTIALS.admin.fullName,
+        ddoCount: 0,
+        form16Count: 0,
+        form16ACount: 0
+      };
+      
+      localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, mockResponse.token);
+      localStorage.setItem(LOGIN_CONSTANT.USER_ID, mockResponse.userId);
+      localStorage.setItem(LOGIN_CONSTANT.DDO_COUNT, mockResponse.ddoCount);
+      localStorage.setItem(LOGIN_CONSTANT.FORM_16_COUNT, mockResponse.form16Count);
+      localStorage.setItem(LOGIN_CONSTANT.FORM_16A_COUNT, mockResponse.form16ACount);
+      
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedPassword', password);
+      }
+      
+      toast.success(`🎉 Demo Login successful! Welcome, ${mockResponse.fullName}.`);
+      router.push("/admin_dashboard");
+      setIsLoading(false);
+      return;
+    }
   
     try {
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.LOGIN, requestBody);
@@ -54,10 +92,7 @@ export default function AdminLogin() {
         }
   
         toast.success(`🎉 Login successful! Welcome back, ${response.login_response.fullName || "User"}.`);
-        
-        setTimeout(() => {
-          router.push("/admin_dashboard");
-        }, 1000);
+        router.push("/admin_dashboard");
       } else {
         toast.error(`❌ Error: ${response.message}`);
       }
@@ -318,6 +353,25 @@ export default function AdminLogin() {
             <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent mx-auto"></div>
             <p className="mt-4 text-sm sm:text-base text-slate-600 font-medium">Sign in to access your dashboard</p>
           </div>
+        </div>
+
+        {/* Demo Credentials Info */}
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 Demo Credentials (for testing):</p>
+          <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+            <p><strong>Username:</strong> admin</p>
+            <p><strong>Password:</strong> admin123</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail(DEMO_CREDENTIALS.admin.username);
+              setPassword(DEMO_CREDENTIALS.admin.password);
+            }}
+            className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            Click to fill demo credentials
+          </button>
         </div>
 
         {/* Error message */}
