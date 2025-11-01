@@ -2,10 +2,27 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Moon, Sun, Languages } from 'lucide-react';
+import { t, getLanguage, setLanguage as setLang } from '@/lib/localization';
+import { getTheme, getMode, setTheme, applyTheme } from '@/lib/theme';
 
 const Navbar = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('aboutus');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('en');
+  const [darkMode, setDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const lang = getLanguage();
+    setCurrentLanguage(lang);
+    const mode = getMode();
+    setDarkMode(mode === 'dark');
+    applyTheme();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,21 +54,62 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleTabClick = (tab) => {
+  const handleTabClick = (tab, e) => {
     setActiveTab(tab);
     setMobileMenuOpen(false);
     
-    // Scroll to the appropriate section
+    // Scroll to the appropriate section only for anchor links
     if (tab === 'aboutus' || tab === 'contactus') {
+      if (e) {
+        e.preventDefault();
+      }
       const section = document.getElementById(tab);
       if (section) {
         section.scrollIntoView({ behavior: 'smooth' });
       }
     }
+    // For admin and ddo links, let Next.js Link handle navigation naturally
   };
 
+  const toggleLanguage = () => {
+    const newLang = currentLanguage === 'en' ? 'kn' : 'en';
+    setCurrentLanguage(newLang);
+    setLang(newLang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredLanguage', newLang);
+      window.location.reload(); // Reload to apply language changes
+    }
+  };
+
+  const toggleTheme = () => {
+    const newMode = !darkMode;
+    const theme = getTheme();
+    
+    // Update state immediately for UI responsiveness
+    setDarkMode(newMode);
+    
+    // Apply theme (setTheme updates localStorage and calls applyTheme internally)
+    setTheme(theme, newMode ? 'dark' : 'light');
+  };
+
+  // Sync with theme changes from other sources
+  useEffect(() => {
+    if (typeof window !== 'undefined' && mounted) {
+      // Check initial state
+      const mode = getMode();
+      const isDark = mode === 'dark';
+      if (isDark !== darkMode) {
+        setDarkMode(isDark);
+        applyTheme();
+      }
+    }
+  }, [mounted]);
+
   return (
-    <nav className="bg-gradient-to-r from-slate-800 via-teal-800 to-emerald-800 shadow-lg fixed top-0 w-full z-50">
+    <nav className={`${darkMode 
+      ? 'bg-gradient-to-r from-slate-900 via-teal-900 to-emerald-900' 
+      : 'bg-gradient-to-r from-slate-800 via-teal-800 to-emerald-800'
+    } shadow-lg fixed top-0 w-full z-50 transition-colors duration-300`}>
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Company Logo and TDS Text */}
@@ -71,7 +129,7 @@ const Navbar = () => {
           </div>
           
           {/* Desktop Navigation Tabs */}
-          <div className="hidden sm:flex items-center space-x-4 pr-4">
+          <div className="hidden sm:flex items-center space-x-2 pr-4">
             <Link 
               href="/#aboutus"
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
@@ -84,30 +142,28 @@ const Navbar = () => {
                 handleTabClick('aboutus');
               }}
             >
-              ABOUT US
+              {mounted ? t('nav.aboutUs') : 'ABOUT US'}
             </Link>
-            <Link 
-              href="/adminlogin" 
+            <button
+              onClick={() => router.push('/adminlogin')}
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
                 activeTab === 'admin' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
               }`}
-              onClick={() => handleTabClick('admin')}
             >
-              ADMIN
-            </Link>
-            <Link 
-              href="/ddologin" 
+              {mounted ? t('nav.admin') : 'ADMIN'}
+            </button>
+            <button
+              onClick={() => router.push('/ddologin')}
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
                 activeTab === 'ddo' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
               }`}
-              onClick={() => handleTabClick('ddo')}
             >
-              DDO
-            </Link>
+              {mounted ? t('nav.ddoButton') : 'DDO'}
+            </button>
             <Link 
               href="/#contactus"
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
@@ -120,12 +176,56 @@ const Navbar = () => {
                 handleTabClick('contactus');
               }}
             >
-              CONTACT US
+              {mounted ? t('nav.contactUs') : 'CONTACT US'}
             </Link>
+            
+            {/* Language Toggle */}
+            <div className="flex items-center border-l border-teal-600/50 pl-3 ml-2">
+              <button
+                onClick={toggleLanguage}
+                className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+                title={currentLanguage === 'en' ? 'Switch to Kannada' : 'Switch to English'}
+              >
+                <Languages size={20} />
+              </button>
+              <span className="ml-2 text-white text-sm font-semibold">
+                {currentLanguage === 'en' ? 'EN' : 'KN'}
+              </span>
+            </div>
+            
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
           </div>
           
-          {/* Mobile menu button */}
-          <div className="flex items-center sm:hidden">
+          {/* Mobile menu button and controls */}
+          <div className="flex items-center space-x-2 sm:hidden">
+            {/* Language Toggle - Mobile */}
+            <button
+              onClick={toggleLanguage}
+              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              title={currentLanguage === 'en' ? 'Switch to Kannada' : 'Switch to English'}
+            >
+              <Languages size={18} />
+            </button>
+            <span className="text-white text-xs font-semibold">
+              {currentLanguage === 'en' ? 'EN' : 'KN'}
+            </span>
+            
+            {/* Theme Toggle - Mobile */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            
             <button
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-teal-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300"
@@ -187,30 +287,34 @@ const Navbar = () => {
                 handleTabClick('aboutus');
               }}
             >
-              About Us
+              {mounted ? t('nav.aboutUs') : 'About Us'}
             </Link>
-            <Link
-              href="/adminlogin"
-              className={`block px-3 py-3 rounded-md text-base font-bold ${
+            <button
+              onClick={() => {
+                router.push('/adminlogin');
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
                 activeTab === 'admin'
                   ? 'bg-white text-teal-700'
                   : 'text-white hover:bg-teal-700/50'
               }`}
-              onClick={() => handleTabClick('admin')}
             >
-              Admin
-            </Link>
-            <Link
-              href="/ddologin"
-              className={`block px-3 py-3 rounded-md text-base font-bold ${
+              {mounted ? t('nav.admin') : 'Admin'}
+            </button>
+            <button
+              onClick={() => {
+                router.push('/ddologin');
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
                 activeTab === 'ddo'
                   ? 'bg-white text-teal-700'
                   : 'text-white hover:bg-teal-700/50'
               }`}
-              onClick={() => handleTabClick('ddo')}
             >
-              DDO
-            </Link>
+              {mounted ? t('nav.ddoButton') : 'DDO'}
+            </button>
             <Link
               href="/#contactus"
               className={`block px-3 py-3 rounded-md text-base font-bold ${
@@ -223,7 +327,7 @@ const Navbar = () => {
                 handleTabClick('contactus');
               }}
             >
-              Contact Us
+              {mounted ? t('nav.contactUs') : 'Contact Us'}
             </Link>
           </div>
         </div>

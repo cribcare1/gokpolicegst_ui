@@ -112,12 +112,62 @@ export default function LoginPage() {
     setIsLoading(false); // stop loading
   };
   
+  // Demo credentials for testing
+  const DEMO_CREDENTIALS = {
+    ddo: {
+      username: 'ddo',
+      password: 'ddo123',
+      fullName: 'Demo DDO User',
+      userName: 'DEMO_DDO_001'
+    }
+  };
+
   const fetchLoginData = async () => {
     setLoading(true);
     setError(null);
     console.log("username : "+username);
     console.log("password : "+password);
     localStorage.removeItem("userToken");
+    
+    // Check for demo credentials first (development mode)
+    if (username === DEMO_CREDENTIALS.ddo.username && password === DEMO_CREDENTIALS.ddo.password) {
+      // Demo login - bypass API
+      const mockResponse = {
+        userId: 'demo-ddo-001',
+        token: 'demo-token-' + Date.now(),
+        fullName: DEMO_CREDENTIALS.ddo.fullName,
+        userName: DEMO_CREDENTIALS.ddo.userName,
+        ddoCount: 0,
+        form16Count: 0,
+        form16ACount: 0
+      };
+      
+      if (rememberMe) {
+        localStorage.setItem('rememberedUsername', username);
+        localStorage.setItem('rememberedPassword', password);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberedUsername');
+        localStorage.removeItem('rememberedPassword');
+        localStorage.removeItem('rememberMe');
+      }
+      
+      localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, mockResponse.token);
+      localStorage.setItem(LOGIN_CONSTANT.USER_ID, mockResponse.userId);
+      localStorage.setItem(LOGIN_CONSTANT.DDO_COUNT, mockResponse.ddoCount);
+      localStorage.setItem(LOGIN_CONSTANT.FORM_16_COUNT, mockResponse.form16Count);
+      localStorage.setItem(LOGIN_CONSTANT.FORM_16A_COUNT, mockResponse.form16ACount);
+      localStorage.setItem(LOGIN_CONSTANT.DDO_USER_NAME, mockResponse.fullName);
+      localStorage.setItem(LOGIN_CONSTANT.DDO_TAN_NUMBER, mockResponse.userName);
+      localStorage.setItem('ddoCode', 'DEMO001');
+      
+      showToast("🎉 Demo Login successful! Welcome back.", "success");
+      router.push("/ddo_dashboard");
+      setLoading(false);
+      setIsLoading(false);
+      return;
+    }
+    
     const requestBody = {
       userName: username, password: password, role: "ddo"
     };
@@ -150,11 +200,7 @@ export default function LoginPage() {
         localStorage.setItem(LOGIN_CONSTANT.DDO_TAN_NUMBER, response.login_response.userName); 
         
         showToast("🎉 Login successful! Welcome back.", "success");
-        
-        // Use setTimeout to ensure the toast is seen before redirect
-        setTimeout(() => {
-          router.push("/DDO_New");
-        }, 1500);
+        router.push("/ddo_dashboard");
       } else {
         showToast(`❌ Error: ${response.message}`, "error");
       }
@@ -267,6 +313,27 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+
+        {/* Demo Credentials Info */}
+        {isLogin && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 Demo Credentials (for testing):</p>
+            <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+              <p><strong>Username:</strong> ddo</p>
+              <p><strong>Password:</strong> ddo123</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setUsername(DEMO_CREDENTIALS.ddo.username);
+                setPassword(DEMO_CREDENTIALS.ddo.password);
+              }}
+              className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              Click to fill demo credentials
+            </button>
+          </div>
+        )}
         
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm" role="alert">
