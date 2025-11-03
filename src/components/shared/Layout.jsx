@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { t, getLanguage, setLanguage as setLang, translations } from '@/lib/localization';
 import { applyTheme, getTheme, getMode, setTheme } from '@/lib/theme';
 import { Menu, X, LogOut, Settings, Moon, Sun, Languages } from 'lucide-react';
 import Link from 'next/link';
 
-export default function Layout({ children, role = 'admin' }) {
+const Layout = memo(function Layout({ children, role = 'admin' }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [language, setLanguage] = useState('en');
   const [darkMode, setDarkMode] = useState(false);
@@ -26,28 +26,35 @@ export default function Layout({ children, role = 'admin' }) {
     }
   }, []);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     const newLang = language === 'en' ? 'kn' : 'en';
     setLanguage(newLang);
     setLang(newLang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('preferredLanguage', newLang);
-      window.location.reload(); // Reload to apply language changes
+      // Force re-render instead of full page reload
+      router.refresh();
     }
-  };
+  }, [language, router]);
 
-  const toggleDarkMode = () => {
+  const toggleDarkMode = useCallback(() => {
     const newMode = !darkMode;
     setDarkMode(newMode);
     const theme = getTheme();
     setTheme(theme, newMode ? 'dark' : 'light');
-  };
+  }, [darkMode]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('userToken');
     localStorage.removeItem('userId');
-    router.push(role === 'admin' ? '/adminlogin' : '/ddologin');
-  };
+    if (role === 'admin') {
+      router.push('/adminlogin');
+    } else if (role === 'gstin') {
+      router.push('/gstinlogin');
+    } else {
+      router.push('/ddologin');
+    }
+  }, [role, router]);
 
   const adminNavItems = [
     { href: '/admin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
@@ -66,7 +73,18 @@ export default function Layout({ children, role = 'admin' }) {
     { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
   ];
 
-  const navItems = role === 'admin' ? adminNavItems : ddoNavItems;
+  const gstinNavItems = [
+    { href: '/gstin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
+    { href: '/gstin/profile', label: 'nav.profile', icon: 'profile' },
+    { href: '/gstin/invoices', label: 'nav.invoiceList', icon: 'invoices' },
+    { href: '/gstin/pending', label: 'nav.pendingBills', icon: 'bill' },
+    { href: '/gstin/approved', label: 'nav.approvedBills', icon: 'gst' },
+    { href: '/gstin/ddo-registration', label: 'nav.ddoRegistration', icon: 'ddo' },
+    { href: '/gstin/ddos', label: 'nav.ddo', icon: 'ddo' },
+    { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
+  ];
+
+  const navItems = role === 'admin' ? adminNavItems : role === 'gstin' ? gstinNavItems : ddoNavItems;
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)]">
@@ -175,5 +193,9 @@ export default function Layout({ children, role = 'admin' }) {
       )}
     </div>
   );
-}
+});
+
+Layout.displayName = 'Layout';
+
+export default Layout;
 

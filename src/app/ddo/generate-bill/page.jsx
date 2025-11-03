@@ -292,11 +292,11 @@ export default function GenerateBillPage() {
         <div className="premium-card p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
           {/* Part 1: Bill Details */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-[var(--color-border)]">
-              <div className="p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
-                <span className="text-2xl font-bold text-[var(--color-primary)]">1</span>
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b-2 border-[var(--color-border)]">
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
+                <span className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">1</span>
               </div>
-              <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
                 Bill Details
               </h2>
             </div>
@@ -368,20 +368,22 @@ export default function GenerateBillPage() {
 
           {/* Part 2: Customer Selection */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-[var(--color-border)]">
-              <div className="p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
-                <span className="text-2xl font-bold text-[var(--color-primary)]">2</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b-2 border-[var(--color-border)]">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
+                  <span className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">2</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
+                  Customer Selection
+                </h2>
               </div>
-              <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
-                Customer Selection
-              </h2>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">
                   {t('label.customer')} <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <select
                     value={selectedCustomer?.id || ''}
                     onChange={(e) => {
@@ -427,53 +429,110 @@ export default function GenerateBillPage() {
 
           {/* Part 3: Line Items */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-[var(--color-border)]">
-              <div className="p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
-                <span className="text-2xl font-bold text-[var(--color-primary)]">3</span>
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b-2 border-[var(--color-border)]">
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
+                <span className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">3</span>
               </div>
-              <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
                 Bill Amount Details
               </h2>
             </div>
-            <div className="overflow-x-auto rounded-xl border-2 border-[var(--color-border)]">
-              <table className="w-full border-collapse">
+            {/* Mobile Card View */}
+            <div className="block sm:hidden space-y-4">
+              {lineItems.map((item, index) => (
+                <div key={index} className="premium-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-[var(--color-text-primary)]">S. No: {item.serialNo}</span>
+                    {lineItems.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveLineItem(index)}
+                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all text-red-600"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t('label.description')}</label>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                      className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t('label.amount')}</label>
+                    <input
+                      type="number"
+                      value={item.amount}
+                      onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
+                      className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t('label.hsnNumber')}</label>
+                    <input
+                      type="text"
+                      value={item.hsnNumber}
+                      onChange={(e) => handleLineItemChange(index, 'hsnNumber', e.target.value)}
+                      className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
+                      list={`hsn-list-mobile-${index}`}
+                    />
+                    <datalist id={`hsn-list-mobile-${index}`}>
+                      {hsnList.map((hsn) => (
+                        <option key={hsn.id} value={hsn.hsnNumber}>
+                          {hsn.name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto rounded-xl border-2 border-[var(--color-border)]">
+              <table className="w-full border-collapse min-w-[600px]">
                 <thead>
                   <tr className="bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)]">
-                    <th className="px-6 py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-sm uppercase tracking-wide">S. No.</th>
-                    <th className="px-6 py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-sm uppercase tracking-wide">{t('label.description')}</th>
-                    <th className="px-6 py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-sm uppercase tracking-wide">{t('label.amount')}</th>
-                    <th className="px-6 py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-sm uppercase tracking-wide">{t('label.hsnNumber')}</th>
-                    <th className="px-6 py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-sm uppercase tracking-wide">Action</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-xs sm:text-sm uppercase tracking-wide">S. No.</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-xs sm:text-sm uppercase tracking-wide">{t('label.description')}</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-xs sm:text-sm uppercase tracking-wide">{t('label.amount')}</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-xs sm:text-sm uppercase tracking-wide">{t('label.hsnNumber')}</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left border-b-2 border-[var(--color-border)] font-bold text-xs sm:text-sm uppercase tracking-wide">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((item, index) => (
                     <tr key={index} className="hover:bg-[var(--color-muted)]/50 transition-colors">
-                      <td className="px-6 py-4 border-b border-[var(--color-border)] font-semibold">{item.serialNo}</td>
-                      <td className="px-6 py-4 border-b border-[var(--color-border)]">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)] font-semibold text-sm">{item.serialNo}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)]">
                         <input
                           type="text"
                           value={item.description}
                           onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg"
+                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
                         />
                       </td>
-                      <td className="px-6 py-4 border-b border-[var(--color-border)]">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)]">
                         <input
                           type="number"
                           value={item.amount}
                           onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
-                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg"
+                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
                           min="0"
                           step="0.01"
                         />
                       </td>
-                      <td className="px-6 py-4 border-b border-[var(--color-border)]">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)]">
                         <input
                           type="text"
                           value={item.hsnNumber}
                           onChange={(e) => handleLineItemChange(index, 'hsnNumber', e.target.value)}
-                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg"
+                          className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg text-sm"
                           list={`hsn-list-${index}`}
                         />
                         <datalist id={`hsn-list-${index}`}>
@@ -484,7 +543,7 @@ export default function GenerateBillPage() {
                           ))}
                         </datalist>
                       </td>
-                      <td className="px-6 py-4 border-b border-[var(--color-border)]">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)]">
                         {lineItems.length > 1 && (
                           <button
                             onClick={() => handleRemoveLineItem(index)}
@@ -507,17 +566,17 @@ export default function GenerateBillPage() {
 
           {/* Part 4: Totals & GST */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-[var(--color-border)]">
-              <div className="p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
-                <span className="text-2xl font-bold text-[var(--color-primary)]">4</span>
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b-2 border-[var(--color-border)]">
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl">
+                <span className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">4</span>
               </div>
-              <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
                 Total & GST Details
               </h2>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-              <div className="premium-card p-6 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-muted)]">
-                <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 pb-2 border-b border-[var(--color-border)]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+              <div className="premium-card p-4 sm:p-6 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-muted)]">
+                <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] mb-3 sm:mb-4 pb-2 border-b border-[var(--color-border)]">
                   Calculation Summary
                 </h3>
                 <div className="space-y-4">
@@ -593,11 +652,11 @@ export default function GenerateBillPage() {
                 <IndeterminateProgressBar message="Saving bill..." variant="primary" />
               </div>
             )}
-            <div className="flex items-center justify-end gap-4 pt-6 border-t-2 border-[var(--color-border)]">
-              <Button variant="secondary" onClick={() => window.history.back()} size="lg" disabled={loading}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t-2 border-[var(--color-border)]">
+              <Button variant="secondary" onClick={() => window.history.back()} size="lg" disabled={loading} className="w-full sm:w-auto">
                 {t('btn.cancel')}
               </Button>
-              <Button variant="primary" onClick={handleSaveBill} disabled={loading} size="lg">
+              <Button variant="primary" onClick={handleSaveBill} disabled={loading} size="lg" className="w-full sm:w-auto">
                 {t('btn.save')}
               </Button>
             </div>
@@ -688,11 +747,11 @@ export default function GenerateBillPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-4 pt-6 border-t border-[var(--color-border)]">
-              <Button type="button" variant="secondary" onClick={() => setShowCustomerModal(false)}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-[var(--color-border)]">
+              <Button type="button" variant="secondary" onClick={() => setShowCustomerModal(false)} className="w-full sm:w-auto">
                 {t('btn.cancel')}
               </Button>
-              <Button type="submit" variant="primary">
+              <Button type="submit" variant="primary" className="w-full sm:w-auto">
                 {t('btn.save')}
               </Button>
             </div>

@@ -1,7 +1,7 @@
 // Localization system for English and Kannada
 export const translations = {
   // Authentication
-  "login.title": { en: "Sign in", kn: "ಸೈನ್ ಇನ್" },
+  "login.title": { en: "Login", kn: "ಲಾಗಿನ್" },
   "login.username": { en: "Username", kn: "ಬಳಕೆದಾರ ಹೆಸರು" },
   "login.password": { en: "Password", kn: "ಪಾಸ್ವರ್ಡ್" },
   "login.forgotPassword": { en: "Forgot Password?", kn: "ಪಾಸ್ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ?" },
@@ -21,9 +21,12 @@ export const translations = {
   "nav.settings": { en: "Settings", kn: "ಸettings" },
   "nav.logout": { en: "Logout", kn: "ಲಾಗ್ ಔಟ್" },
   "nav.aboutUs": { en: "ABOUT US", kn: "ನಮ್ಮ ಬಗ್ಗೆ" },
-  "nav.contactUs": { en: "CONTACT US", kn: "ಸಂಪರ್ಕಿಸಿ" },
-  "nav.admin": { en: "ADMIN", kn: "ಆಡಳಿತಗಾರ" },
-  "nav.ddoButton": { en: "DDO", kn: "DDO" },
+  "nav.contactUs": { en: "Contact Us", kn: "ಸಂಪರ್ಕಿಸಿ" },
+  "nav.admin": { en: "Admin Login", kn: "ಆಡಳಿತಗಾರ ಲಾಗಿನ್" },
+  "nav.ddoButton": { en: "DDO Login", kn: "DDO ಲಾಗಿನ್" },
+  "nav.gstinLogin": { en: "GSTIN Login", kn: "GSTIN ಲಾಗಿನ್" },
+  "nav.pendingBills": { en: "Pending Bills", kn: "ಬಾಕಿ ಬಿಲ್ಗಳು" },
+  "nav.approvedBills": { en: "Approved Bills", kn: "ಅನುಮೋದಿತ ಬಿಲ್ಗಳು" },
   
   // Labels
   "label.gstin": { en: "GSTIN Number", kn: "GSTIN ಸಂಖ್ಯೆ" },

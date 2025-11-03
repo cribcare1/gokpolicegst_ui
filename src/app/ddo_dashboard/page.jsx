@@ -145,34 +145,34 @@ export default function DDODashboard() {
         {/* Stats Cards */}
         {!loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div className="premium-card p-8 group">
+            <div className="premium-card p-4 sm:p-6 lg:p-8 group">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
                     {t('dashboard.pendingBills')}
                   </p>
-                  <p className="text-4xl font-extrabold bg-gradient-to-br from-amber-500 to-orange-600 bg-clip-text text-transparent">
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-amber-500 to-orange-600 bg-clip-text text-transparent">
                     {stats.pendingBills.toLocaleString()}
                   </p>
                 </div>
-                <div className="p-5 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <Clock className="text-amber-600 dark:text-amber-400" size={36} />
+                <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                  <Clock className="text-amber-600 dark:text-amber-400" size={24} />
                 </div>
               </div>
             </div>
 
-            <div className="premium-card p-8 group">
+            <div className="premium-card p-4 sm:p-6 lg:p-8 group">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
                     {t('dashboard.submittedBills')}
                   </p>
-                  <p className="text-4xl font-extrabold bg-gradient-to-br from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-green-500 to-emerald-600 bg-clip-text text-transparent">
                     {stats.submittedBills.toLocaleString()}
                   </p>
                 </div>
-                <div className="p-5 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <CheckCircle className="text-green-600 dark:text-green-400" size={36} />
+                <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                  <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
                 </div>
               </div>
             </div>
@@ -180,19 +180,19 @@ export default function DDODashboard() {
         )}
 
         {/* Recent Bills */}
-        <div className="premium-card p-8">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-6 pb-4 border-b border-[var(--color-border)]">
+        <div className="premium-card p-4 sm:p-6 lg:p-8">
+          <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)] mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-[var(--color-border)]">
             {t('dashboard.recentBills')}
           </h2>
           {stats.recentBills.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="inline-block p-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl mb-4">
-                <FileText className="text-blue-600 dark:text-blue-400" size={48} />
+            <div className="text-center py-8 sm:py-12">
+              <div className="inline-block p-4 sm:p-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl sm:rounded-3xl mb-4">
+                <FileText className="text-blue-600 dark:text-blue-400" size={32} />
               </div>
-              <p className="text-[var(--color-text-secondary)] font-medium text-lg">
+              <p className="text-[var(--color-text-secondary)] font-medium text-base sm:text-lg">
                 No bills generated yet
               </p>
-              <p className="text-[var(--color-text-secondary)] text-sm mt-2">
+              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm mt-2">
                 Click "Generate Bill" to create your first bill
               </p>
             </div>
@@ -201,29 +201,29 @@ export default function DDODashboard() {
               {stats.recentBills.slice(0, 5).map((bill, index) => (
                 <div
                   key={bill.id}
-                  className="flex items-center justify-between p-5 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border border-[var(--color-border)] group"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-5 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border border-[var(--color-border)] group"
                   onClick={() => router.push(`/ddo/invoices?id=${bill.id}`)}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 rounded-xl group-hover:scale-110 transition-transform">
-                      <FileText size={24} className="text-[var(--color-primary)]" />
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 rounded-xl group-hover:scale-110 transition-transform flex-shrink-0">
+                      <FileText size={20} className="text-[var(--color-primary)]" />
                     </div>
-                    <div>
-                      <p className="font-bold text-[var(--color-text-primary)] text-lg mb-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[var(--color-text-primary)] text-base sm:text-lg mb-1 truncate">
                         {bill.billNumber}
                       </p>
-                      <p className="text-sm text-[var(--color-text-secondary)]">
+                      <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] truncate">
                         {bill.customerName} • {new Date(bill.date).toLocaleDateString('en-IN')}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-xl text-[var(--color-text-primary)] mb-2">
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end sm:text-right gap-2">
+                    <p className="font-bold text-lg sm:text-xl text-[var(--color-text-primary)]">
                       ₹{bill.totalAmount?.toLocaleString('en-IN') || '0'}
                     </p>
                     <span
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                      className={`text-xs font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${
                         bill.status === 'submitted'
                           ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
                           : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
@@ -239,12 +239,12 @@ export default function DDODashboard() {
         </div>
 
         {/* Submission Deadline Alert */}
-        <div className="premium-card p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-500/20 rounded-xl">
-              <AlertCircle className="text-blue-600 dark:text-blue-400" size={24} />
+        <div className="premium-card p-4 sm:p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-blue-500/20 rounded-xl flex-shrink-0">
+              <AlertCircle className="text-blue-600 dark:text-blue-400" size={20} />
             </div>
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 flex-1">
+            <p className="text-xs sm:text-sm font-semibold text-blue-900 dark:text-blue-200 flex-1">
               ⚠️ {t('alert.submitBy10')}
             </p>
           </div>

@@ -32,8 +32,9 @@ export default function SettingsPage() {
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setCurrentLanguage(lang);
-    toast.success('Language changed. Page will reload.');
-    setTimeout(() => window.location.reload(), 300);
+    toast.success('Language changed successfully');
+    // Force re-render instead of full page reload
+    setTimeout(() => router.refresh(), 100);
   };
 
   const handleThemeChange = (theme) => {

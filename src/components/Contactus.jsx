@@ -1,4 +1,6 @@
+'use client';
 import { Mail, Phone, MapPin, Clock, Navigation, ArrowRight, Linkedin, Facebook, Twitter, Instagram } from 'lucide-react';
+import Image from 'next/image';
 
 export default function ContactUsPage() {
   return (
@@ -27,10 +29,14 @@ export default function ContactUsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Map Section */}
                 <div className="h-64 md:h-full bg-gray-200 relative overflow-hidden">
-                  <img 
-                    src="/image.png" 
-                    alt="Map location of our office" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                  <Image
+                    src="/image.png"
+                    alt="Map location of our office"
+                    fill
+                    className="object-cover transition-transform duration-500 hover:scale-110"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    quality={85}
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>

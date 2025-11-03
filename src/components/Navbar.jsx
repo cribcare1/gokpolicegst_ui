@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -7,9 +7,9 @@ import { Moon, Sun, Languages } from 'lucide-react';
 import { t, getLanguage, setLanguage as setLang } from '@/lib/localization';
 import { getTheme, getMode, setTheme, applyTheme } from '@/lib/theme';
 
-const Navbar = () => {
+const Navbar = memo(() => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('aboutus');
+  const [activeTab, setActiveTab] = useState('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [darkMode, setDarkMode] = useState(false);
@@ -25,63 +25,89 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    let ticking = false;
+    let rafId = null;
+    
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      
-      // Get section positions
-      const aboutUsSection = document.getElementById('aboutus');
-      const contactUsSection = document.getElementById('contactus');
-      
-      // Set buffer for better UX
-      const buffer = 100;
-      
-      // Update active tab based on scroll position
-      if (contactUsSection && scrollPosition >= contactUsSection.offsetTop - buffer) {
-        setActiveTab('contactus');
-      } else if (aboutUsSection && scrollPosition >= aboutUsSection.offsetTop - buffer) {
-        setActiveTab('aboutus');
-      } else {
-        // If not scrolled to either section, could set to home or another default
-        setActiveTab('home');
+      if (!ticking) {
+        rafId = window.requestAnimationFrame(() => {
+          const scrollPosition = window.scrollY;
+          
+          // Get section positions - cache for performance
+          const contactUsSection = document.getElementById('contactus');
+          
+          // Set buffer for better UX
+          const buffer = 100;
+          
+          // Update active tab based on scroll position
+          if (contactUsSection && scrollPosition >= contactUsSection.offsetTop - buffer) {
+            setActiveTab('contactus');
+          } else {
+            // If not scrolled to contact section, set to home
+            setActiveTab('home');
+          }
+          
+          ticking = false;
+        });
+        
+        ticking = true;
       }
     };
     
-    window.addEventListener('scroll', handleScroll);
+    // Use passive listener for better scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     
-    // Initial check on mount
-    handleScroll();
+    // Initial check on mount with small delay to ensure DOM is ready
+    const timeoutId = setTimeout(handleScroll, 100);
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
-  const handleTabClick = (tab, e) => {
+  const handleTabClick = useCallback((tab, e) => {
     setActiveTab(tab);
     setMobileMenuOpen(false);
     
     // Scroll to the appropriate section only for anchor links
-    if (tab === 'aboutus' || tab === 'contactus') {
+    if (tab === 'contactus') {
       if (e) {
         e.preventDefault();
       }
-      const section = document.getElementById(tab);
-      if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
+      // Use requestIdleCallback for non-critical scroll operation
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          const section = document.getElementById(tab);
+          if (section) {
+            section.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      } else {
+        setTimeout(() => {
+          const section = document.getElementById(tab);
+          if (section) {
+            section.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 0);
       }
     }
     // For admin and ddo links, let Next.js Link handle navigation naturally
-  };
+  }, []);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     const newLang = currentLanguage === 'en' ? 'kn' : 'en';
     setCurrentLanguage(newLang);
     setLang(newLang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('preferredLanguage', newLang);
-      window.location.reload(); // Reload to apply language changes
+      // Force re-render instead of full page reload
+      router.refresh();
     }
-  };
+  }, [currentLanguage, router]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const newMode = !darkMode;
     const theme = getTheme();
     
@@ -90,7 +116,7 @@ const Navbar = () => {
     
     // Apply theme (setTheme updates localStorage and calls applyTheme internally)
     setTheme(theme, newMode ? 'dark' : 'light');
-  };
+  }, [darkMode]);
 
   // Sync with theme changes from other sources
   useEffect(() => {
@@ -113,56 +139,48 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Company Logo and TDS Text */}
-          <div className="flex-shrink-0 flex items-center pl-2">
-            <Link href="/" className="flex items-center">
-              <div className="relative w-10 h-12">
-                <Image 
-                  src="/company logo.jpeg" 
-                  alt="Company Logo"
-                  fill
-                  style={{ objectFit: 'contain' }}
-                  priority
-                />
+          <div className="flex-shrink-0 flex items-center pl-2 min-w-0">
+            <Link href="/" className="flex items-center min-w-0">
+              <div className="relative w-8 sm:w-10 h-10 sm:h-12 flex-shrink-0">
               </div>
-              <span className="text-white text-2xl font-bold ml-4">e-Wings</span>
+              <span className="text-white text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold ml-2 sm:ml-4 truncate"> Bandobast GST Management System</span>
             </Link>
           </div>
           
           {/* Desktop Navigation Tabs */}
           <div className="hidden sm:flex items-center space-x-2 pr-4">
-            <Link 
-              href="/#aboutus"
-              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
-                activeTab === 'aboutus' 
-                  ? 'bg-white text-teal-700 shadow-md' 
-                  : 'text-white hover:bg-teal-700/50'
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                handleTabClick('aboutus');
-              }}
-            >
-              {mounted ? t('nav.aboutUs') : 'ABOUT US'}
-            </Link>
             <button
               onClick={() => router.push('/adminlogin')}
+              onMouseEnter={() => router.prefetch('/adminlogin')}
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
                 activeTab === 'admin' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
               }`}
             >
-              {mounted ? t('nav.admin') : 'ADMIN'}
+              {mounted ? t('nav.admin') : 'Admin Login'}
+            </button>
+            <button
+              onClick={() => router.push('/gstinlogin')}
+              onMouseEnter={() => router.prefetch('/gstinlogin')}
+              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
+                activeTab === 'gstin' 
+                  ? 'bg-white text-teal-700 shadow-md' 
+                  : 'text-white hover:bg-teal-700/50'
+              }`}
+            >
+              {mounted ? t('nav.gstinLogin') : 'GSTIN Login'}
             </button>
             <button
               onClick={() => router.push('/ddologin')}
+              onMouseEnter={() => router.prefetch('/ddologin')}
               className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
                 activeTab === 'ddo' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
               }`}
             >
-              {mounted ? t('nav.ddoButton') : 'DDO'}
+              {mounted ? t('nav.ddoButton') : 'DDO Login'}
             </button>
             <Link 
               href="/#contactus"
@@ -176,7 +194,7 @@ const Navbar = () => {
                 handleTabClick('contactus');
               }}
             >
-              {mounted ? t('nav.contactUs') : 'CONTACT US'}
+              {mounted ? t('nav.contactUs') : 'Contact Us'}
             </Link>
             
             {/* Language Toggle */}
@@ -275,20 +293,6 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="sm:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-slate-900 rounded-b-lg shadow-inner">
-            <Link
-              href="/#aboutus"
-              className={`block px-3 py-3 rounded-md text-base font-bold ${
-                activeTab === 'aboutus'
-                  ? 'bg-white text-teal-700'
-                  : 'text-white hover:bg-teal-700/50'
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                handleTabClick('aboutus');
-              }}
-            >
-              {mounted ? t('nav.aboutUs') : 'About Us'}
-            </Link>
             <button
               onClick={() => {
                 router.push('/adminlogin');
@@ -300,7 +304,20 @@ const Navbar = () => {
                   : 'text-white hover:bg-teal-700/50'
               }`}
             >
-              {mounted ? t('nav.admin') : 'Admin'}
+              {mounted ? t('nav.admin') : 'Admin Login'}
+            </button>
+            <button
+              onClick={() => {
+                router.push('/gstinlogin');
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
+                activeTab === 'gstin'
+                  ? 'bg-white text-teal-700'
+                  : 'text-white hover:bg-teal-700/50'
+              }`}
+            >
+              {mounted ? t('nav.gstinLogin') : 'GSTIN Login'}
             </button>
             <button
               onClick={() => {
@@ -313,7 +330,7 @@ const Navbar = () => {
                   : 'text-white hover:bg-teal-700/50'
               }`}
             >
-              {mounted ? t('nav.ddoButton') : 'DDO'}
+              {mounted ? t('nav.ddoButton') : 'DDO Login'}
             </button>
             <Link
               href="/#contactus"
@@ -334,6 +351,8 @@ const Navbar = () => {
       )}
     </nav>
   );
-};
+});
+
+Navbar.displayName = 'Navbar';
 
 export default Navbar;

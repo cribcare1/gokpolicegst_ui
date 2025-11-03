@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import Layout from '@/components/shared/Layout';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { Package, CreditCard, Users, Building2, FileText, AlertCircle } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -80,7 +81,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const statCards = [
+  // Memoize statCards to prevent unnecessary recalculations
+  const statCards = useMemo(() => [
     {
       label: t('dashboard.totalGst'),
       value: stats.totalGst,
@@ -116,7 +118,7 @@ export default function AdminDashboard() {
       color: 'bg-teal-500',
       href: '/admin/master-data/bank',
     },
-  ];
+  ], [stats, t]);
 
   return (
     <Layout role="admin">
@@ -139,30 +141,31 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
             {statCards.map((card, index) => {
               const Icon = card.icon;
               return (
-                <a
+                <Link
                   key={card.label}
                   href={card.href}
-                  className="group premium-card p-6 block animate-fade-in"
+                  prefetch={true}
+                  className="group premium-card p-4 sm:p-5 lg:p-6 block animate-fade-in"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1 sm:mb-2 truncate">
                         {card.label}
                       </p>
-                      <p className="text-3xl font-bold bg-gradient-to-br from-[var(--color-text-primary)] to-[var(--color-text-secondary)] bg-clip-text text-transparent">
+                      <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-[var(--color-text-primary)] to-[var(--color-text-secondary)] bg-clip-text text-transparent">
                         {card.value.toLocaleString()}
                       </p>
                     </div>
-                    <div className={`${card.color} p-4 rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-                      <Icon className="text-white" size={28} />
+                    <div className={`${card.color} p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0`}>
+                      <Icon className="text-white" size={20} />
                     </div>
                   </div>
-                </a>
+                </Link>
               );
             })}
           </div>
