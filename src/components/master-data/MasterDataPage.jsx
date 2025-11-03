@@ -48,43 +48,33 @@ export default function MasterDataPage({
     const endpointStr = endpoint.LIST || '';
     if (endpointStr.includes('gst')) {
       return [
-        { id: '1', gstNumber: '29AABCU9603R1ZX', name: 'ABC Enterprises', address: '123 MG Road, Bangalore', contactNumber: '9876543210', email: 'abc@example.com' },
+        { id: '1', gstNumber: '29AAAGO1111W1ZB', name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka', address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001', contactNumber: '9902991144', email: 'Copadmin@ksp.gov.in' },
         { id: '2', gstNumber: '19ABCDE1234F1Z5', name: 'XYZ Corporation', address: '456 Brigade Road, Bangalore', contactNumber: '9876543211', email: 'xyz@example.com' },
-        { id: '3', gstNumber: '27AACCB1234D1Z2', name: 'Tech Solutions Pvt Ltd', address: '789 Indira Nagar, Bangalore', contactNumber: '9876543212', email: 'tech@example.com' },
-        { id: '4', gstNumber: '09AABCT1234E1Z3', name: 'Global Industries', address: '321 Koramangala, Bangalore', contactNumber: '9876543213', email: 'global@example.com' },
-        { id: '5', gstNumber: '07AACCF1234G1Z4', name: 'Prime Services', address: '654 Whitefield, Bangalore', contactNumber: '9876543214', email: 'prime@example.com' },
       ];
     } else if (endpointStr.includes('pan')) {
       return [
-        { id: '1', panNumber: 'ABCDE1234F', name: 'John Doe', address: '123 MG Road, Bangalore', contactNumber: '9876543210', email: 'john@example.com' },
-        { id: '2', panNumber: 'FGHIJ5678K', name: 'Jane Smith', address: '456 Brigade Road, Bangalore', contactNumber: '9876543211', email: 'jane@example.com' },
-        { id: '3', panNumber: 'LMNOP9012Q', name: 'Robert Johnson', address: '789 Indira Nagar, Bangalore', contactNumber: '9876543212', email: 'robert@example.com' },
-        { id: '4', panNumber: 'RSTUV3456W', name: 'Emily Davis', address: '321 Koramangala, Bangalore', contactNumber: '9876543213', email: 'emily@example.com' },
-        { id: '5', panNumber: 'WXYZ7890A', name: 'Michael Brown', address: '654 Whitefield, Bangalore', contactNumber: '9876543214', email: 'michael@example.com' },
+        { id: '1', panNumber: 'AMQPP1137R', name: 'GOK, Police department.', address: 'No.1, Police Head Quartez, Napathunga road, K R Circle, Bengaluru-560001', mobile: '9902991133', email: 'dgpolicehq@ksp.gov.in' },
+        { id: '2', panNumber: 'FGHIJ5678K', name: 'Jane Smith', address: '456 Brigade Road, Bangalore', mobile: '9876543211', email: 'jane@example.com' },
+        { id: '3', panNumber: 'LMNOP9012Q', name: 'Robert Johnson', address: '789 Indira Nagar, Bangalore', mobile: '9876543212', email: 'robert@example.com' },
       ];
     } else if (endpointStr.includes('ddo')) {
       return [
-        { id: '1', ddoCode: 'DDO001', ddoName: 'Bangalore North Division', address: '123 MG Road, Bangalore', contactNumber: '9876543210', email: 'ddo001@example.com' },
-        { id: '2', ddoCode: 'DDO002', ddoName: 'Bangalore South Division', address: '456 Brigade Road, Bangalore', contactNumber: '9876543211', email: 'ddo002@example.com' },
-        { id: '3', ddoCode: 'DDO003', ddoName: 'Mysore Division', address: '789 Indira Nagar, Mysore', contactNumber: '9876543212', email: 'ddo003@example.com' },
-        { id: '4', ddoCode: 'DDO004', ddoName: 'Hubli Division', address: '321 Koramangala, Hubli', contactNumber: '9876543213', email: 'ddo004@example.com' },
-        { id: '5', ddoCode: 'DDO005', ddoName: 'Mangalore Division', address: '654 Whitefield, Mangalore', contactNumber: '9876543214', email: 'ddo005@example.com' },
+        { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991133', email: 'ddo001@example.com' },
+        { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991134', email: 'ddo002@example.com' },
+        { id: '3', ddoCode: '0200PO0034', ddoName: 'DCP North', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991135', email: 'ddo003@example.com' },
+        { id: '4', ddoCode: '0200PO0035', ddoName: 'DCP West', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991136', email: 'ddo004@example.com' },
+        { id: '5', ddoCode: '0200PO0036', ddoName: 'DCP east', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991137', email: 'ddo005@example.com' },
       ];
     } else if (endpointStr.includes('hsn')) {
       return [
-        { id: '1', hsnNumber: '8471', name: 'Automatic data processing machines', description: 'Computers and laptops' },
-        { id: '2', hsnNumber: '8517', name: 'Telephone sets and devices', description: 'Mobile phones and communication devices' },
-        { id: '3', hsnNumber: '9401', name: 'Seats and parts thereof', description: 'Furniture and seating' },
-        { id: '4', hsnNumber: '8421', name: 'Centrifuges and filtering equipment', description: 'Industrial equipment' },
-        { id: '5', hsnNumber: '8528', name: 'Monitors and projectors', description: 'Display equipment' },
+        { id: '1', hsnNumber: '999293', name: 'Public Administration and Security Services', gstTaxRate: 18, igst: 18, cgst: 9, sgst: 9 },
+        { id: '2', hsnNumber: '999294', name: 'Arm Security Services', gstTaxRate: 12, igst: 12, cgst: 6, sgst: 6 },
+        { id: '3', hsnNumber: '8471', name: 'Automatic data processing machines', gstTaxRate: 18, igst: 18, cgst: 9, sgst: 9 },
       ];
     } else if (endpointStr.includes('bank')) {
       return [
-        { id: '1', bankName: 'State Bank of India', accountNumber: '12345678901', ifscCode: 'SBIN0001234', branch: 'MG Road Branch', address: '123 MG Road, Bangalore' },
-        { id: '2', bankName: 'HDFC Bank', accountNumber: '98765432109', ifscCode: 'HDFC0005678', branch: 'Koramangala Branch', address: '456 Koramangala, Bangalore' },
-        { id: '3', bankName: 'ICICI Bank', accountNumber: '11223344556', ifscCode: 'ICIC0009012', branch: 'Whitefield Branch', address: '789 Whitefield, Bangalore' },
-        { id: '4', bankName: 'Axis Bank', accountNumber: '99887766554', ifscCode: 'UTIB0003456', branch: 'Indira Nagar Branch', address: '321 Indira Nagar, Bangalore' },
-        { id: '5', bankName: 'Kotak Mahindra Bank', accountNumber: '55443322110', ifscCode: 'KKBK0007890', branch: 'Brigade Road Branch', address: '654 Brigade Road, Bangalore' },
+        { id: '1', gstinNumber: '29AAAGO1111W1ZB', bankName: 'Union Bank of India-Current Account', accountNumber: '143211100000627', ifscCode: 'UBIN0814326', branchName: 'Banaswadi', accountType: 'Current', accountHolderName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka', micrCode: '560026077' },
+        { id: '2', gstinNumber: '19ABCDE1234F1Z5', bankName: 'HDFC Bank', accountNumber: '98765432109', ifscCode: 'HDFC0005678', branchName: 'Koramangala Branch', accountType: 'Current', accountHolderName: 'XYZ Corporation' },
       ];
     }
     return [];

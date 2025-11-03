@@ -305,11 +305,11 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent leading-tight">
-              {isLogin ? 'DDO Sign in' : 'Reset Password'}
+              {isLogin ? 'DDO Login' : 'Reset Password'}
             </h2>
             <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent mx-auto"></div>
             <p className="mt-4 text-center text-sm sm:text-base text-slate-600 font-medium">
-              {isLogin ? 'Sign in to access your account' : 'Enter your information to reset your password'}
+              {isLogin ? 'Login to access your account' : 'Enter your information to reset your password'}
             </p>
           </div>
         </div>
@@ -472,10 +472,10 @@ export default function LoginPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    Signing in...
+                    Logging in...
                   </>
                 ) : (
-                  'Sign In'
+                  'Login'
                 )}
               </button>
             </div>

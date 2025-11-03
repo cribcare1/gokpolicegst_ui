@@ -1,8 +1,8 @@
 "use client";
-import { useEffect } from 'react';
+import { useEffect, memo, useCallback } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'md' }) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -25,20 +25,21 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
       <div
         className={`
-          relative bg-[var(--color-surface)] rounded-2xl shadow-2xl
+          relative bg-[var(--color-surface)] rounded-xl sm:rounded-2xl shadow-2xl
           w-full ${sizeClasses[size]}
-          max-h-[90vh] overflow-y-auto
+          max-h-[95vh] sm:max-h-[90vh] overflow-y-auto
           border border-[var(--color-border)]
           animate-fade-in
+          mx-2 sm:mx-0
         `}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)]">
-            <h2 className="text-2xl font-bold gradient-text">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)]">
+            <h2 className="text-lg sm:text-2xl font-bold gradient-text truncate flex-1 pr-2">
               {title}
             </h2>
             <button
@@ -52,9 +53,13 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         )}
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );
-}
+});
+
+Modal.displayName = 'Modal';
+
+export default Modal;
 

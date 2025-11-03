@@ -1,10 +1,17 @@
 // GST calculation and validation utilities
+import { getStateCodeFromGSTIN, isSameState } from './stateCodes';
 
 /**
  * Validates GSTIN format
  * GSTIN format: 15 characters, alphanumeric
  * First 2 digits: State code (29 for Karnataka)
  * 4th character can be 'G' for government entities
+ * Format explanation:
+ * - First 2 digits: State code
+ * - Next 10 characters: PAN number (5 Alpha, 4 Numbers, 1 Alpha)
+ * - 13th character: Number indicating count of GSTIN allocated
+ * - 14th character: Common Check Digit (Z)
+ * - 15th character: Alpha/Number Digit randomly allotted
  */
 export const validateGSTIN = (gstin) => {
   if (!gstin) return { valid: false, message: 'GSTIN is required' };
@@ -26,13 +33,23 @@ export const validateGSTIN = (gstin) => {
 };
 
 /**
- * Checks if GSTIN is a government entity (Karnataka)
- * Government GSTIN: starts with "29" and 4th character is 'G'
+ * Checks if GSTIN is a government entity
+ * Government GSTIN: 4th character (index 3) is 'G'
  */
 export const isGovernmentGSTIN = (gstin) => {
   if (!gstin || gstin.length < 4) return false;
   const cleaned = gstin.trim().toUpperCase().replace(/\s/g, '');
-  return cleaned.startsWith('29') && cleaned[3] === 'G';
+  return cleaned[3] === 'G';
+};
+
+/**
+ * Checks if PAN is a government entity
+ * Government PAN: 4th character (index 3) is 'G'
+ */
+export const isGovernmentPAN = (pan) => {
+  if (!pan || pan.length < 4) return false;
+  const cleaned = pan.trim().toUpperCase().replace(/\s/g, '');
+  return cleaned[3] === 'G';
 };
 
 /**
@@ -45,80 +62,122 @@ export const isKarnatakaGSTIN = (gstin) => {
 };
 
 /**
- * Calculates GST based on customer GSTIN and taxable value
- * Rules:
- * - If govt GSTIN (29*G*): GST = 0
- * - If Karnataka non-govt (29*): CGST 9% + SGST 9% = 18% total
- * - Otherwise: Standard GST rate (default 18%)
+ * Calculates GST based on customer GSTIN, supplier GSTIN, taxable value, and invoice type
+ * Rules based on invoice logic:
+ * - Exempted Services: No GST for Govt customers (when 4th char of PAN is 'G')
+ * - RCM (Reverse Charge Mechanism): Tax payable by recipient
+ * - FCM (Forward Charge Mechanism): Tax payable by supplier
+ * - Same State: CGST + SGST
+ * - Different State: IGST
+ * 
+ * @param {string} supplierGSTIN - Supplier's GSTIN
+ * @param {string} customerGSTIN - Customer's GSTIN (optional for exempted)
+ * @param {string} customerPAN - Customer's PAN (to check if Govt)
+ * @param {number} taxableValue - Taxable amount
+ * @param {number} gstRate - GST rate (default 18%)
+ * @param {string} invoiceType - 'RCM', 'FCM', or 'EXEMPTED'
+ * @param {object} hsnDetails - HSN code details with IGST, CGST, SGST rates
  */
-export const calculateGST = (customerGSTIN, taxableValue, gstRate = 18) => {
-  if (!customerGSTIN || !taxableValue || taxableValue <= 0) {
+export const calculateGST = (
+  supplierGSTIN,
+  customerGSTIN,
+  customerPAN,
+  taxableValue,
+  gstRate = 18,
+  invoiceType = 'FCM',
+  hsnDetails = null
+) => {
+  if (!taxableValue || taxableValue <= 0) {
     return {
       taxableValue: 0,
       gstAmount: 0,
+      igst: 0,
       cgst: 0,
       sgst: 0,
       finalAmount: 0,
       isGovernment: false,
-      isKarnataka: false,
-      gstApplicable: true,
+      isSameState: false,
+      gstApplicable: false,
+      invoiceType: invoiceType,
       note: '',
+      taxPayableBy: 'supplier',
     };
   }
+
+  // Check if customer is Government entity (4th character of PAN is 'G')
+  const isGovtCustomer = customerPAN ? isGovernmentPAN(customerPAN) : false;
   
-  const cleanedGSTIN = customerGSTIN.trim().toUpperCase().replace(/\s/g, '');
-  const isGovt = isGovernmentGSTIN(cleanedGSTIN);
-  const isKarnataka = isKarnatakaGSTIN(cleanedGSTIN);
-  
-  if (isGovt) {
-    // Government entity - No GST
+  // Check if customer GSTIN indicates Government
+  const isGovtFromGSTIN = customerGSTIN ? isGovernmentGSTIN(customerGSTIN) : false;
+  const isGovt = isGovtCustomer || isGovtFromGSTIN;
+
+  // Exempted Services for Government customers
+  if (invoiceType === 'EXEMPTED' || (isGovt && invoiceType !== 'RCM' && invoiceType !== 'FCM')) {
     return {
       taxableValue,
       gstAmount: 0,
+      igst: 0,
       cgst: 0,
       sgst: 0,
       finalAmount: taxableValue,
       isGovernment: true,
-      isKarnataka: true,
+      isSameState: false,
       gstApplicable: false,
-      note: 'GST Not Applicable - Government Entity (Karnataka)',
+      invoiceType: 'EXEMPTED',
+      note: 'Exempted Services - No GST (Government Entity)',
+      taxPayableBy: 'none',
     };
   }
-  
-  if (isKarnataka) {
-    // Karnataka non-government - CGST 9% + SGST 9%
-    const cgst = (taxableValue * 9) / 100;
-    const sgst = (taxableValue * 9) / 100;
-    const gstAmount = cgst + sgst;
-    
-    return {
-      taxableValue,
-      gstAmount,
-      cgst,
-      sgst,
-      finalAmount: taxableValue + gstAmount,
-      isGovernment: false,
-      isKarnataka: true,
-      gstApplicable: true,
-      note: 'CGST @9% + SGST @9% = 18% (Karnataka)',
-    };
+
+  // Determine if supplier and customer are from same state
+  let isSameStateFlag = false;
+  if (supplierGSTIN && customerGSTIN) {
+    isSameStateFlag = isSameState(supplierGSTIN, customerGSTIN);
   }
+
+  // Get GST rates from HSN details if available
+  let igstRate = gstRate;
+  let cgstRate = gstRate / 2;
+  let sgstRate = gstRate / 2;
   
-  // Other states/entities - Standard GST rate
-  const gstAmount = (taxableValue * gstRate) / 100;
-  const cgst = gstAmount / 2; // Split equally for CGST and SGST (for standard rate)
-  const sgst = gstAmount / 2;
-  
+  if (hsnDetails) {
+    igstRate = hsnDetails.igst || gstRate;
+    cgstRate = hsnDetails.cgst || gstRate / 2;
+    sgstRate = hsnDetails.sgst || gstRate / 2;
+  }
+
+  // Calculate GST based on state
+  let igst = 0;
+  let cgst = 0;
+  let sgst = 0;
+  let note = '';
+
+  if (isSameStateFlag) {
+    // Same State: CGST + SGST
+    cgst = (taxableValue * cgstRate) / 100;
+    sgst = (taxableValue * sgstRate) / 100;
+    note = `CGST @${cgstRate}% + SGST @${sgstRate}% (Same State)`;
+  } else {
+    // Different State: IGST
+    igst = (taxableValue * igstRate) / 100;
+    note = `IGST @${igstRate}% (Different State)`;
+  }
+
+  const gstAmount = igst + cgst + sgst;
+
   return {
     taxableValue,
     gstAmount,
+    igst,
     cgst,
     sgst,
     finalAmount: taxableValue + gstAmount,
-    isGovernment: false,
-    isKarnataka: false,
+    isGovernment: isGovt,
+    isSameState: isSameStateFlag,
     gstApplicable: true,
-    note: `GST @${gstRate}% (Standard Rate)`,
+    invoiceType: invoiceType,
+    note: `${note} - ${invoiceType === 'RCM' ? 'Reverse Charge' : invoiceType === 'FCM' ? 'Forward Charge' : 'Exempted'}`,
+    taxPayableBy: invoiceType === 'RCM' ? 'recipient' : 'supplier',
   };
 };
 
