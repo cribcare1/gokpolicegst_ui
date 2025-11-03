@@ -8,8 +8,6 @@ const nextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  // Optimize production builds
-  swcMinify: true,
   // Enable React strict mode for better performance debugging
   reactStrictMode: true,
   // Optimize chunk splitting
