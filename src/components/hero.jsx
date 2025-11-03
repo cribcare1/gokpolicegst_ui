@@ -61,8 +61,9 @@ const HeroCarousel = () => {
                 fill
                 className="object-cover transition-transform duration-1000 hover:scale-105"
                 priority={index === 0}
-                quality={90}
+                quality={75}
                 sizes="100vw"
+                loading={index === 0 ? 'eager' : 'lazy'}
               />
               {/* Enhanced content overlay */}
               <div className="absolute inset-0 flex flex-col items-center justify-center z-[2] px-4 sm:px-6 lg:px-8">
@@ -90,9 +91,9 @@ const HeroCarousel = () => {
                   <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-5 pt-6 sm:pt-8">
                     <button 
                       onClick={() => {
-                        const aboutSection = document.getElementById('aboutus');
-                        if (aboutSection) {
-                          aboutSection.scrollIntoView({ behavior: 'smooth' });
+                        const contactSection = document.getElementById('contactus');
+                        if (contactSection) {
+                          contactSection.scrollIntoView({ behavior: 'smooth' });
                         }
                       }}
                       className="group relative bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-600 hover:from-teal-700 hover:via-emerald-700 hover:to-teal-700 text-white font-bold py-4 sm:py-5 px-8 sm:px-12 rounded-xl shadow-2xl hover:shadow-teal-500/50 transform hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/30 backdrop-blur-sm overflow-hidden"
