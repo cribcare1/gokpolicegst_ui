@@ -9,6 +9,18 @@ import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import { ArrowLeft, Download, Printer, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingProgressBar } from '@/components/shared/ProgressBar';
+
+// Required for static export with dynamic routes
+export async function generateStaticParams() {
+  // Return placeholder ID for static export compatibility
+  // Actual invoice IDs are handled client-side at runtime
+  // This satisfies Next.js static export requirement for dynamic routes
+  return [{ id: 'placeholder' }];
+}
+
+// Allow dynamic params for client-side rendering
+export const dynamicParams = true;
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
