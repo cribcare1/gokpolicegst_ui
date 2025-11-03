@@ -48,11 +48,12 @@ export default function GstinDashboard() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
       
+      const userToken = typeof window !== 'undefined' ? localStorage.getItem('userToken') : '';
       const response = await fetch(API_ENDPOINTS.GSTIN_DASHBOARD || API_ENDPOINTS.DDO_DASHBOARD, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
+          'Authorization': `Bearer ${userToken || ''}`
         },
         signal: controller.signal
       });
@@ -138,7 +139,7 @@ export default function GstinDashboard() {
             Welcome! Here's your GSTIN overview.
           </p>
           <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            <strong>GSTIN:</strong> {localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB'}
+            <strong>GSTIN:</strong> {typeof window !== 'undefined' ? (localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB') : '29AAAGO1111W1ZB'}
           </div>
         </div>
 
