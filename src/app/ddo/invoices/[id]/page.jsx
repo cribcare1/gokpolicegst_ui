@@ -9,6 +9,13 @@ import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import { ArrowLeft, Download, Printer, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingProgressBar } from '@/components/shared/ProgressBar';
+
+// Required for static export with dynamic routes
+export function generateStaticParams() {
+  // Return empty array since invoice IDs are determined at runtime
+  return [];
+}
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
