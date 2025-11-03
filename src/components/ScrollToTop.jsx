@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { ChevronUp } from "lucide-react"; // or any icon you like
 
-export default function ScrollToTop() {
+const ScrollToTop = memo(function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -29,4 +29,8 @@ export default function ScrollToTop() {
       </button>
     )
   );
-}
+});
+
+ScrollToTop.displayName = 'ScrollToTop';
+
+export default ScrollToTop;

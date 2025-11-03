@@ -1,8 +1,14 @@
 "use client";
-import MasterDataPage from '@/components/master-data/MasterDataPage';
+import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
 import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+
+// Lazy load MasterDataPage for better performance
+const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
+  loading: () => <div className="premium-card p-8 animate-pulse"><div className="h-96 bg-gray-200 rounded"></div></div>,
+  ssr: false
+});
 
 const columns = [
   { key: 'gstNumber', label: t('label.gstin') },

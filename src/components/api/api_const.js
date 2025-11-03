@@ -61,7 +61,10 @@ export const API_ENDPOINTS = {
   BILL_ADD: `${API_BASE_URL}/bill/add`,
   BILL_UPDATE: `${API_BASE_URL}/bill/update`,
   BILL_GET: `${API_BASE_URL}/bill/get/`,
+  BILL_DETAIL: `${API_BASE_URL}/bill/detail/`,
   BILL_SUBMIT: `${API_BASE_URL}/bill/submit`,
+  BILL_APPROVE: `${API_BASE_URL}/bill/approve/`,
+  BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
   BILL_DELETE: `${API_BASE_URL}/bill/delete/`,
   
   // Credit Note Endpoints
@@ -71,10 +74,21 @@ export const API_ENDPOINTS = {
   // Dashboard Endpoints
   ADMIN_DASHBOARD: `${API_BASE_URL}/dashboard/admin`,
   DDO_DASHBOARD: `${API_BASE_URL}/dashboard/ddo`,
+  GSTIN_DASHBOARD: `${API_BASE_URL}/dashboard/gstin`,
+  
+  // GSTIN Password Reset
+  RESET_GSTIN_PASSWORD: `${API_BASE_URL}/auth/resetGstinPassword`,
   
   // Reports Endpoints
   REPORTS_MONTHLY: `${API_BASE_URL}/reports/monthly`,
   REPORTS_EXCEPTIONS: `${API_BASE_URL}/reports/exceptions`,
+  
+  // Profile Endpoints
+  PROFILE_GET: `${API_BASE_URL}/profile/get`,
+  PROFILE_UPDATE: `${API_BASE_URL}/profile/update`,
+  
+  // DDO Mapping Endpoints
+  DDO_MAPPING_UPDATE: `${API_BASE_URL}/ddo/mapping`,
   
 };
 
