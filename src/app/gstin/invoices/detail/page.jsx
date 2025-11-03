@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
 import Button from '@/components/shared/Button';
@@ -10,7 +10,7 @@ import { ArrowLeft, Download, Printer, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 
-export default function GstinInvoiceDetailPage() {
+function InvoiceDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [bill, setBill] = useState(null);
@@ -218,3 +218,18 @@ export default function GstinInvoiceDetailPage() {
   );
 }
 
+export default function GstinInvoiceDetailPage() {
+  return (
+    <Suspense fallback={
+      <Layout role="gstin">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-md">
+            <LoadingProgressBar message="Loading bill details..." variant="primary" />
+          </div>
+        </div>
+      </Layout>
+    }>
+      <InvoiceDetailContent />
+    </Suspense>
+  );
+}

@@ -17,8 +17,13 @@ export default function GstinDashboard() {
   });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [gstinNumber, setGstinNumber] = useState('29AAAGO1111W1ZB');
 
   useEffect(() => {
+    // Set GSTIN number from localStorage on client side only
+    if (typeof window !== 'undefined') {
+      setGstinNumber(localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB');
+    }
     fetchDashboardData();
   }, []);
 
@@ -48,11 +53,12 @@ export default function GstinDashboard() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
       
+      const token = typeof window !== 'undefined' ? localStorage.getItem('userToken') || '' : '';
       const response = await fetch(API_ENDPOINTS.GSTIN_DASHBOARD || API_ENDPOINTS.DDO_DASHBOARD, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
+          'Authorization': `Bearer ${token}`
         },
         signal: controller.signal
       });
@@ -138,7 +144,7 @@ export default function GstinDashboard() {
             Welcome! Here's your GSTIN overview.
           </p>
           <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            <strong>GSTIN:</strong> {localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB'}
+            <strong>GSTIN:</strong> {gstinNumber}
           </div>
         </div>
 
