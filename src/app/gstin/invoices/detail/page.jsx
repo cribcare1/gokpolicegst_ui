@@ -10,7 +10,7 @@ import { ArrowLeft, Download, Printer, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 
-function InvoiceDetailContent() {
+function GstinInvoiceDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [bill, setBill] = useState(null);
@@ -224,12 +224,13 @@ export default function GstinInvoiceDetailPage() {
       <Layout role="gstin">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="w-full max-w-md">
-            <LoadingProgressBar message="Loading bill details..." variant="primary" />
+            <LoadingProgressBar message="Loading..." variant="primary" />
           </div>
         </div>
       </Layout>
     }>
-      <InvoiceDetailContent />
+      <GstinInvoiceDetailContent />
     </Suspense>
   );
 }
+
