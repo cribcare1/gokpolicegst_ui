@@ -42,25 +42,25 @@ const Table = memo(function Table({ columns, data, onRowClick, actions, classNam
               key={index}
               onClick={() => onRowClick && onRowClick(row)}
               className={`
-                premium-card p-4 space-y-2
-                ${onRowClick ? 'cursor-pointer' : ''}
+                premium-card p-4 space-y-2 touch-manipulation
+                ${onRowClick ? 'cursor-pointer active:scale-[0.98]' : ''}
                 transition-all duration-200
               `}
             >
               {columns.map((col) => (
-                <div key={col.key} className="flex justify-between items-start gap-2">
-                  <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase min-w-[100px]">
+                <div key={col.key} className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
+                  <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">
                     {col.label}:
                   </span>
-                  <span className="text-sm font-medium text-[var(--color-text-primary)] text-right flex-1">
+                  <span className="text-sm font-medium text-[var(--color-text-primary)] text-right flex-1 break-words">
                     {col.render ? col.render(row[col.key], row) : String(row[col.key] || 'N/A')}
                   </span>
                 </div>
               ))}
               {actions && (
-                <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border)]">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-2 border-t border-[var(--color-border)]">
                   <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">Actions:</span>
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-2 ml-0 sm:ml-auto">
                     {actions(row)}
                   </div>
                 </div>

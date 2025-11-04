@@ -20,6 +20,12 @@ export const metadata = {
     icon: "/company logo.jpeg",
     shortcut: "/company logo.jpeg",
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
 };
 
 export default function RootLayout({ children }) {
