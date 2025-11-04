@@ -53,10 +53,10 @@ const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'md
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-[var(--color-muted)] rounded-xl transition-all duration-200 hover:scale-110 hover:rotate-90"
+              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:rotate-90"
               aria-label="Close"
             >
-              <X size={22} className="text-[var(--color-text-secondary)]" />
+              <X size={22} className="text-red-500 hover:text-red-600" />
             </button>
           </div>
         )}

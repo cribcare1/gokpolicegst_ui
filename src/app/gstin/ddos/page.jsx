@@ -23,30 +23,32 @@ export default function GstinDDOsPage() {
   }, [searchTerm, ddos]);
 
   const fetchDDOs = async () => {
-    setLoading(true);
+    // Demo data - show immediately
+    const demoDDOs = [
+      { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ' },
+      { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South' },
+      { id: '3', ddoCode: '0200PO0034', ddoName: 'DCP North' },
+      { id: '4', ddoCode: '0200PO0035', ddoName: 'DCP West' },
+      { id: '5', ddoCode: '0200PO0036', ddoName: 'DCP east' },
+    ];
+    
+    // Show demo data immediately - UI ready instantly
+    setDdos(demoDDOs);
+    setFilteredDdos(demoDDOs);
+    setLoading(false);
+    
+    // Fetch real data in background (non-blocking)
     try {
-      const demoDDOs = [
-        { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ' },
-        { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South' },
-        { id: '3', ddoCode: '0200PO0034', ddoName: 'DCP North' },
-        { id: '4', ddoCode: '0200PO0035', ddoName: 'DCP West' },
-        { id: '5', ddoCode: '0200PO0036', ddoName: 'DCP east' },
-      ];
-      
-      setDdos(demoDDOs);
-      setFilteredDdos(demoDDOs);
-      
-      // Try to fetch from API
+      // Try to fetch from API with timeout
       const gstinNumber = localStorage.getItem('gstinNumber');
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`);
-      if (response?.status === 'success' && response?.data) {
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`, 1500);
+      if (response?.status === 'success' && response?.data && !response.timeout) {
         setDdos(response.data);
         setFilteredDdos(response.data);
       }
     } catch (error) {
       console.error('Error fetching DDOs:', error);
-    } finally {
-      setLoading(false);
+      // Keep demo data on error
     }
   };
 

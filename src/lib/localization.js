@@ -38,6 +38,8 @@ export const translations = {
   "label.address": { en: "Address", kn: "ವಿಳಾಸ" },
   "label.mobile": { en: "Mobile", kn: "ಮೊಬೈಲ್" },
   "label.email": { en: "Email", kn: "ಇಮೇಲ್" },
+  "label.stateCode": { en: "State Code", kn: "ರಾಜ್ಯ ಕೋಡ್" },
+  "label.logo": { en: "Logo", kn: "ಲೋಗೋ" },
   "label.billNumber": { en: "Bill Number", kn: "ಬಿಲ್ ಸಂಖ್ಯೆ" },
   "label.date": { en: "Date", kn: "ದಿನಾಂಕ" },
   "label.customer": { en: "Customer", kn: "ಗ್ರಾಹಕ" },

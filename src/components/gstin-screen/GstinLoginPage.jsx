@@ -8,6 +8,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
+import { useGstinList } from '@/hooks/useGstinList';
 
 // Toast component
 const Toast = ({ message, type, onClose }) => {
@@ -73,6 +74,7 @@ export default function GstinLoginPage() {
   const [toastState, setToastState] = useState({ show: false, message: '', type: 'success' });
   const router = useRouter();
   const isOnline = useNetworkStatus();
+  const { gstinList } = useGstinList();
 
   // Demo credentials for testing
   const DEMO_CREDENTIALS = {
@@ -337,23 +339,32 @@ export default function GstinLoginPage() {
               <div className="space-y-2">
                 <label htmlFor="gstin" className="block text-sm font-semibold text-slate-700 tracking-wide">GSTIN Number</label>
                 <div className="mt-1 relative rounded-xl shadow-sm group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm6 6H7v2h6v-2z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <input
+                  <select
                     id="gstin"
                     name="gstin"
-                    type="text"
                     autoComplete="username"
                     required
-                    maxLength={15}
-                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none sm:text-sm bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 uppercase"
-                    placeholder="Enter GSTIN (e.g., 29AAAGO1111W1ZB)"
+                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl shadow-sm text-slate-800 focus:outline-none sm:text-sm bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 uppercase appearance-none"
                     value={gstin}
                     onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                  />
+                  >
+                    <option value="">Select GSTIN Number</option>
+                    {gstinList.map((gstinItem) => (
+                      <option key={gstinItem.value} value={gstinItem.value}>
+                        {gstinItem.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
               </div>
               
@@ -456,23 +467,32 @@ export default function GstinLoginPage() {
             <div>
               <label htmlFor="gstin" className="block text-sm font-medium text-gray-700">GSTIN Number</label>
               <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm6 6H7v2h6v-2z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <input
+                <select
                   id="gstin"
                   name="gstin"
-                  type="text"
                   autoComplete="username"
                   required
-                  maxLength={15}
-                  className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none sm:text-sm bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 uppercase"
-                  placeholder="Enter GSTIN"
+                  className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-12 pr-10 py-3.5 border-2 border-gray-200 rounded-xl shadow-sm text-slate-800 focus:outline-none sm:text-sm bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 uppercase appearance-none"
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                />
+                >
+                  <option value="">Select GSTIN Number</option>
+                  {gstinList.map((gstinItem) => (
+                    <option key={gstinItem.value} value={gstinItem.value}>
+                      {gstinItem.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
               </div>
             </div>
         

@@ -24,6 +24,8 @@ const formFields = [
   { key: 'address', label: t('label.address'), type: 'textarea', required: true },
   { key: 'contactNumber', label: t('label.mobile'), required: true, maxLength: 10 },
   { key: 'email', label: t('label.email'), type: 'email', required: true },
+  { key: 'stateCode', label: t('label.stateCode'), type: 'number', required: false, min: 1, max: 99 },
+  { key: 'logo', label: t('label.logo'), type: 'file', required: false, accept: 'image/*' },
 ];
 
 const validateForm = (data) => {

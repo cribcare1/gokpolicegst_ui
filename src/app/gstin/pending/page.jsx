@@ -28,30 +28,32 @@ export default function GstinPendingBillsPage() {
   }, [searchTerm, bills]);
 
   const fetchBills = async () => {
-    setLoading(true);
+    // Demo data - show immediately
+    const demoBills = [
+      {
+        id: '2',
+        invoiceNumber: '1ZB/PO0033/0001',
+        date: '2025-01-11',
+        ddoCode: '0200PO0033',
+        ddoName: 'DCP South',
+        customerName: 'ABC Corporation',
+        amount: 500000,
+        gstAmount: 90000,
+        totalAmount: 590000,
+        status: 'pending',
+      },
+    ];
+    
+    // Show demo data immediately - UI ready instantly
+    setBills(demoBills);
+    setFilteredBills(demoBills);
+    setLoading(false);
+    
+    // Fetch real data in background (non-blocking)
     try {
-      // Demo data
-      const demoBills = [
-        {
-          id: '2',
-          invoiceNumber: '1ZB/PO0033/0001',
-          date: '2025-01-11',
-          ddoCode: '0200PO0033',
-          ddoName: 'DCP South',
-          customerName: 'ABC Corporation',
-          amount: 500000,
-          gstAmount: 90000,
-          totalAmount: 590000,
-          status: 'pending',
-        },
-      ];
-      
-      setBills(demoBills);
-      setFilteredBills(demoBills);
-      
-      // Try to fetch from API
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST);
-      if (response?.status === 'success' && response?.data) {
+      // Try to fetch from API with timeout
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 1500);
+      if (response?.status === 'success' && response?.data && !response.timeout) {
         const gstinNumber = localStorage.getItem('gstinNumber');
         const filtered = response.data.filter(
           bill => bill.gstinNumber === gstinNumber && bill.status === 'pending'
@@ -63,8 +65,7 @@ export default function GstinPendingBillsPage() {
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
-    } finally {
-      setLoading(false);
+      // Keep demo data on error
     }
   };
 

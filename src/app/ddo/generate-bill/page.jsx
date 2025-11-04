@@ -11,6 +11,7 @@ import { validateGSTIN, validateEmail, validateMobile, validatePIN } from '@/lib
 import { Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar } from '@/components/shared/ProgressBar';
+import { useGstinList } from '@/hooks/useGstinList';
 
 export default function GenerateBillPage() {
   const [step, setStep] = useState(1);
@@ -49,6 +50,7 @@ export default function GenerateBillPage() {
   const [note, setNote] = useState('');
   
   const [loading, setLoading] = useState(false);
+  const { gstinList } = useGstinList();
 
   useEffect(() => {
     fetchCustomers();
@@ -305,14 +307,30 @@ export default function GenerateBillPage() {
                 <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">
                   {t('label.gstin')} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={billDetails.gstinNumber}
-                  onChange={(e) => setBillDetails({ ...billDetails, gstinNumber: e.target.value.toUpperCase() })}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm"
-                  maxLength={15}
-                  required
-                />
+                {gstinList.length > 0 ? (
+                  <select
+                    value={billDetails.gstinNumber}
+                    onChange={(e) => setBillDetails({ ...billDetails, gstinNumber: e.target.value.toUpperCase() })}
+                    className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm uppercase"
+                    required
+                  >
+                    <option value="">Select GSTIN Number</option>
+                    {gstinList.map((gstin) => (
+                      <option key={gstin.value} value={gstin.value}>
+                        {gstin.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={billDetails.gstinNumber}
+                    onChange={(e) => setBillDetails({ ...billDetails, gstinNumber: e.target.value.toUpperCase() })}
+                    className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm"
+                    maxLength={15}
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">
@@ -686,14 +704,30 @@ export default function GenerateBillPage() {
               <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">
                 {t('label.gstin')} <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={newCustomer.gstNumber}
-                onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase() })}
-                className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm"
-                maxLength={15}
-                required
-              />
+              {gstinList.length > 0 ? (
+                <select
+                  value={newCustomer.gstNumber}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase() })}
+                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm uppercase"
+                  required
+                >
+                  <option value="">Select GSTIN Number</option>
+                  {gstinList.map((gstin) => (
+                    <option key={gstin.value} value={gstin.value}>
+                      {gstin.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={newCustomer.gstNumber}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase() })}
+                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm"
+                  maxLength={15}
+                  required
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">

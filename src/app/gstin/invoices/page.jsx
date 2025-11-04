@@ -27,42 +27,44 @@ export default function GstinInvoiceListPage() {
   }, [searchTerm, statusFilter, bills]);
 
   const fetchBills = async () => {
-    setLoading(true);
+    // Demo data for GSTIN - show immediately
+    const demoBills = [
+      {
+        id: '1',
+        invoiceNumber: '1ZB/PO0032/0001',
+        date: '2025-01-10',
+        ddoCode: '0200PO0032',
+        ddoName: 'DCP CAR HQ',
+        customerName: 'Karnataka Education Board',
+        amount: 700000,
+        gstAmount: 126000,
+        totalAmount: 826000,
+        status: 'submitted',
+      },
+      {
+        id: '2',
+        invoiceNumber: '1ZB/PO0033/0001',
+        date: '2025-01-11',
+        ddoCode: '0200PO0033',
+        ddoName: 'DCP South',
+        customerName: 'ABC Corporation',
+        amount: 500000,
+        gstAmount: 90000,
+        totalAmount: 590000,
+        status: 'pending',
+      },
+    ];
+    
+    // Show demo data immediately - UI ready instantly
+    setBills(demoBills);
+    setFilteredBills(demoBills);
+    setLoading(false);
+    
+    // Fetch real data in background (non-blocking)
     try {
-      // Demo data for GSTIN
-      const demoBills = [
-        {
-          id: '1',
-          invoiceNumber: '1ZB/PO0032/0001',
-          date: '2025-01-10',
-          ddoCode: '0200PO0032',
-          ddoName: 'DCP CAR HQ',
-          customerName: 'Karnataka Education Board',
-          amount: 700000,
-          gstAmount: 126000,
-          totalAmount: 826000,
-          status: 'submitted',
-        },
-        {
-          id: '2',
-          invoiceNumber: '1ZB/PO0033/0001',
-          date: '2025-01-11',
-          ddoCode: '0200PO0033',
-          ddoName: 'DCP South',
-          customerName: 'ABC Corporation',
-          amount: 500000,
-          gstAmount: 90000,
-          totalAmount: 590000,
-          status: 'pending',
-        },
-      ];
-      
-      setBills(demoBills);
-      setFilteredBills(demoBills);
-      
-      // Try to fetch from API
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST);
-      if (response?.status === 'success' && response?.data) {
+      // Try to fetch from API with timeout
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 1500);
+      if (response?.status === 'success' && response?.data && !response.timeout) {
         // Filter bills for this GSTIN
         const gstinNumber = localStorage.getItem('gstinNumber');
         const filtered = response.data.filter(bill => bill.gstinNumber === gstinNumber);
@@ -73,8 +75,7 @@ export default function GstinInvoiceListPage() {
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
-    } finally {
-      setLoading(false);
+      // Keep demo data on error
     }
   };
 

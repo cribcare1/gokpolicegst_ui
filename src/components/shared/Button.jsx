@@ -35,6 +35,7 @@ export default function Button({
         transition-all duration-300 ease-out
         disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100
         shadow-md
+        flex items-center justify-center
         ${className}
       `}
       {...props}

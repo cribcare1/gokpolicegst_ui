@@ -10,6 +10,7 @@ import { t } from '@/lib/localization';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
+import { useGstinList } from '@/hooks/useGstinList';
 
 export default function MasterDataPage({
   title,
@@ -26,6 +27,7 @@ export default function MasterDataPage({
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { gstinList } = useGstinList();
 
   useEffect(() => {
     fetchData();
@@ -163,7 +165,43 @@ export default function MasterDataPage({
 
     try {
       const url = editingItem ? endpoint.UPDATE : endpoint.ADD;
-      const response = await ApiService.handlePostRequest(url, formData);
+      
+      // Check if there are any file uploads
+      const hasFiles = Object.values(formData).some(value => value instanceof File);
+      
+      let response;
+      if (hasFiles) {
+        // Handle multipart/form-data for file uploads
+        const multipartFormData = new FormData();
+        const jsonData = {};
+        
+        // Separate files from other data
+        Object.keys(formData).forEach(key => {
+          if (formData[key] instanceof File) {
+            multipartFormData.append(key, formData[key]);
+          } else {
+            jsonData[key] = formData[key];
+          }
+        });
+        
+        // Append JSON data as string (backend might expect this format)
+        multipartFormData.append('formData', JSON.stringify(jsonData));
+        
+        // Use fetch directly for multipart requests
+        const token = localStorage.getItem('userToken') || '';
+        const fetchResponse = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: multipartFormData,
+        });
+        
+        response = await fetchResponse.json();
+      } else {
+        // Use regular JSON request
+        response = await ApiService.handlePostRequest(url, formData);
+      }
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
@@ -280,15 +318,65 @@ export default function MasterDataPage({
                     rows={3}
                     required={field.required}
                   />
+                ) : field.type === 'file' ? (
+                  <div>
+                    <input
+                      type="file"
+                      accept={field.accept || 'image/*'}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          updateFormData(field.key, file);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
+                      required={field.required}
+                    />
+                    {formData[field.key] && formData[field.key] instanceof File && (
+                      <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                        Selected: {formData[field.key].name}
+                      </p>
+                    )}
+                    {formData[field.key] && typeof formData[field.key] === 'string' && (
+                      <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                        Current: {formData[field.key]}
+                      </p>
+                    )}
+                  </div>
+                ) : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
+                  <select
+                    value={formData[field.key] ?? ''}
+                    onChange={(e) => updateFormData(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase"
+                    required={field.required}
+                  >
+                    <option value="">Select GSTIN Number</option>
+                    {gstinList.map((gstin) => (
+                      <option key={gstin.value} value={gstin.value}>
+                        {gstin.label}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <input
                     type={field.type || 'text'}
-                    value={formData[field.key] || ''}
-                    onChange={(e) => updateFormData(field.key, e.target.value)}
+                    value={formData[field.key] ?? ''}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      if (field.type === 'number') {
+                        // Store as number if valid, otherwise empty string
+                        const numValue = value === '' ? '' : parseInt(value);
+                        updateFormData(field.key, isNaN(numValue) ? '' : numValue);
+                      } else {
+                        updateFormData(field.key, value);
+                      }
+                    }}
                     className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     placeholder={field.placeholder}
                     required={field.required}
                     maxLength={field.maxLength}
+                    min={field.min}
+                    max={field.max}
                   />
                 )}
               </div>

@@ -37,16 +37,16 @@ export default function GstinDashboard() {
       'Monthly report due in 5 days'
     ];
     
-    // Show demo data immediately
+    // Show demo data immediately - UI is ready instantly
     setStats(demoData);
     setAlerts(demoAlerts);
     setLoading(false);
     
+    // Fetch real data in background (non-blocking)
     try {
-      setLoading(true);
       // Try to fetch real data with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       
       const userToken = typeof window !== 'undefined' ? localStorage.getItem('userToken') : '';
       const response = await fetch(API_ENDPOINTS.GSTIN_DASHBOARD || API_ENDPOINTS.DDO_DASHBOARD, {
@@ -63,6 +63,7 @@ export default function GstinDashboard() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.status === 'success') {
+          // Update with real data silently
           setStats({
             totalInvoices: data.totalInvoices || 0,
             totalAmount: data.totalAmount || 0,
@@ -74,10 +75,8 @@ export default function GstinDashboard() {
         }
       }
     } catch (error) {
-      // Keep demo data, API failed or timed out
+      // Keep demo data, API failed or timed out - no UI change needed
       console.log('Using demo data');
-    } finally {
-      setLoading(false);
     }
   };
 
