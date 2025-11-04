@@ -58,8 +58,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
 
   const adminNavItems = [
     { href: '/admin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
-    { href: '/admin/master-data/gst', label: 'nav.gst', icon: 'gst' },
     { href: '/admin/master-data/pan', label: 'nav.pan', icon: 'pan' },
+    { href: '/admin/master-data/gst', label: 'nav.gst', icon: 'gst' },
     { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
     { href: '/admin/master-data/hsn', label: 'nav.hsn', icon: 'hsn' },
     { href: '/admin/master-data/bank', label: 'nav.bank', icon: 'bank' },
@@ -75,11 +75,11 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
 
   const gstinNavItems = [
     { href: '/gstin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
-    { href: '/gstin/profile', label: 'nav.profile', icon: 'profile' },
+    { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
     { href: '/gstin/invoices', label: 'nav.invoiceList', icon: 'invoices' },
     { href: '/gstin/pending', label: 'nav.pendingBills', icon: 'bill' },
     { href: '/gstin/approved', label: 'nav.approvedBills', icon: 'gst' },
-    { href: '/gstin/ddo-registration', label: 'nav.ddoRegistration', icon: 'ddo' },
+    { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
     { href: '/gstin/ddos', label: 'nav.ddo', icon: 'ddo' },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
   ];
@@ -142,11 +142,13 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         {/* Sidebar */}
         <aside
           className={`
-            fixed lg:static inset-y-0 left-0 z-40
+            fixed lg:static left-0 z-40
+            top-[56px] sm:top-[64px] lg:top-0 lg:inset-y-0
+            h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-auto
             w-64 sm:w-72 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)]
             transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            lg:translate-x-0
+            lg:translate-x-0 overflow-y-auto
           `}
         >
           <nav className="p-3 sm:p-4 md:p-6 space-y-2">
@@ -169,7 +171,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
                   `}
                 >
                   <span suppressHydrationWarning>
-                    {mounted ? t(item.label) : (translations[item.label]?.en || item.label)}
+                    {item.label.startsWith('nav.') ? (mounted ? t(item.label) : (translations[item.label]?.en || item.label)) : item.label}
                   </span>
                 </Link>
               );
@@ -178,8 +180,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-screen w-full lg:w-auto">
-          <div className="animate-fade-in max-w-full overflow-x-hidden">
+        <main className="flex-1 w-full lg:w-auto bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-[calc(100vh-56px)] sm:min-h-[calc(100vh-64px)] lg:min-h-screen">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in max-w-full overflow-x-hidden">
             {children}
           </div>
         </main>

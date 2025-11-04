@@ -25,28 +25,32 @@ export default function GstinApprovedBillsPage() {
   }, [searchTerm, bills]);
 
   const fetchBills = async () => {
-    setLoading(true);
+    // Demo data - show immediately
+    const demoBills = [
+      {
+        id: '1',
+        invoiceNumber: '1ZB/PO0032/0001',
+        date: '2025-01-10',
+        ddoCode: '0200PO0032',
+        ddoName: 'DCP CAR HQ',
+        customerName: 'Karnataka Education Board',
+        amount: 700000,
+        gstAmount: 126000,
+        totalAmount: 826000,
+        status: 'approved',
+      },
+    ];
+    
+    // Show demo data immediately - UI ready instantly
+    setBills(demoBills);
+    setFilteredBills(demoBills);
+    setLoading(false);
+    
+    // Fetch real data in background (non-blocking)
     try {
-      const demoBills = [
-        {
-          id: '1',
-          invoiceNumber: '1ZB/PO0032/0001',
-          date: '2025-01-10',
-          ddoCode: '0200PO0032',
-          ddoName: 'DCP CAR HQ',
-          customerName: 'Karnataka Education Board',
-          amount: 700000,
-          gstAmount: 126000,
-          totalAmount: 826000,
-          status: 'approved',
-        },
-      ];
-      
-      setBills(demoBills);
-      setFilteredBills(demoBills);
-      
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST);
-      if (response?.status === 'success' && response?.data) {
+      // Try to fetch from API with timeout
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 1500);
+      if (response?.status === 'success' && response?.data && !response.timeout) {
         const gstinNumber = localStorage.getItem('gstinNumber');
         const filtered = response.data.filter(
           bill => bill.gstinNumber === gstinNumber && (bill.status === 'approved' || bill.status === 'submitted')
@@ -58,8 +62,7 @@ export default function GstinApprovedBillsPage() {
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
-    } finally {
-      setLoading(false);
+      // Keep demo data on error
     }
   };
 

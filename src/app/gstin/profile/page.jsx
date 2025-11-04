@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Edit, Save, X } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { useGstinList } from '@/hooks/useGstinList';
 
 export default function GstinProfilePage() {
   const [formData, setFormData] = useState({
@@ -20,19 +21,23 @@ export default function GstinProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const { gstinList } = useGstinList();
 
   useEffect(() => {
     fetchProfileData();
   }, []);
 
   const fetchProfileData = async () => {
-    setFetching(true);
+    // Show default data immediately - UI ready instantly
+    setFetching(false);
+    
+    // Fetch real data in background (non-blocking)
     try {
       const gstinNumber = localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB';
       
-      // Try to fetch from API
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}?gstin=${gstinNumber}`);
-      if (response?.status === 'success' && response?.data && response.data.length > 0) {
+      // Try to fetch from API with timeout
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}?gstin=${gstinNumber}`, 1500);
+      if (response?.status === 'success' && response?.data && response.data.length > 0 && !response.timeout) {
         const gstinData = response.data[0];
         setFormData({
           gstinNumber: gstinData.gstNumber || gstinNumber,
@@ -44,8 +49,7 @@ export default function GstinProfilePage() {
       }
     } catch (error) {
       console.log('Using default GSTIN profile data');
-    } finally {
-      setFetching(false);
+      // Keep default data on error
     }
   };
 
@@ -151,15 +155,31 @@ export default function GstinProfilePage() {
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   GSTIN Number
                 </label>
-                <input
-                  type="text"
-                  name="gstinNumber"
-                  value={formData.gstinNumber}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  maxLength={15}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                {isEditing && gstinList.length > 0 ? (
+                  <select
+                    name="gstinNumber"
+                    value={formData.gstinNumber}
+                    onChange={handleChange}
+                    className="premium-input w-full uppercase"
+                  >
+                    <option value="">Select GSTIN Number</option>
+                    {gstinList.map((gstin) => (
+                      <option key={gstin.value} value={gstin.value}>
+                        {gstin.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    name="gstinNumber"
+                    value={formData.gstinNumber}
+                    onChange={handleChange}
+                    readOnly={!isEditing}
+                    maxLength={15}
+                    className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
+                  />
+                )}
               </div>
 
               <div className="md:col-span-2">

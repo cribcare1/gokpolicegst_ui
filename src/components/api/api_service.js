@@ -10,7 +10,7 @@ static  getToken = () => {
 };
 
 // **1️⃣ GET Request Handler**
-static async handleGetRequest(url) {
+static async handleGetRequest(url, timeoutMs = 2000) {
   console.log("GET Call URL:", url);
 
   try {
@@ -27,7 +27,17 @@ static async handleGetRequest(url) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
-    const response = await fetch(url, { method: "GET", headers });
+    // Add timeout with AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, { 
+      method: "GET", 
+      headers,
+      signal: controller.signal 
+    });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
@@ -39,6 +49,10 @@ static async handleGetRequest(url) {
     console.log("Response Data:", data);
     return data;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log("GET Request timeout after", timeoutMs, "ms");
+      return { error: "Request timeout", timeout: true };
+    }
     console.error("GET Request Failed:", error);
     return { error: "GET Request Failed" };
   }
