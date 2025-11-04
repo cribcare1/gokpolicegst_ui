@@ -137,22 +137,22 @@ const Navbar = memo(() => {
       : 'bg-gradient-to-r from-slate-800 via-teal-800 to-emerald-800'
     } shadow-lg fixed top-0 w-full z-50 transition-colors duration-300`}>
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Company Logo and TDS Text */}
-          <div className="flex-shrink-0 flex items-center pl-2 min-w-0">
+          <div className="flex-shrink-0 flex items-center pl-1 sm:pl-2 min-w-0 flex-1">
             <Link href="/" className="flex items-center min-w-0">
-              <div className="relative w-8 sm:w-10 h-10 sm:h-12 flex-shrink-0">
+              <div className="relative w-8 sm:w-10 h-8 sm:h-10 md:h-12 flex-shrink-0">
               </div>
-              <span className="text-white text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold ml-2 sm:ml-4 truncate"> Bandobast GST Management System</span>
+              <span className="text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl font-bold ml-1 sm:ml-2 md:ml-4 truncate"> Bandobast GST Management System</span>
             </Link>
           </div>
           
           {/* Desktop Navigation Tabs */}
-          <div className="hidden sm:flex items-center space-x-2 pr-4">
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-2 pr-2 lg:pr-4">
             <button
               onClick={() => router.push('/adminlogin')}
               onMouseEnter={() => router.prefetch('/adminlogin')}
-              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
+              className={`px-2 lg:px-4 py-1.5 lg:py-2 rounded-md transition-colors duration-300 font-bold text-xs lg:text-sm touch-manipulation ${
                 activeTab === 'admin' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
@@ -163,7 +163,7 @@ const Navbar = memo(() => {
             <button
               onClick={() => router.push('/gstinlogin')}
               onMouseEnter={() => router.prefetch('/gstinlogin')}
-              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
+              className={`px-2 lg:px-4 py-1.5 lg:py-2 rounded-md transition-colors duration-300 font-bold text-xs lg:text-sm touch-manipulation ${
                 activeTab === 'gstin' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
@@ -174,7 +174,7 @@ const Navbar = memo(() => {
             <button
               onClick={() => router.push('/ddologin')}
               onMouseEnter={() => router.prefetch('/ddologin')}
-              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
+              className={`px-2 lg:px-4 py-1.5 lg:py-2 rounded-md transition-colors duration-300 font-bold text-xs lg:text-sm touch-manipulation ${
                 activeTab === 'ddo' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
@@ -184,7 +184,7 @@ const Navbar = memo(() => {
             </button>
             <Link 
               href="/#contactus"
-              className={`px-4 py-2 rounded-md transition-colors duration-300 font-bold ${
+              className={`px-2 lg:px-4 py-1.5 lg:py-2 rounded-md transition-colors duration-300 font-bold text-xs lg:text-sm touch-manipulation ${
                 activeTab === 'contactus' 
                   ? 'bg-white text-teal-700 shadow-md' 
                   : 'text-white hover:bg-teal-700/50'
@@ -198,15 +198,15 @@ const Navbar = memo(() => {
             </Link>
             
             {/* Language Toggle */}
-            <div className="flex items-center border-l border-teal-600/50 pl-3 ml-2">
+            <div className="flex items-center border-l border-teal-600/50 pl-2 lg:pl-3 ml-1 lg:ml-2">
               <button
                 onClick={toggleLanguage}
-                className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+                className="p-1.5 lg:p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
                 title={currentLanguage === 'en' ? 'Switch to Kannada' : 'Switch to English'}
               >
-                <Languages size={20} />
+                <Languages size={18} className="lg:w-5 lg:h-5" />
               </button>
-              <span className="ml-2 text-white text-sm font-semibold">
+              <span className="ml-1 lg:ml-2 text-white text-xs lg:text-sm font-semibold">
                 {currentLanguage === 'en' ? 'EN' : 'KN'}
               </span>
             </div>
@@ -214,19 +214,88 @@ const Navbar = memo(() => {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              className="p-1.5 lg:p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              {darkMode ? <Sun size={18} className="lg:w-5 lg:h-5" /> : <Moon size={18} className="lg:w-5 lg:h-5" />}
             </button>
           </div>
           
           {/* Mobile menu button and controls */}
-          <div className="flex items-center space-x-2 sm:hidden">
+          <div className="flex items-center space-x-1 sm:space-x-2 md:hidden">
             {/* Language Toggle - Mobile */}
             <button
               onClick={toggleLanguage}
-              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              className="p-1.5 sm:p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
+              title={currentLanguage === 'en' ? 'Switch to Kannada' : 'Switch to English'}
+              aria-label="Toggle language"
+            >
+              <Languages size={16} className="sm:w-[18px] sm:h-[18px]" />
+            </button>
+            <span className="text-white text-[10px] sm:text-xs font-semibold hidden sm:inline">
+              {currentLanguage === 'en' ? 'EN' : 'KN'}
+            </span>
+            
+            {/* Theme Toggle - Mobile */}
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 sm:p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme"
+            >
+              {darkMode ? <Sun size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px]" />}
+            </button>
+            
+            <button
+              type="button"
+              className="inline-flex items-center justify-center p-1.5 sm:p-2 rounded-md text-white hover:bg-teal-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300 touch-manipulation min-w-[44px] min-h-[44px]"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle menu"
+            >
+              <span className="sr-only">Open main menu</span>
+              {!mobileMenuOpen ? (
+                <svg
+                  className="block h-5 w-5 sm:h-6 sm:w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="block h-5 w-5 sm:h-6 sm:w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+          
+          {/* Tablet menu button (between sm and md) */}
+          <div className="hidden sm:flex md:hidden items-center space-x-1">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
               title={currentLanguage === 'en' ? 'Switch to Kannada' : 'Switch to English'}
             >
               <Languages size={18} />
@@ -235,10 +304,10 @@ const Navbar = memo(() => {
               {currentLanguage === 'en' ? 'EN' : 'KN'}
             </span>
             
-            {/* Theme Toggle - Mobile */}
+            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300"
+              className="p-2 rounded-md text-white hover:bg-teal-700/50 transition-colors duration-300 touch-manipulation"
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -246,7 +315,7 @@ const Navbar = memo(() => {
             
             <button
               type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-teal-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300"
+              className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-teal-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300 touch-manipulation"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-expanded={mobileMenuOpen}
             >
@@ -291,17 +360,17 @@ const Navbar = memo(() => {
       
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="sm:hidden">
+        <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-slate-900 rounded-b-lg shadow-inner">
             <button
               onClick={() => {
                 router.push('/adminlogin');
                 setMobileMenuOpen(false);
               }}
-              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
+              className={`block w-full text-left px-3 py-3 rounded-md text-sm sm:text-base font-bold touch-manipulation min-h-[44px] flex items-center ${
                 activeTab === 'admin'
                   ? 'bg-white text-teal-700'
-                  : 'text-white hover:bg-teal-700/50'
+                  : 'text-white hover:bg-teal-700/50 active:bg-teal-700/70'
               }`}
             >
               {mounted ? t('nav.admin') : 'Admin Login'}
@@ -311,10 +380,10 @@ const Navbar = memo(() => {
                 router.push('/gstinlogin');
                 setMobileMenuOpen(false);
               }}
-              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
+              className={`block w-full text-left px-3 py-3 rounded-md text-sm sm:text-base font-bold touch-manipulation min-h-[44px] flex items-center ${
                 activeTab === 'gstin'
                   ? 'bg-white text-teal-700'
-                  : 'text-white hover:bg-teal-700/50'
+                  : 'text-white hover:bg-teal-700/50 active:bg-teal-700/70'
               }`}
             >
               {mounted ? t('nav.gstinLogin') : 'GSTIN Login'}
@@ -324,20 +393,20 @@ const Navbar = memo(() => {
                 router.push('/ddologin');
                 setMobileMenuOpen(false);
               }}
-              className={`block w-full text-left px-3 py-3 rounded-md text-base font-bold ${
+              className={`block w-full text-left px-3 py-3 rounded-md text-sm sm:text-base font-bold touch-manipulation min-h-[44px] flex items-center ${
                 activeTab === 'ddo'
                   ? 'bg-white text-teal-700'
-                  : 'text-white hover:bg-teal-700/50'
+                  : 'text-white hover:bg-teal-700/50 active:bg-teal-700/70'
               }`}
             >
               {mounted ? t('nav.ddoButton') : 'DDO Login'}
             </button>
             <Link
               href="/#contactus"
-              className={`block px-3 py-3 rounded-md text-base font-bold ${
+              className={`block px-3 py-3 rounded-md text-sm sm:text-base font-bold touch-manipulation min-h-[44px] flex items-center ${
                 activeTab === 'contactus'
                   ? 'bg-white text-teal-700'
-                  : 'text-white hover:bg-teal-700/50'
+                  : 'text-white hover:bg-teal-700/50 active:bg-teal-700/70'
               }`}
               onClick={(e) => {
                 e.preventDefault();

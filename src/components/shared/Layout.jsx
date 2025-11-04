@@ -149,7 +149,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             lg:translate-x-0
           `}
         >
-          <nav className="p-4 sm:p-6 space-y-2">
+          <nav className="p-3 sm:p-4 md:p-6 space-y-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -160,10 +160,11 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
                   className={`
                     flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl
                     transition-all duration-200 font-medium text-sm sm:text-base
+                    touch-manipulation min-h-[44px]
                     ${
                       isActive
                         ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-105'
-                        : 'hover:bg-[var(--color-muted)] text-[var(--color-text-primary)] hover:scale-105 hover:shadow-md'
+                        : 'hover:bg-[var(--color-muted)] text-[var(--color-text-primary)] hover:scale-105 hover:shadow-md active:scale-95'
                     }
                   `}
                 >
@@ -177,7 +178,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-screen w-full lg:w-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-screen w-full lg:w-auto">
           <div className="animate-fade-in max-w-full overflow-x-hidden">
             {children}
           </div>

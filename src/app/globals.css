@@ -23,6 +23,43 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure touch targets are at least 44x44px for mobile */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Minimum touch target size for interactive elements */
+button:not([class*="min-h"]):not([class*="h-"]):not([class*="size-"]),
+a:not([class*="min-h"]):not([class*="h-"]) {
+  min-height: 44px;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent horizontal scroll on mobile */
+* {
+  box-sizing: border-box;
+}
+
+/* Smooth scrolling for better mobile experience */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Theme CSS Variables - Premium Design */

@@ -25,7 +25,14 @@ const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'md
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         className={`
           relative bg-[var(--color-surface)] rounded-xl sm:rounded-2xl shadow-2xl
@@ -34,7 +41,9 @@ const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'md
           border border-[var(--color-border)]
           animate-fade-in
           mx-2 sm:mx-0
+          touch-manipulation
         `}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {title && (

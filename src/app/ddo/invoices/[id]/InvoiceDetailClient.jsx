@@ -192,7 +192,38 @@ export default function InvoiceDetailClient() {
           </div>
 
           {/* Line Items */}
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-3">
+            {bill.lineItems && bill.lineItems.length > 0 ? (
+              bill.lineItems.map((item, index) => (
+                <div key={index} className="premium-card p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">S. No:</span>
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)]">{item.serialNo || index + 1}</span>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">Description:</span>
+                    <span className="text-sm text-[var(--color-text-primary)] text-right flex-1 ml-2">{item.description || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">HSN:</span>
+                    <span className="text-sm text-[var(--color-text-primary)]">{item.hsnNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">Amount:</span>
+                    <span className="text-base font-bold text-[var(--color-primary)]">{formatCurrency(item.amount || 0)}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-[var(--color-text-secondary)]">No line items found</p>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)]">
