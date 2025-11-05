@@ -343,6 +343,20 @@ export default function MasterDataPage({
                       </p>
                     )}
                   </div>
+                ) : field.type === 'select' && field.options ? (
+                  <select
+                    value={formData[field.key] ?? ''}
+                    onChange={(e) => updateFormData(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    required={field.required}
+                  >
+                    <option value="">Select {field.label}</option>
+                    {field.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 ) : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
                   <select
                     value={formData[field.key] ?? ''}

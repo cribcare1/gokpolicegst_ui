@@ -8,6 +8,7 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { validateGSTIN, validateEmail, validateMobile, validatePIN } from '@/lib/gstUtils';
+import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ export default function CustomersPage() {
     name: '',
     gstNumber: '',
     address: '',
+    stateCode: '',
     pin: '',
     mobile: '',
     email: '',
@@ -100,6 +102,7 @@ export default function CustomersPage() {
       name: '',
       gstNumber: '',
       address: '',
+      stateCode: '',
       pin: '',
       mobile: '',
       email: '',
@@ -300,6 +303,24 @@ export default function CustomersPage() {
                 rows={3}
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                State Code <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.stateCode}
+                onChange={(e) => setFormData({ ...formData, stateCode: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              >
+                <option value="">Select State Code</option>
+                {getAllStates().map((state) => (
+                  <option key={state.code} value={state.code}>
+                    {state.code} - {state.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">

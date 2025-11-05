@@ -407,9 +407,10 @@ export default function GstinLoginPage() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer transition-all"
+                  className="h-3 w-3 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer transition-all"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ minWidth: '12px', minHeight: '12px', width: '12px', height: '12px' }}
                 />
                 <label htmlFor="remember-me" className="ml-2 sm:ml-3 block text-xs sm:text-sm font-medium text-slate-700 cursor-pointer group-hover:text-teal-600 transition-colors">
                   Remember me

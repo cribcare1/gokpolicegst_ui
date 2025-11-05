@@ -58,6 +58,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
 
   const adminNavItems = [
     { href: '/admin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
+    { href: '/admin/profile', label: 'Profile', icon: 'profile' },
     { href: '/admin/master-data/pan', label: 'nav.pan', icon: 'pan' },
     { href: '/admin/master-data/gst', label: 'nav.gst', icon: 'gst' },
     { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
