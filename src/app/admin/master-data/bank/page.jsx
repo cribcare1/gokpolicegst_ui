@@ -16,7 +16,9 @@ const columns = [
   { key: 'accountHolderName', label: 'Account Holder Name' },
   { key: 'bankName', label: 'Bank Name' },
   { key: 'branchName', label: 'Branch Name' },
+  { key: 'accountType', label: 'Account Type' },
   { key: 'ifscCode', label: 'IFSC Code' },
+  { key: 'micrCode', label: 'MICR Code' },
 ];
 
 const formFields = [
@@ -25,8 +27,14 @@ const formFields = [
   { key: 'accountHolderName', label: 'Account Holder Name', required: true },
   { key: 'bankName', label: 'Bank Name', required: true },
   { key: 'branchName', label: 'Branch Name', required: true },
-  { key: 'accountType', label: 'Account Type', required: true },
+  { key: 'accountType', label: 'Account Type', required: true, type: 'select', options: [
+    { value: 'Savings', label: 'Savings' },
+    { value: 'Current', label: 'Current' },
+    { value: 'Fixed Deposit', label: 'Fixed Deposit' },
+    { value: 'Recurring Deposit', label: 'Recurring Deposit' },
+  ]},
   { key: 'ifscCode', label: 'IFSC Code', required: true, maxLength: 11 },
+  { key: 'micrCode', label: 'MICR Code', required: true, maxLength: 9 },
 ];
 
 const validateForm = (data) => {

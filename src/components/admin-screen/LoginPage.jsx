@@ -457,7 +457,8 @@ export default function AdminLogin() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer"
+                className="h-3 w-3 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer"
+                style={{ minWidth: '12px', minHeight: '12px', width: '12px', height: '12px' }}
               />
                 <label htmlFor="rememberMe" className="ml-2 block text-xs sm:text-sm text-slate-700 cursor-pointer">
                   Remember me

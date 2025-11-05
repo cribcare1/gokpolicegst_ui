@@ -8,6 +8,7 @@ import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { calculateGST, validateBillDate, canSubmitBill, formatCurrency } from '@/lib/gstUtils';
 import { validateGSTIN, validateEmail, validateMobile, validatePIN } from '@/lib/gstUtils';
+import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar } from '@/components/shared/ProgressBar';
@@ -34,6 +35,7 @@ export default function GenerateBillPage() {
     name: '',
     gstNumber: '',
     address: '',
+    stateCode: '',
     pin: '',
     mobile: '',
     email: '',
@@ -163,6 +165,7 @@ export default function GenerateBillPage() {
           name: '',
           gstNumber: '',
           address: '',
+          stateCode: '',
           pin: '',
           mobile: '',
           email: '',
@@ -740,6 +743,24 @@ export default function GenerateBillPage() {
                 rows={3}
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-[var(--color-text-primary)]">
+                State Code <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newCustomer.stateCode}
+                onChange={(e) => setNewCustomer({ ...newCustomer, stateCode: e.target.value })}
+                className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl shadow-sm"
+                required
+              >
+                <option value="">Select State Code</option>
+                {getAllStates().map((state) => (
+                  <option key={state.code} value={state.code}>
+                    {state.code} - {state.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
