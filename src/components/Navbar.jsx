@@ -143,7 +143,6 @@ const Navbar = memo(() => {
             <Link href="/" className="flex items-center min-w-0">
               <div className="relative w-8 sm:w-10 h-8 sm:h-10 md:h-12 flex-shrink-0">
               </div>
-              <span className="text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl font-bold ml-1 sm:ml-2 md:ml-4 truncate"> Bandobast GST Management System</span>
             </Link>
           </div>
           

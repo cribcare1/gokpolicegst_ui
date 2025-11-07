@@ -5,7 +5,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
-import { Edit, Save, X } from 'lucide-react';
+import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateEmail, validateMobile } from '@/lib/gstUtils';
 
@@ -103,9 +103,9 @@ export default function DDOProfilePage() {
 
   return (
     <Layout role="ddo">
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-3">
             <span className="gradient-text">Profile</span>
           </h1>
           <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
@@ -113,13 +113,21 @@ export default function DDOProfilePage() {
           </p>
         </div>
 
-        <div className="premium-card p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">DDO Profile</h2>
+        <div className="premium-card p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl shadow-lg">
+                <Building2 className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">DDO Profile</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mt-1">Update your organization details</p>
+              </div>
+            </div>
             {isEditing ? (
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button variant="secondary" onClick={handleCancel} disabled={loading} className="w-full sm:w-auto">
-                  <X className="mr-2" size={16} /> Cancel
+                  <X className="mr-2" size={18} /> Cancel
                 </Button>
                 <Button variant="primary" onClick={handleSave} disabled={loading} className="w-full sm:w-auto">
                   {loading ? (
@@ -131,107 +139,191 @@ export default function DDOProfilePage() {
                       Saving...
                     </span>
                   ) : (
-                    <><Save className="mr-2" size={16} /> Save</>
+                    <><Save className="mr-2" size={18} /> Save Changes</>
                   )}
                 </Button>
               </div>
             ) : (
               <Button variant="secondary" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
-                <Edit className="mr-2" size={16} /> Edit
+                <Edit className="mr-2" size={18} /> Edit Profile
               </Button>
             )}
           </div>
 
           {fetching ? (
-            <div className="py-8">
+            <div className="py-12">
               <LoadingProgressBar message="Loading profile data..." variant="primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+              {/* DDO Code */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  DDO Code
-                </label>
-                <input
-                  type="text"
-                  name="ddoCode"
-                  value={formData.ddoCode}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mt-1">
+                    <Hash className="text-blue-600 dark:text-blue-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      DDO Code
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="ddoCode"
+                        value={formData.ddoCode}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter DDO code"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.ddoCode}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
+              {/* DDO Name */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  DDO Name
-                </label>
-                <input
-                  type="text"
-                  name="ddoName"
-                  value={formData.ddoName}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg mt-1">
+                    <Building2 className="text-indigo-600 dark:text-indigo-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      DDO Name
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="ddoName"
+                        value={formData.ddoName}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter DDO name"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoName}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
+              {/* Area & City */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Area & City
-                </label>
-                <input
-                  type="text"
-                  name="ddoAreaCity"
-                  value={formData.ddoAreaCity}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Area & City
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="ddoAreaCity"
+                        value={formData.ddoAreaCity}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter area and city"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoAreaCity}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
+              {/* PIN */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  PIN
-                </label>
-                <input
-                  type="text"
-                  name="ddoPin"
-                  value={formData.ddoPin}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  maxLength={6}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      PIN Code
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="ddoPin"
+                        value={formData.ddoPin}
+                        onChange={handleChange}
+                        maxLength={6}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter pin code"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoPin}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
+              {/* Contact No */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Contact No
-                </label>
-                <input
-                  type="text"
-                  name="contactNo"
-                  value={formData.contactNo}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  maxLength={10}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg mt-1">
+                    <Phone className="text-orange-600 dark:text-orange-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Contact Number
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        name="contactNo"
+                        value={formData.contactNo}
+                        onChange={handleChange}
+                        maxLength={10}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter contact number"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.contactNo}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
+              {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  readOnly={!isEditing}
-                  className={`premium-input w-full ${!isEditing ? 'bg-[var(--color-muted)]' : ''}`}
-                />
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mt-1">
+                    <Mail className="text-purple-600 dark:text-purple-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Email Address
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter email address"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.email}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

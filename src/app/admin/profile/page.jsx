@@ -10,10 +10,45 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateEmail, validateMobile } from '@/lib/gstUtils';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
+// Helper function to parse address and extract city and pin code
+const parseAddress = (fullAddress) => {
+  if (!fullAddress) return { address: '', city: '', pinCode: '' };
+  
+  // Pattern to match: city-pincode at the end (e.g., "Bengaluru-560016")
+  const cityPinPattern = /,\s*([A-Za-z\s]+)-(\d{6})$/;
+  const match = fullAddress.match(cityPinPattern);
+  
+  if (match) {
+    const city = match[1].trim();
+    const pinCode = match[2];
+    const address = fullAddress.substring(0, match.index).trim();
+    return { address, city, pinCode };
+  }
+  
+  // Fallback: try to extract pin code at the end
+  const pinPattern = /-(\d{6})$/;
+  const pinMatch = fullAddress.match(pinPattern);
+  if (pinMatch) {
+    const beforePin = fullAddress.substring(0, pinMatch.index);
+    const lastCommaIndex = beforePin.lastIndexOf(',');
+    if (lastCommaIndex > 0) {
+      const address = beforePin.substring(0, lastCommaIndex).trim();
+      const city = beforePin.substring(lastCommaIndex + 1).trim();
+      const pinCode = pinMatch[1];
+      return { address, city, pinCode };
+    }
+  }
+  
+  // If no pattern matches, return the full address as address
+  return { address: fullAddress, city: '', pinCode: '' };
+};
+
 export default function AdminProfilePage() {
   const [formData, setFormData] = useState({
     profileName: 'Wings - E-business Services',
-    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016',
+    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
+    city: 'Bengaluru',
+    pinCode: '560016',
     email: 'Wingdebs@gmail.com',
     mobile: '9902991133',
   });
@@ -31,12 +66,28 @@ export default function AdminProfilePage() {
       // Try to fetch from API
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.PROFILE_GET);
       if (response?.status === 'success' && response?.data) {
-        setFormData({
-          profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
-          address: response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016',
-          email: response.data.email || 'Wingdebs@gmail.com',
-          mobile: response.data.mobile || '9902991133',
-        });
+        // If API returns separate city and pinCode, use them directly
+        if (response.data.city && response.data.pinCode) {
+          setFormData({
+            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            address: response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
+            city: response.data.city || 'Bengaluru',
+            pinCode: response.data.pinCode || '560016',
+            email: response.data.email || 'Wingdebs@gmail.com',
+            mobile: response.data.mobile || '9902991133',
+          });
+        } else {
+          // Parse the old format address string
+          const parsed = parseAddress(response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016');
+          setFormData({
+            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            address: parsed.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
+            city: parsed.city || 'Bengaluru',
+            pinCode: parsed.pinCode || '560016',
+            email: response.data.email || 'Wingdebs@gmail.com',
+            mobile: response.data.mobile || '9902991133',
+          });
+        }
       }
     } catch (error) {
       // Use default demo data
@@ -74,6 +125,8 @@ export default function AdminProfilePage() {
       const updateData = {
         companyName: formData.profileName,
         address: formData.address,
+        city: formData.city,
+        pinCode: formData.pinCode,
         email: formData.email,
         mobile: formData.mobile,
       };
@@ -226,11 +279,68 @@ export default function AdminProfilePage() {
                         onChange={handleChange}
                         rows={3}
                         className="premium-input w-full px-4 py-3 text-base resize-none"
-                        placeholder="Enter complete address"
+                        placeholder="Enter address (street, building, area)"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
                         <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{formData.address}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* City */}
+              <div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      City
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter city"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.city}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pin Code */}
+              <div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Pin Code
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="pinCode"
+                        value={formData.pinCode}
+                        onChange={handleChange}
+                        maxLength={6}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter pin code"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.pinCode}</p>
                       </div>
                     )}
                   </div>

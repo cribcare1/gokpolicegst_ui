@@ -9,9 +9,9 @@ export const translations = {
   // Navigation
   "nav.dashboard": { en: "Dashboard", kn: "ಡ್ಯಾಶ್ಬೋರ್ಡ್" },
   "nav.masterData": { en: "Master Data", kn: "ಮಾಸ್ಟರ್ ಡೇಟಾ" },
-  "nav.gst": { en: "GST Records", kn: "GST ದಾಖಲೆಗಳು" },
-  "nav.pan": { en: "PAN Records", kn: "PAN ದಾಖಲೆಗಳು" },
-  "nav.ddo": { en: "DDO Details", kn: "DDO ವಿವರಗಳು" },
+  "nav.gst": { en: "GST Master", kn: "GST ಮಾಸ್ಟರ್" },
+  "nav.pan": { en: "PAN Master", kn: "PAN ಮಾಸ್ಟರ್" },
+  "nav.ddo": { en: "DDO Mapping", kn: "DDO ಮ್ಯಾಪಿಂಗ್" },
   "nav.hsn": { en: "HSN Details", kn: "HSN ವಿವರಗಳು" },
   "nav.bank": { en: "Bank Details", kn: "ಬ್ಯಾಂಕ್ ವಿವರಗಳು" },
   "nav.customers": { en: "Customers", kn: "ಗ್ರಾಹಕರು" },

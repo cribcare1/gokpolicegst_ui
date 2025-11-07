@@ -22,8 +22,11 @@ export default function CustomersPage() {
     name: '',
     gstNumber: '',
     address: '',
+    city: '',
     stateCode: '',
     pin: '',
+    customerType: '',
+    exemptionCertNumber: '',
     mobile: '',
     email: '',
   });
@@ -39,6 +42,9 @@ export default function CustomersPage() {
       const filtered = customers.filter((customer) =>
         customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.gstNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.customerType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.exemptionCertNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.mobile?.includes(searchTerm)
       );
       setFilteredCustomers(filtered);
@@ -50,12 +56,12 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     // Load demo data immediately for instant UI
     const demoCustomers = [
-      { id: '1', name: 'ABC Enterprises', gstNumber: '29AABCU9603R1ZX', address: '123 MG Road, Bangalore - 560001', mobile: '9876543210', email: 'abc@example.com', pin: '560001' },
-      { id: '2', name: 'XYZ Corporation', gstNumber: '19ABCDE1234F1Z5', address: '456 Brigade Road, Bangalore - 560025', mobile: '9876543211', email: 'xyz@example.com', pin: '560025' },
-      { id: '3', name: 'Tech Solutions Pvt Ltd', gstNumber: '27AACCB1234D1Z2', address: '789 Indira Nagar, Bangalore - 560038', mobile: '9876543212', email: 'tech@example.com', pin: '560038' },
-      { id: '4', name: 'Global Industries', gstNumber: '09AABCT1234E1Z3', address: '321 Koramangala, Bangalore - 560095', mobile: '9876543213', email: 'global@example.com', pin: '560095' },
-      { id: '5', name: 'Prime Services', gstNumber: '07AACCF1234G1Z4', address: '654 Whitefield, Bangalore - 560066', mobile: '9876543214', email: 'prime@example.com', pin: '560066' },
-      { id: '6', name: 'Metro Constructions', gstNumber: '29METRO1234H1Z5', address: '987 Hebbal, Bangalore - 560024', mobile: '9876543215', email: 'metro@example.com', pin: '560024' },
+      { id: '1', name: 'ABC Enterprises', gstNumber: '29AABCU9603R1ZX', address: '123 MG Road', city: 'Bangalore', stateCode: '29', pin: '560001', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543210', email: 'abc@example.com' },
+      { id: '2', name: 'XYZ Corporation', gstNumber: '19ABCDE1234F1Z5', address: '456 Brigade Road', city: 'Bangalore', stateCode: '29', pin: '560025', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543211', email: 'xyz@example.com' },
+      { id: '3', name: 'Tech Solutions Pvt Ltd', gstNumber: '27AACCB1234D1Z2', address: '789 Indira Nagar', city: 'Bangalore', stateCode: '29', pin: '560038', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543212', email: 'tech@example.com' },
+      { id: '4', name: 'Global Industries', gstNumber: '09AABCT1234E1Z3', address: '321 Koramangala', city: 'Bangalore', stateCode: '29', pin: '560095', customerType: 'Govt', exemptionCertNumber: 'EXEMPT001', mobile: '9876543213', email: 'global@example.com' },
+      { id: '5', name: 'Prime Services', gstNumber: '07AACCF1234G1Z4', address: '654 Whitefield', city: 'Bangalore', stateCode: '29', pin: '560066', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543214', email: 'prime@example.com' },
+      { id: '6', name: 'Metro Constructions', gstNumber: '29METRO1234H1Z5', address: '987 Hebbal', city: 'Bangalore', stateCode: '29', pin: '560024', customerType: 'Govt', exemptionCertNumber: 'EXEMPT002', mobile: '9876543215', email: 'metro@example.com' },
     ];
     
     // Show demo data immediately
@@ -102,8 +108,11 @@ export default function CustomersPage() {
       name: '',
       gstNumber: '',
       address: '',
+      city: '',
       stateCode: '',
       pin: '',
+      customerType: '',
+      exemptionCertNumber: '',
       mobile: '',
       email: '',
     });
@@ -184,7 +193,10 @@ export default function CustomersPage() {
     { key: 'name', label: 'Customer Name' },
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'address', label: t('label.address') },
+    { key: 'city', label: 'City' },
+    { key: 'stateCode', label: 'State Code', render: (value) => value || '-' },
     { key: 'pin', label: 'PIN Code' },
+    { key: 'customerType', label: 'Type' },
     { key: 'mobile', label: t('label.mobile') },
     { key: 'email', label: t('label.email') },
   ];
@@ -306,6 +318,18 @@ export default function CustomersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
                 State Code <span className="text-red-500">*</span>
               </label>
               <select
@@ -333,6 +357,34 @@ export default function CustomersPage() {
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                 maxLength={6}
                 required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Type of Customer <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.customerType}
+                onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              >
+                <option value="">Select Type</option>
+                <option value="Govt">Govt</option>
+                <option value="Non Govt">Non Govt</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Exemption Certificate Number
+              </label>
+              <input
+                type="text"
+                value={formData.exemptionCertNumber}
+                onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                placeholder="Enter alphanumeric certificate number"
+                pattern="[A-Za-z0-9]*"
               />
             </div>
             <div>

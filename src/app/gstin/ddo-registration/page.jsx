@@ -7,7 +7,7 @@ import Table from '@/components/shared/Table';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
 
@@ -27,7 +27,9 @@ export default function GstinDDORegistrationPage() {
     ddoPin: '',
     contactNo: '',
     email: '',
+    password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchDDOs();
@@ -92,7 +94,9 @@ export default function GstinDDORegistrationPage() {
       ddoPin: '',
       contactNo: '',
       email: '',
+      password: '',
     });
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -105,7 +109,9 @@ export default function GstinDDORegistrationPage() {
       ddoPin: ddo.ddoPin || ddo.pin || '',
       contactNo: ddo.contactNo || ddo.mobile || '',
       email: ddo.email || '',
+      password: '', // Password field is empty by default, user can set new password
     });
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -154,6 +160,14 @@ export default function GstinDDORegistrationPage() {
         gstinNumber: gstinNumber,
         mobile: formData.contactNo,
       };
+
+      // Only include password when editing (not when adding new DDO)
+      if (editingDDO && formData.password) {
+        payload.password = formData.password;
+      } else if (!editingDDO) {
+        // Remove password from payload when adding new DDO
+        delete payload.password;
+      }
 
       const endpoint = editingDDO ? API_ENDPOINTS.DDO_UPDATE : API_ENDPOINTS.DDO_ADD;
       const response = await ApiService.handlePostRequest(endpoint, payload);
@@ -331,6 +345,36 @@ export default function GstinDDORegistrationPage() {
                   className="premium-input w-full"
                 />
               </div>
+
+              {/* Password field - only shown when editing */}
+              {editingDDO && (
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <div className="flex items-center gap-2">
+                      <Lock className="text-[var(--color-text-secondary)]" size={16} />
+                      <span>Password</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-normal">(Leave blank to keep current password)</span>
+                    </div>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="premium-input w-full pr-10"
+                      placeholder="Enter new password (optional)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
