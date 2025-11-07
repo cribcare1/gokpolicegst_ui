@@ -4,7 +4,7 @@ import Layout from '@/components/shared/Layout';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { FileText, DollarSign, Users, TrendingUp, AlertCircle, Receipt } from 'lucide-react';
+import { FileText, DollarSign, Users, TrendingUp, AlertCircle, Receipt, Activity, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 
 export default function GstinDashboard() {
@@ -85,35 +85,45 @@ export default function GstinDashboard() {
       label: 'Total Invoices',
       value: stats.totalInvoices,
       icon: Receipt,
-      color: 'bg-blue-500',
+      color: 'from-blue-500 to-blue-600',
+      bgColor: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30',
+      iconBg: 'bg-blue-500',
       href: '/gstin/invoices',
     },
     {
       label: 'Total Amount',
       value: `₹${(stats.totalAmount / 100000).toFixed(2)}L`,
       icon: DollarSign,
-      color: 'bg-green-500',
+      color: 'from-green-500 to-emerald-600',
+      bgColor: 'from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-800/30',
+      iconBg: 'bg-green-500',
       href: '#',
     },
     {
       label: 'Pending Bills',
       value: stats.pendingBills,
       icon: FileText,
-      color: 'bg-orange-500',
+      color: 'from-orange-500 to-amber-600',
+      bgColor: 'from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-800/30',
+      iconBg: 'bg-orange-500',
       href: '/gstin/pending',
     },
     {
       label: 'Approved Bills',
       value: stats.approvedBills,
       icon: TrendingUp,
-      color: 'bg-purple-500',
+      color: 'from-purple-500 to-violet-600',
+      bgColor: 'from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-800/30',
+      iconBg: 'bg-purple-500',
       href: '/gstin/approved',
     },
     {
       label: 'Mapped DDOs',
       value: stats.totalDDOs,
       icon: Users,
-      color: 'bg-teal-500',
+      color: 'from-teal-500 to-cyan-600',
+      bgColor: 'from-teal-50 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-800/30',
+      iconBg: 'bg-teal-500',
       href: '/gstin/ddos',
     },
   ];
@@ -129,16 +139,24 @@ export default function GstinDashboard() {
 
   return (
     <Layout role="gstin">
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
+        {/* Header Section */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
-            <span className="gradient-text">GSTIN Dashboard</span>
-          </h1>
-          <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
-            Welcome! Here's your GSTIN overview.
-          </p>
-          <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            <strong>GSTIN:</strong> {typeof window !== 'undefined' ? (localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB') : '29AAAGO1111W1ZB'}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-3">
+                <span className="gradient-text">GSTIN Dashboard</span>
+              </h1>
+              <p className="text-base sm:text-lg text-[var(--color-text-secondary)] mb-2">
+                Welcome! Here's your GSTIN overview.
+              </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)] rounded-xl border border-[var(--color-border)]">
+                <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">GSTIN:</span>
+                <span className="text-sm sm:text-base font-bold text-[var(--color-text-primary)] font-mono">
+                  {typeof window !== 'undefined' ? (localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB') : '29AAAGO1111W1ZB'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -151,27 +169,38 @@ export default function GstinDashboard() {
 
         {/* Stats Cards */}
         {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
             {statCards.map((card, index) => {
               const Icon = card.icon;
               return (
                 <a
                   key={card.label}
                   href={card.href}
-                  className="group premium-card p-4 sm:p-5 lg:p-6 block animate-fade-in"
+                  className="group premium-card relative overflow-hidden p-5 sm:p-6 lg:p-7 block animate-fade-in hover:scale-[1.02] transition-all duration-300"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1 sm:mb-2 truncate">
-                        {card.label}
-                      </p>
-                      <p className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-br from-[var(--color-text-primary)] to-[var(--color-text-secondary)] bg-clip-text text-transparent break-words">
-                        {card.value}
-                      </p>
+                  {/* Background Gradient */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${card.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                  
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 sm:mb-3">
+                          {card.label}
+                        </p>
+                        <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br ${card.color} bg-clip-text text-transparent leading-tight`}>
+                          {card.value}
+                        </p>
+                      </div>
+                      <div className={`${card.iconBg} p-3 sm:p-3.5 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 flex-shrink-0`}>
+                        <Icon className="text-white" size={24} strokeWidth={2.5} />
+                      </div>
                     </div>
-                    <div className={`${card.color} p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0`}>
-                      <Icon className="text-white" size={20} />
+                    <div className="mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex items-center text-xs font-medium text-[var(--color-text-secondary)]">
+                        <span>View details</span>
+                        <ArrowRight className="ml-1" size={14} />
+                      </div>
                     </div>
                   </div>
                 </a>
@@ -180,22 +209,26 @@ export default function GstinDashboard() {
           </div>
         )}
 
-        {/* Alerts */}
+        {/* Alerts & Reminders */}
         {alerts.length > 0 && (
-          <div className="premium-card p-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-800">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-amber-500/20 rounded-xl">
-                <AlertCircle className="text-amber-600 dark:text-amber-400" size={24} />
+          <div className="premium-card p-6 sm:p-8 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-amber-900/20 border-2 border-amber-200/50 dark:border-amber-800/50 shadow-lg">
+            <div className="flex items-start gap-4 sm:gap-6">
+              <div className="p-3 sm:p-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg flex-shrink-0">
+                <AlertCircle className="text-white" size={28} strokeWidth={2.5} />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-xl sm:text-2xl text-amber-900 dark:text-amber-100 mb-4 sm:mb-5 flex items-center gap-2">
                   Alerts & Reminders
                 </h3>
-                <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-300">
+                <ul className="space-y-3 sm:space-y-4">
                   {alerts.map((alert, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-amber-500 mt-1">▸</span>
-                      <span>{alert}</span>
+                    <li key={index} className="flex items-start gap-3 group/item">
+                      <div className="mt-1 p-1.5 bg-amber-400/20 dark:bg-amber-500/30 rounded-lg group-hover/item:bg-amber-400/30 dark:group-hover/item:bg-amber-500/40 transition-colors">
+                        <div className="w-2 h-2 bg-amber-600 dark:bg-amber-400 rounded-full" />
+                      </div>
+                      <span className="text-sm sm:text-base text-amber-800 dark:text-amber-200 font-medium flex-1 leading-relaxed">
+                        {alert}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -205,17 +238,27 @@ export default function GstinDashboard() {
         )}
 
         {/* Recent Activity */}
-        <div className="premium-card p-8">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-6 pb-4 border-b border-[var(--color-border)]">
-            Recent Activity
-          </h2>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="inline-block p-4 bg-[var(--color-muted)] rounded-2xl mb-4">
-                <FileText className="text-[var(--color-text-secondary)]" size={32} />
+        <div className="premium-card p-6 sm:p-8">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--color-border)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <Activity className="text-white" size={24} strokeWidth={2.5} />
               </div>
-              <p className="text-[var(--color-text-secondary)] font-medium">
-                Activity log will be displayed here
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
+                Recent Activity
+              </h2>
+            </div>
+          </div>
+          <div className="flex items-center justify-center py-12 sm:py-16">
+            <div className="text-center max-w-md">
+              <div className="inline-flex items-center justify-center p-6 bg-gradient-to-br from-[var(--color-muted)] to-[var(--color-surface)] rounded-3xl mb-6 shadow-inner">
+                <Activity className="text-[var(--color-text-secondary)]" size={48} strokeWidth={1.5} />
+              </div>
+              <p className="text-base sm:text-lg text-[var(--color-text-secondary)] font-medium mb-2">
+                No recent activity
+              </p>
+              <p className="text-sm text-[var(--color-text-secondary)]/70">
+                Activity log will be displayed here once available
               </p>
             </div>
           </div>

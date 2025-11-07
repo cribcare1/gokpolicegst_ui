@@ -1,67 +1,655 @@
 "use client";
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
+import Layout from '@/components/shared/Layout';
+import Table from '@/components/shared/Table';
+import Modal from '@/components/shared/Modal';
+import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
+import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { Plus, Edit, Trash2, Search, ArrowLeft, Users } from 'lucide-react';
+import { LoadingProgressBar } from '@/components/shared/ProgressBar';
+import { toast } from 'sonner';
 
-// Lazy load MasterDataPage for better performance
-const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
-  loading: () => <div className="premium-card p-8 animate-pulse"><div className="h-96 bg-gray-200 rounded"></div></div>,
-  ssr: false
-});
-
-const columns = [
-  { key: 'gstNumber', label: t('label.gstin') },
-  { key: 'name', label: t('label.name') },
-  { key: 'address', label: t('label.address') },
-  { key: 'contactNumber', label: t('label.mobile') },
-  { key: 'email', label: t('label.email') },
-];
-
-const formFields = [
-  { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
-  { key: 'name', label: t('label.name'), required: true },
-  { key: 'address', label: t('label.address'), type: 'textarea', required: true },
-  { key: 'contactNumber', label: t('label.mobile'), required: true, maxLength: 10 },
-  { key: 'email', label: t('label.email'), type: 'email', required: true },
-  { key: 'stateCode', label: t('label.stateCode'), type: 'number', required: false, min: 1, max: 99 },
-  { key: 'logo', label: t('label.logo'), type: 'file', required: false, accept: 'image/*' },
-];
-
-const validateForm = (data) => {
-  const gstValidation = validateGSTIN(data.gstNumber);
-  if (!gstValidation.valid) {
-    return { valid: false, message: gstValidation.message };
-  }
-  
-  const emailValidation = validateEmail(data.email);
-  if (!emailValidation.valid) {
-    return { valid: false, message: emailValidation.message };
-  }
-  
-  const mobileValidation = validateMobile(data.contactNumber);
-  if (!mobileValidation.valid) {
-    return { valid: false, message: mobileValidation.message };
-  }
-  
-  return { valid: true };
+// Extract PAN from GSTIN (positions 2-11, 0-indexed: 2-12)
+const extractPANFromGSTIN = (gstin) => {
+  if (!gstin || gstin.length < 12) return null;
+  return gstin.substring(2, 12).toUpperCase();
 };
 
-export default function GSTRecordsPage() {
+export default function GSTMasterPage() {
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [panList, setPanList] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDDOList, setShowDDOList] = useState(false);
+  const [selectedGSTIN, setSelectedGSTIN] = useState(null);
+  const [ddoList, setDdoList] = useState([]);
+  const [ddoLoading, setDdoLoading] = useState(false);
+  const [editingDDO, setEditingDDO] = useState(null);
+  const [ddoPasswordModal, setDdoPasswordModal] = useState(false);
+  const [ddoPasswordData, setDdoPasswordData] = useState({});
+
+  useEffect(() => {
+    fetchData();
+    fetchPANList();
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = data.filter((item) =>
+        Object.values(item).some((val) =>
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(data);
+    }
+  }, [searchTerm, data]);
+
+  const fetchPANList = async () => {
+    try {
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST, 2000);
+      if (response?.status === 'success' && response?.data) {
+        setPanList(response.data);
+      } else {
+        // Demo PAN data
+        setPanList([
+          { id: '1', panNumber: 'AAAGO1111W' },
+          { id: '2', panNumber: 'ABCDE1234F' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching PAN list:', error);
+      setPanList([
+        { id: '1', panNumber: 'AAAGO1111W' },
+        { id: '2', panNumber: 'ABCDE1234F' },
+      ]);
+    }
+  };
+
+  const fetchData = async () => {
+    const demoData = [
+      { 
+        id: '1', 
+        gstNumber: '29AAAGO1111W1ZB', 
+        name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
+        gstHolderName: 'Government of Karnataka',
+        address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
+        city: 'Bengaluru',
+        pin: '560001',
+        contactNumber: '9902991144', 
+        email: 'Copadmin@ksp.gov.in',
+        ddoCount: 5
+      },
+      { 
+        id: '2', 
+        gstNumber: '19ABCDE1234F1Z5', 
+        name: 'XYZ Corporation',
+        gstHolderName: 'XYZ Corporation',
+        address: '456 Brigade Road, Bangalore',
+        city: 'Bangalore',
+        pin: '560001',
+        contactNumber: '9876543211', 
+        email: 'xyz@example.com',
+        ddoCount: 2
+      },
+    ];
+    setData(demoData);
+    setFilteredData(demoData);
+    setLoading(false);
+    
+    try {
+      setLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      const response = await fetch(API_ENDPOINTS.GST_LIST, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result && result.status === 'success' && result.data && result.data.length > 0) {
+          // Fetch DDO count for each GST
+          const dataWithCounts = await Promise.all(
+            result.data.map(async (gst) => {
+              try {
+                const ddoResponse = await ApiService.handleGetRequest(
+                  `${API_ENDPOINTS.DDO_LIST}?gstin=${gst.gstNumber}`,
+                  1000
+                );
+                const ddoCount = ddoResponse?.data?.length || 0;
+                return { ...gst, ddoCount };
+              } catch {
+                return { ...gst, ddoCount: 0 };
+              }
+            })
+          );
+          setData(dataWithCounts);
+          setFilteredData(dataWithCounts);
+        }
+      }
+    } catch (error) {
+      console.log('Using demo data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDDOList = async (gstinNumber) => {
+    setDdoLoading(true);
+    try {
+      const response = await ApiService.handleGetRequest(
+        `${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`,
+        2000
+      );
+      if (response?.status === 'success' && response?.data) {
+        setDdoList(response.data);
+      } else {
+        // Demo DDO data
+        setDdoList([
+          { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', email: 'ddo001@example.com' },
+          { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', email: 'ddo002@example.com' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching DDO list:', error);
+      setDdoList([
+        { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', email: 'ddo001@example.com' },
+        { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', email: 'ddo002@example.com' },
+      ]);
+    } finally {
+      setDdoLoading(false);
+    }
+  };
+
+  const handleAdd = () => {
+    setEditingItem(null);
+    setFormData({});
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData(item);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (item) => {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    try {
+      const response = await ApiService.handlePostRequest(
+        `${API_ENDPOINTS.GST_DELETE}${item.id}`,
+        {}
+      );
+      
+      if (response && response.status === 'success') {
+        toast.success(t('alert.success'));
+        fetchData();
+      } else {
+        toast.error(response?.message || t('alert.error'));
+      }
+    } catch (error) {
+      toast.error(t('alert.error'));
+    }
+  };
+
+  const validateForm = (data) => {
+    const gstValidation = validateGSTIN(data.gstNumber);
+    if (!gstValidation.valid) {
+      return { valid: false, message: gstValidation.message };
+    }
+
+    // Extract PAN from GSTIN and validate it exists
+    const extractedPAN = extractPANFromGSTIN(data.gstNumber);
+    if (!extractedPAN) {
+      return { valid: false, message: 'Invalid GSTIN format - cannot extract PAN' };
+    }
+
+    const panExists = panList.some(pan => pan.panNumber === extractedPAN);
+    if (!panExists) {
+      return { 
+        valid: false, 
+        message: `GSTIN contains PAN "${extractedPAN}" which does not exist in PAN Master. Please add the PAN first.` 
+      };
+    }
+    
+    const emailValidation = validateEmail(data.email);
+    if (!emailValidation.valid) {
+      return { valid: false, message: emailValidation.message };
+    }
+    
+    const mobileValidation = validateMobile(data.contactNumber);
+    if (!mobileValidation.valid) {
+      return { valid: false, message: mobileValidation.message };
+    }
+    
+    return { valid: true };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const validation = validateForm(formData);
+    if (!validation.valid) {
+      toast.error(validation.message || t('validation.required'));
+      return;
+    }
+
+    try {
+      const url = editingItem ? API_ENDPOINTS.GST_UPDATE : API_ENDPOINTS.GST_ADD;
+      
+      // Prepare form data - remove empty password if not provided in edit mode
+      const submitData = { ...formData };
+      if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
+        delete submitData.password;
+      }
+      
+      const hasFiles = Object.values(submitData).some(value => value instanceof File);
+      
+      let response;
+      if (hasFiles) {
+        const multipartFormData = new FormData();
+        const jsonData = {};
+        
+        Object.keys(submitData).forEach(key => {
+          if (submitData[key] instanceof File) {
+            multipartFormData.append(key, submitData[key]);
+          } else {
+            jsonData[key] = submitData[key];
+          }
+        });
+        
+        multipartFormData.append('formData', JSON.stringify(jsonData));
+        
+        const token = localStorage.getItem('userToken') || '';
+        const fetchResponse = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: multipartFormData,
+        });
+        
+        response = await fetchResponse.json();
+      } else {
+        response = await ApiService.handlePostRequest(url, submitData);
+      }
+      
+      if (response && response.status === 'success') {
+        toast.success(t('alert.success'));
+        setIsModalOpen(false);
+        fetchData();
+      } else {
+        toast.error(response?.message || t('alert.error'));
+      }
+    } catch (error) {
+      toast.error(t('alert.error'));
+    }
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDDOCountClick = async (gstItem) => {
+    setSelectedGSTIN(gstItem);
+    setShowDDOList(true);
+    await fetchDDOList(gstItem.gstNumber);
+  };
+
+  const handleDDOEditPassword = (ddo) => {
+    setEditingDDO(ddo);
+    setDdoPasswordData({ password: '' });
+    setDdoPasswordModal(true);
+  };
+
+  const handleDDOPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!ddoPasswordData.password || ddoPasswordData.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      const response = await ApiService.handlePostRequest(API_ENDPOINTS.RESET_DDO_PASSWORD, {
+        userName: editingDDO.ddoCode || editingDDO.email,
+        password: ddoPasswordData.password,
+      });
+
+      if (response && response.status === 'success') {
+        toast.success('Password updated successfully');
+        setDdoPasswordModal(false);
+        setEditingDDO(null);
+        setDdoPasswordData({});
+      } else {
+        toast.error(response?.message || 'Failed to update password');
+      }
+    } catch (error) {
+      toast.error('Error updating password');
+    }
+  };
+
+  const columns = [
+    { key: 'gstNumber', label: t('label.gstin') },
+    { key: 'gstHolderName', label: 'GST Holder Name' },
+    { key: 'name', label: t('label.name') },
+    { key: 'address', label: t('label.address') },
+    { key: 'city', label: 'City' },
+    { key: 'pin', label: 'PIN' },
+    { key: 'contactNumber', label: t('label.mobile') },
+    { key: 'email', label: t('label.email') },
+    { 
+      key: 'ddoCount', 
+      label: 'DDO Count',
+      render: (value, row) => (
+        <button
+          onClick={() => handleDDOCountClick(row)}
+          className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1"
+        >
+          <Users size={16} />
+          {value || 0}
+        </button>
+      )
+    },
+  ];
+
+  const tableActions = (row) => (
+    <>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleEdit(row);
+        }}
+        className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
+        aria-label="Edit"
+      >
+        <Edit size={18} />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDelete(row);
+        }}
+        className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-red-600 dark:text-red-400"
+        aria-label="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </>
+  );
+
+  const formFields = [
+    { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
+    { key: 'gstHolderName', label: 'GST Holder Name', required: true },
+    { key: 'name', label: t('label.name'), required: true },
+    { key: 'address', label: t('label.address'), type: 'textarea', required: true },
+    { key: 'city', label: 'City', required: true },
+    { key: 'pin', label: 'PIN', required: true, maxLength: 6, type: 'text' },
+    { key: 'contactNumber', label: t('label.mobile'), required: true, maxLength: 10 },
+    { key: 'email', label: t('label.email'), type: 'email', required: true },
+    { key: 'stateCode', label: t('label.stateCode'), type: 'number', required: false, min: 1, max: 99 },
+    { key: 'logo', label: t('label.logo'), type: 'file', required: false, accept: 'image/*' },
+  ];
+
+  // Add password field only in edit mode
+  if (editingItem) {
+    formFields.push({ key: 'password', label: 'Password', type: 'password', required: false });
+  }
+
   return (
-    <MasterDataPage
-      title="GST Records"
-      endpoint={{
-        LIST: API_ENDPOINTS.GST_LIST,
-        ADD: API_ENDPOINTS.GST_ADD,
-        UPDATE: API_ENDPOINTS.GST_UPDATE,
-        DELETE: API_ENDPOINTS.GST_DELETE,
-      }}
-      columns={columns}
-      formFields={formFields}
-      validateForm={validateForm}
-      role="admin"
-    />
+    <Layout role="admin">
+      {!showDDOList ? (
+        <div className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
+                <span className="gradient-text">GST Master</span>
+              </h1>
+              <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
+                Manage gst master efficiently
+              </p>
+            </div>
+            <Button onClick={handleAdd} variant="primary" className="group w-full sm:w-auto">
+              <Plus className="mr-2 group-hover:rotate-90 transition-transform duration-300" size={18} />
+              {t('btn.add')}
+            </Button>
+          </div>
+
+          <div className="relative mb-4 sm:mb-6">
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={18} />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="premium-input w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3.5 bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none shadow-md text-sm sm:text-base"
+            />
+          </div>
+
+          <div className="premium-card overflow-hidden">
+            {loading ? (
+              <div className="p-8 sm:p-16">
+                <LoadingProgressBar message="Loading data..." variant="primary" />
+              </div>
+            ) : (
+              <Table
+                columns={columns}
+                data={filteredData}
+                actions={tableActions}
+              />
+            )}
+          </div>
+
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={editingItem ? `Edit GST Master` : `Add GST Master`}
+            size="lg"
+          >
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {formFields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      value={formData[field.key] || ''}
+                      onChange={(e) => updateFormData(field.key, e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      rows={3}
+                      required={field.required}
+                    />
+                  ) : field.type === 'file' ? (
+                    <div>
+                      <input
+                        type="file"
+                        accept={field.accept || 'image/*'}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            updateFormData(field.key, file);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
+                        required={field.required}
+                      />
+                      {formData[field.key] && formData[field.key] instanceof File && (
+                        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                          Selected: {formData[field.key].name}
+                        </p>
+                      )}
+                      {formData[field.key] && typeof formData[field.key] === 'string' && (
+                        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                          Current: {formData[field.key]}
+                        </p>
+                      )}
+                    </div>
+                  ) : field.type === 'password' ? (
+                    <input
+                      type="password"
+                      value={formData[field.key] || ''}
+                      onChange={(e) => updateFormData(field.key, e.target.value)}
+                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      placeholder="Leave blank to keep current password"
+                      required={field.required}
+                    />
+                  ) : (
+                    <input
+                      type={field.type || 'text'}
+                      value={formData[field.key] ?? ''}
+                      onChange={(e) => {
+                        let value = e.target.value;
+                        if (field.type === 'number') {
+                          const numValue = value === '' ? '' : parseInt(value);
+                          updateFormData(field.key, isNaN(numValue) ? '' : numValue);
+                        } else {
+                          updateFormData(field.key, value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      placeholder={field.placeholder}
+                      required={field.required}
+                      maxLength={field.maxLength}
+                      min={field.min}
+                      max={field.max}
+                    />
+                  )}
+                </div>
+              ))}
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  {t('btn.cancel')}
+                </Button>
+                <Button type="submit" variant="primary">
+                  {t('btn.save')}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        </div>
+      ) : (
+        <div className="space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-4 mb-6">
+            <Button
+              variant="secondary"
+              onClick={() => setShowDDOList(false)}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft size={18} />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
+                <span className="gradient-text">DDO List</span>
+              </h1>
+              <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
+                GSTIN: {selectedGSTIN?.gstNumber}
+              </p>
+            </div>
+          </div>
+
+          <div className="premium-card overflow-hidden">
+            {ddoLoading ? (
+              <div className="p-8 sm:p-16">
+                <LoadingProgressBar message="Loading DDOs..." variant="primary" />
+              </div>
+            ) : (
+              <Table
+                columns={[
+                  { key: 'ddoCode', label: t('label.ddoCode') },
+                  { key: 'ddoName', label: t('label.ddoName') },
+                  { key: 'email', label: t('label.email') },
+                  {
+                    key: 'actions',
+                    label: 'Actions',
+                    render: (_, row) => (
+                      <button
+                        onClick={() => handleDDOEditPassword(row)}
+                        className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
+                        aria-label="Edit Password"
+                      >
+                        <Edit size={18} />
+                      </button>
+                    ),
+                  },
+                ]}
+                data={ddoList}
+              />
+            )}
+          </div>
+
+          <Modal
+            isOpen={ddoPasswordModal}
+            onClose={() => {
+              setDdoPasswordModal(false);
+              setEditingDDO(null);
+              setDdoPasswordData({});
+            }}
+            title="Edit DDO Password"
+            size="md"
+          >
+            <form onSubmit={handleDDOPasswordSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                  DDO Code: <span className="font-normal">{editingDDO?.ddoCode}</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                  New Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={ddoPasswordData.password || ''}
+                  onChange={(e) => setDdoPasswordData({ password: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  placeholder="Enter new password (min 6 characters)"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setDdoPasswordModal(false);
+                    setEditingDDO(null);
+                    setDdoPasswordData({});
+                  }}
+                >
+                  {t('btn.cancel')}
+                </Button>
+                <Button type="submit" variant="primary">
+                  Update Password
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        </div>
+      )}
+    </Layout>
   );
 }
-

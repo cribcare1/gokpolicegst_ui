@@ -48,7 +48,7 @@ const validateForm = (data) => {
 export default function PANRecordsPage() {
   return (
     <MasterDataPage
-      title="PAN Records"
+      title="PAN Master"
       endpoint={{
         LIST: API_ENDPOINTS.PAN_LIST,
         ADD: API_ENDPOINTS.PAN_ADD,

@@ -69,6 +69,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
 
   const ddoNavItems = [
     { href: '/ddo_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
+    { href: '/ddo/profile', label: 'Profile', icon: 'profile' },
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
     { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
@@ -77,11 +78,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
   const gstinNavItems = [
     { href: '/gstin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
-    { href: '/gstin/invoices', label: 'nav.invoiceList', icon: 'invoices' },
-    { href: '/gstin/pending', label: 'nav.pendingBills', icon: 'bill' },
-    { href: '/gstin/approved', label: 'nav.approvedBills', icon: 'gst' },
     { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
-    { href: '/gstin/ddos', label: 'nav.ddo', icon: 'ddo' },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
   ];
 
@@ -146,7 +143,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             fixed lg:static left-0 z-40
             top-[56px] sm:top-[64px] lg:top-0 lg:inset-y-0
             h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-auto
-            w-64 sm:w-72 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)]
+            w-64 sm:w-72 flex-shrink-0 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)]
             transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 overflow-y-auto
@@ -181,7 +178,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 w-full lg:w-auto bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-[calc(100vh-56px)] sm:min-h-[calc(100vh-64px)] lg:min-h-screen">
+        <main className="flex-1 min-w-0 w-full lg:w-auto bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-[calc(100vh-56px)] sm:min-h-[calc(100vh-64px)] lg:min-h-screen">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in max-w-full overflow-x-hidden">
             {children}
           </div>

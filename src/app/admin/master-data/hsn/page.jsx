@@ -18,13 +18,22 @@ const columns = [
   { key: 'sgst', label: 'SGST (%)' },
 ];
 
+// Common GST rate options
+const gstRateOptions = [
+  { value: '0', label: '0%' },
+  { value: '5', label: '5%' },
+  { value: '12', label: '12%' },
+  { value: '18', label: '18%' },
+  { value: '28', label: '28%' },
+];
+
 const formFields = [
   { key: 'hsnNumber', label: t('label.hsnNumber'), required: true },
   { key: 'name', label: t('label.name'), required: true },
-  { key: 'gstTaxRate', label: 'GST Tax Rate (%)', type: 'number', required: true, placeholder: '18' },
-  { key: 'igst', label: 'IGST (%)', type: 'number', required: true, placeholder: '18' },
-  { key: 'cgst', label: 'CGST (%)', type: 'number', required: true, placeholder: '9' },
-  { key: 'sgst', label: 'SGST (%)', type: 'number', required: true, placeholder: '9' },
+  { key: 'gstTaxRate', label: 'GST Tax Rate (%)', type: 'select', required: true, options: gstRateOptions },
+  { key: 'igst', label: 'IGST (%)', type: 'select', required: true, options: gstRateOptions },
+  { key: 'cgst', label: 'CGST (%)', type: 'select', required: true, options: gstRateOptions },
+  { key: 'sgst', label: 'SGST (%)', type: 'select', required: true, options: gstRateOptions },
 ];
 
 const validateForm = (data) => {
@@ -32,7 +41,11 @@ const validateForm = (data) => {
     return { valid: false, message: 'HSN Number and Name are required' };
   }
   
-  // Validate GST rates
+  // Validate GST rates (values come as strings from dropdown)
+  if (!data.gstTaxRate || !data.igst || !data.cgst || !data.sgst) {
+    return { valid: false, message: 'All GST rates are required' };
+  }
+  
   const gstRate = parseFloat(data.gstTaxRate);
   const igst = parseFloat(data.igst);
   const cgst = parseFloat(data.cgst);
