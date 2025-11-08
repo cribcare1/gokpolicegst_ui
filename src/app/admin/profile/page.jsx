@@ -44,20 +44,35 @@ const parseAddress = (fullAddress) => {
 };
 
 export default function AdminProfilePage() {
-  const [formData, setFormData] = useState({
-    profileName: 'Wings - E-business Services',
-    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
-    city: 'Bengaluru',
-    pinCode: '560016',
-    email: 'Wingdebs@gmail.com',
-    mobile: '9902991133',
-  });
+  // const [formData, setFormData] = useState({
+  //   fullName: 'Wings - E-business Services',
+  //   address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
+  //   city: 'Bengaluru',
+  //   pinCode: '560016',
+  //   email: 'Wingdebs@gmail.com',
+  //   mobileNumber: '9902991133',
+  // });
+  const [formData, setFormData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
-    fetchProfileData();
+ useEffect(() => {
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+
+    if (storedProfile) {
+      const userProfile = JSON.parse(storedProfile);
+      // If data exists and not empty
+      if (userProfile && Object.keys(userProfile).length > 0) {
+        setFormData(userProfile);
+        setLoading(false);
+        setFetching(false);
+      } else {
+        fetchProfileData();
+      }
+    } else {
+      fetchProfileData();
+    }
   }, []);
 
   const fetchProfileData = async () => {
@@ -69,23 +84,23 @@ export default function AdminProfilePage() {
         // If API returns separate city and pinCode, use them directly
         if (response.data.city && response.data.pinCode) {
           setFormData({
-            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            fullName: response.data.companyName || response.data.fullName || 'Wings - E-business Services',
             address: response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
             city: response.data.city || 'Bengaluru',
             pinCode: response.data.pinCode || '560016',
             email: response.data.email || 'Wingdebs@gmail.com',
-            mobile: response.data.mobile || '9902991133',
+            mobileNumber: response.data.mobileNumber || '9902991133',
           });
         } else {
           // Parse the old format address string
           const parsed = parseAddress(response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016');
           setFormData({
-            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            fullName: response.data.companyName || response.data.fullName || 'Wings - E-business Services',
             address: parsed.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
             city: parsed.city || 'Bengaluru',
             pinCode: parsed.pinCode || '560016',
             email: response.data.email || 'Wingdebs@gmail.com',
-            mobile: response.data.mobile || '9902991133',
+            mobileNumber: response.data.mobileNumber || '9902991133',
           });
         }
       }
@@ -99,7 +114,7 @@ export default function AdminProfilePage() {
 
   const handleSave = async () => {
     // Validate form
-    if (!formData.profileName || formData.profileName.trim() === '') {
+    if (!formData.fullName || formData.fullName.trim() === '') {
       toast.error('Profile Name is required');
       return;
     }
@@ -112,8 +127,8 @@ export default function AdminProfilePage() {
       }
     }
 
-    if (formData.mobile) {
-      const mobileValidation = validateMobile(formData.mobile);
+    if (formData.mobileNumber) {
+      const mobileValidation = validateMobile(formData.mobileNumber);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
@@ -123,16 +138,17 @@ export default function AdminProfilePage() {
     setLoading(true);
     try {
       const updateData = {
-        companyName: formData.profileName,
+        id: formData.id,
+        fullName: formData.fullName,
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
         email: formData.email,
-        mobile: formData.mobile,
+        mobileNumber: formData.mobileNumber,
       };
 
       const response = await ApiService.handlePostRequest(
-        API_ENDPOINTS.PROFILE_UPDATE,
+        API_ENDPOINTS.ADMIN_PROFILE_UPDATE,
         updateData
       );
 
@@ -247,15 +263,15 @@ export default function AdminProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="profileName"
-                        value={formData.profileName}
+                        name="fullName"
+                        value={formData.fullName}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter profile name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.profileName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.fullName}</p>
                       </div>
                     )}
                   </div>
@@ -388,8 +404,8 @@ export default function AdminProfilePage() {
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="mobile"
-                        value={formData.mobile}
+                        name="mobileNumber"
+                        value={formData.mobileNumber}
                         onChange={handleChange}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
@@ -397,7 +413,7 @@ export default function AdminProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobileNumber}</p>
                       </div>
                     )}
                   </div>

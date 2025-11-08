@@ -7,17 +7,30 @@ import { toast } from 'sonner';
 import { Edit, Save, X } from 'lucide-react';
 
 export default function ProfileMaster() {
-  const [formData, setFormData] = useState({
-    companyName: 'Wings - E-business Services',
-    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016',
-    email: 'Wingdebs@gmail.com',
-    mobile: '9902991133',
-  });
+  // const [formData, setFormData] = useState({
+  //   companyName: 'Wings - E-business Services',
+  //   address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016',
+  //   email: 'Wingdebs@gmail.com',
+  //   mobile: '9902991133',
+  // });
+  const [formData, setFormData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchProfileData();
+ useEffect(() => {
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+
+    if (storedProfile) {
+      const userProfile = JSON.parse(storedProfile);
+      // If data exists and not empty
+      if (userProfile && Object.keys(userProfile).length > 0) {
+        setFormData(userProfile);
+      } else {
+        fetchProfileData();
+      }
+    } else {
+      fetchProfileData();
+    }
   }, []);
 
   const fetchProfileData = async () => {

@@ -10,9 +10,9 @@ const MasterDataPage = dynamic(() => import('@/components/master-data/MasterData
 });
 
 const columns = [
-  { key: 'hsnNumber', label: t('label.hsnNumber') },
-  { key: 'name', label: t('label.name') },
-  { key: 'gstTaxRate', label: 'GST Tax Rate (%)' },
+  { key: 'hsnCode', label: t('label.hsnNumber') },
+  { key: 'serviceName', label: t('label.name') },
+  { key: 'totalGst', label: 'GST Tax Rate (%)' },
   { key: 'igst', label: 'IGST (%)' },
   { key: 'cgst', label: 'CGST (%)' },
   { key: 'sgst', label: 'SGST (%)' },
@@ -28,12 +28,12 @@ const gstRateOptions = [
 ];
 
 const formFields = [
-  { key: 'hsnNumber', label: t('label.hsnNumber'), required: true },
-  { key: 'name', label: t('label.name'), required: true },
-  { key: 'gstTaxRate', label: 'GST Tax Rate (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'igst', label: 'IGST (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'cgst', label: 'CGST (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'sgst', label: 'SGST (%)', type: 'select', required: true, options: gstRateOptions },
+  { key: 'hsnCode', label: t('label.hsnNumber'), required: true },
+  { key: 'serviceName', label: t('label.name'), required: true },
+  { key: 'totalGst', label: 'GST Tax Rate (%)',  required: true },
+  { key: 'igst', label: 'IGST (%)',  required: true},
+  { key: 'cgst', label: 'CGST (%)',  required: true},
+  { key: 'sgst', label: 'SGST (%)',  required: true},
 ];
 
 const validateForm = (data) => {
@@ -42,11 +42,11 @@ const validateForm = (data) => {
   }
   
   // Validate GST rates (values come as strings from dropdown)
-  if (!data.gstTaxRate || !data.igst || !data.cgst || !data.sgst) {
+  if (!data.totalGst || !data.igst || !data.cgst || !data.sgst) {
     return { valid: false, message: 'All GST rates are required' };
   }
   
-  const gstRate = parseFloat(data.gstTaxRate);
+  const gstRate = parseFloat(data.totalGst);
   const igst = parseFloat(data.igst);
   const cgst = parseFloat(data.cgst);
   const sgst = parseFloat(data.sgst);

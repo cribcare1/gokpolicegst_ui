@@ -79,9 +79,14 @@ export default function AdminLogin() {
         setUserData(response.login_response);
         localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
-        localStorage.setItem(LOGIN_CONSTANT.DDO_COUNT, response.login_response.ddoCount);
-        localStorage.setItem(LOGIN_CONSTANT.FORM_16_COUNT, response.login_response.form16Count);
-        localStorage.setItem(LOGIN_CONSTANT.FORM_16A_COUNT, response.login_response.form16ACount);
+        localStorage.setItem(LOGIN_CONSTANT.FULL_NAME, response.login_response.fullName);
+        localStorage.setItem(LOGIN_CONSTANT.MOBILE_NUMBER, response.login_response.mobileNumber);
+        localStorage.setItem(LOGIN_CONSTANT.EMAIL, response.login_response.email);
+        localStorage.setItem(LOGIN_CONSTANT.ADDRESS, response.login_response.address);
+        localStorage.setItem(LOGIN_CONSTANT.CITY, response.login_response.city);
+        localStorage.setItem(LOGIN_CONSTANT.PINCODE, response.login_response.pinCode);
+
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
   
         if (rememberMe) {
           localStorage.setItem('rememberedEmail', email);
