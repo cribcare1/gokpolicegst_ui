@@ -333,8 +333,9 @@ export default function MasterDataPage({
                   <select
                     value={formData[field.key] ?? ''}
                     onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     required={field.required}
+                    disabled={field.readOnly}
                   >
                     <option value="">Select {field.label}</option>
                     {field.options.map((option) => (
@@ -347,8 +348,9 @@ export default function MasterDataPage({
                   <select
                     value={formData[field.key] ?? ''}
                     onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     required={field.required}
+                    disabled={field.readOnly}
                   >
                     <option value="">Select GSTIN Number</option>
                     {gstinList.map((gstin) => (
@@ -372,12 +374,20 @@ export default function MasterDataPage({
                       if (field.type === 'number') {
                         const numValue = value === '' ? '' : parseInt(value);
                         updateFormData(field.key, isNaN(numValue) ? '' : numValue);
-                      } else {
+
+                      } else if (field.key === 'totalGst') {
+                          const total = parseFloat(value) || 0;
+                          updateFormData('totalGst', total);
+                          updateFormData('igst', total);
+                          updateFormData('cgst', total / 2);
+                          updateFormData('sgst', total / 2);
+                      }else{
                         updateFormData(field.key, value);
                       }
                     }}
 
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    readOnly={field.readOnly}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     placeholder={field.placeholder}
                     required={field.required}
                     maxLength={field.maxLength}
