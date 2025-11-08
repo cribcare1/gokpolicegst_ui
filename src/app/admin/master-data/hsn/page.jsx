@@ -10,6 +10,7 @@ const MasterDataPage = dynamic(() => import('@/components/master-data/MasterData
 });
 
 const columns = [
+  { key: 'gstinNumber', label: t('label.gstin') },
   { key: 'hsnCode', label: t('label.hsnNumber') },
   { key: 'serviceName', label: t('label.name') },
   { key: 'totalGst', label: 'GST Tax Rate (%)' },
@@ -28,12 +29,13 @@ const gstRateOptions = [
 ];
 
 const formFields = [
+  { key: 'gstinNumber', label: t('label.gstin'), required: true, maxLength: 15 },
   { key: 'hsnCode', label: t('label.hsnNumber'), required: true },
   { key: 'serviceName', label: t('label.name'), required: true },
   { key: 'totalGst', label: 'GST Tax Rate (%)',  required: true },
-  { key: 'igst', label: 'IGST (%)',  required: true},
-  { key: 'cgst', label: 'CGST (%)',  required: true},
-  { key: 'sgst', label: 'SGST (%)',  required: true},
+  { key: 'igst', label: 'IGST (%)',  required: true, readOnly: true },
+  { key: 'cgst', label: 'CGST (%)',  required: true, readOnly: true },
+  { key: 'sgst', label: 'SGST (%)',  required: true, readOnly: true },
 ];
 
 const validateForm = (data) => {
