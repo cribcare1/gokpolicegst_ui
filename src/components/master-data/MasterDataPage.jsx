@@ -48,18 +48,18 @@ export default function MasterDataPage({
 
   const getDemoData = () => {
     const endpointStr = endpoint.LIST || '';
-    if (endpointStr.includes('gst')) {
-      return [
-        { id: '1', gstNumber: '29AAAGO1111W1ZB', name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka', address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001', contactNumber: '9902991144', email: 'Copadmin@ksp.gov.in' },
-        { id: '2', gstNumber: '19ABCDE1234F1Z5', name: 'XYZ Corporation', address: '456 Brigade Road, Bangalore', contactNumber: '9876543211', email: 'xyz@example.com' },
-      ];
-    } else if (endpointStr.includes('pan')) {
-      return [
-        { id: '1', panNumber: 'AMQPP1137R', name: 'GOK, Police department.', address: 'No.1, Police Head Quartez, Napathunga road, K R Circle, Bengaluru-560001', mobile: '9902991133', email: 'dgpolicehq@ksp.gov.in' },
-        { id: '2', panNumber: 'FGHIJ5678K', name: 'Jane Smith', address: '456 Brigade Road, Bangalore', mobile: '9876543211', email: 'jane@example.com' },
-        { id: '3', panNumber: 'LMNOP9012Q', name: 'Robert Johnson', address: '789 Indira Nagar, Bangalore', mobile: '9876543212', email: 'robert@example.com' },
-      ];
-    } else if (endpointStr.includes('ddo')) {
+    // if (endpointStr.includes('gst')) {
+    //   return [
+    //     { id: '1', gstNumber: '29AAAGO1111W1ZB', name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka', address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001', contactNumber: '9902991144', email: 'Copadmin@ksp.gov.in' },
+    //     { id: '2', gstNumber: '19ABCDE1234F1Z5', name: 'XYZ Corporation', address: '456 Brigade Road, Bangalore', contactNumber: '9876543211', email: 'xyz@example.com' },
+    //   ];
+    // } else if (endpointStr.includes('pan')) {
+    //   return [
+    //     { id: '1', panNumber: 'AMQPP1137R', name: 'GOK, Police department.', address: 'No.1, Police Head Quartez, Napathunga road, K R Circle, Bengaluru-560001', mobile: '9902991133', email: 'dgpolicehq@ksp.gov.in' },
+    //     { id: '2', panNumber: 'FGHIJ5678K', name: 'Jane Smith', address: '456 Brigade Road, Bangalore', mobile: '9876543211', email: 'jane@example.com' },
+    //     { id: '3', panNumber: 'LMNOP9012Q', name: 'Robert Johnson', address: '789 Indira Nagar, Bangalore', mobile: '9876543212', email: 'robert@example.com' },
+    //   ];
+     if (endpointStr.includes('ddo')) {
       return [
         { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991133', email: 'ddo001@example.com' },
         { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', gstinNumber: '29AAAGO1111W1ZB', mobile: '9902991134', email: 'ddo002@example.com' },
@@ -91,27 +91,13 @@ export default function MasterDataPage({
     
     try {
       setLoading(true);
-      // Try to fetch real data with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-      
-      const response = await fetch(endpoint.LIST, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === 'success' && data.data && data.data.length > 0) {
-          setData(data.data);
-          setFilteredData(data.data);
-        }
+    
+       const response = await ApiService.handleGetRequest(`${endpoint.LIST}` );
+      if (response  && response.status === 'success') {
+        
+          setData(response.data);
+          setFilteredData(response.data);
+        
       }
     } catch (error) {
       // Keep demo data, API failed or timed out
@@ -188,7 +174,7 @@ export default function MasterDataPage({
         multipartFormData.append('formData', JSON.stringify(jsonData));
         
         // Use fetch directly for multipart requests
-        const token = localStorage.getItem('userToken') || '';
+        const token = localStorage.getItem('token') || '';
         const fetchResponse = await fetch(url, {
           method: 'POST',
           headers: {
@@ -375,16 +361,22 @@ export default function MasterDataPage({
                   <input
                     type={field.type || 'text'}
                     value={formData[field.key] ?? ''}
-                    onChange={(e) => {
+                   onChange={(e) => {
                       let value = e.target.value;
+
+                      // ✅ Auto-uppercase for PAN or GST fields
+                      if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
+                        value = value.toUpperCase();
+                      }
+
                       if (field.type === 'number') {
-                        // Store as number if valid, otherwise empty string
                         const numValue = value === '' ? '' : parseInt(value);
                         updateFormData(field.key, isNaN(numValue) ? '' : numValue);
                       } else {
                         updateFormData(field.key, value);
                       }
                     }}
+
                     className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     placeholder={field.placeholder}
                     required={field.required}

@@ -4,7 +4,7 @@ class ApiService {
 // Utility function to fetch token from cookies
 static  getToken = () => {
   if (typeof window !== "undefined") { // Ensure client-side execution
-    return localStorage.getItem("userToken");
+    return localStorage.getItem("token");
   }
   return null;
 };
@@ -18,7 +18,7 @@ static async handleGetRequest(url, timeoutMs = 2000) {
       throw new Error("Cannot access localStorage on the server");
     }
 
-    const token = localStorage.getItem("userToken");
+    const token = localStorage.getItem("token");
     console.log("User Token:", token);
 
     const headers = {
@@ -64,8 +64,8 @@ static  async  handlePostRequest(url, req, res) {
     console.log("Post url : ${url}"+url);
     
     // if (!url) return res.status(400).json({ error: "URL parameter is required" });
-    console.log("Stored Token:", localStorage.getItem("userToken"));
-   const token = localStorage.getItem("userToken");
+    console.log("Stored Token:", localStorage.getItem("token"));
+   const token = localStorage.getItem("token");
     console.log("User Token:", token);
     console.log("Request Body:", req);
     const headers = {

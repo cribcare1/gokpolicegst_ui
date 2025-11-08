@@ -185,13 +185,26 @@ export const calculateGST = (
  * Validates mobile number (10 digits)
  */
 export const validateMobile = (mobile) => {
-  if (!mobile) return { valid: false, message: 'Mobile number is required' };
-  const cleaned = mobile.trim().replace(/\D/g, '');
+  console.log(mobile);
+  if (mobile === undefined || mobile === null) {
+    return { valid: false, message: 'Mobile number is required' };
+  }
+
+  const cleaned = String(mobile).normalize('NFKC').trim().replace(/[^0-9]/g, '');
+  console.log("Cleaned:", cleaned, "Length:", cleaned.length);
   if (cleaned.length !== 10) {
     return { valid: false, message: 'Mobile number must be 10 digits' };
   }
+
+  const mobileRegex = /^[6-9]\d{9}$/;
+  if (!mobileRegex.test(cleaned)) {
+    return { valid: false, message: 'Invalid mobile number format' };
+  }
+
   return { valid: true, cleaned };
 };
+
+
 
 /**
  * Validates PIN code (6 digits)
@@ -230,7 +243,7 @@ export const validatePAN = (pan) => {
   if (!panRegex.test(cleaned)) {
     return { valid: false, message: 'Invalid PAN format' };
   }
-  return { valid: true, cleaned };
+  return { valid: true, cleaned: pan.trim() };
 };
 
 /**

@@ -12,7 +12,7 @@ const MasterDataPage = dynamic(() => import('@/components/master-data/MasterData
 
 const columns = [
   { key: 'panNumber', label: t('label.panNumber') },
-  { key: 'name', label: t('label.name') },
+  { key: 'panName', label: t('label.name') },
   { key: 'address', label: t('label.address') },
   { key: 'mobile', label: t('label.mobile') },
   { key: 'email', label: t('label.email') },
@@ -20,7 +20,7 @@ const columns = [
 
 const formFields = [
   { key: 'panNumber', label: t('label.panNumber'), required: true, maxLength: 10 },
-  { key: 'name', label: t('label.name'), required: true },
+  { key: 'panName', label: t('label.name'), required: true },
   { key: 'address', label: t('label.address'), type: 'textarea', required: true },
   { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
   { key: 'email', label: t('label.email'), type: 'email', required: true },

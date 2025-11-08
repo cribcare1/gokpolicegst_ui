@@ -75,74 +75,45 @@ export default function GSTMasterPage() {
   };
 
   const fetchData = async () => {
-    const demoData = [
-      { 
-        id: '1', 
-        gstNumber: '29AAAGO1111W1ZB', 
-        name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
-        gstHolderName: 'Government of Karnataka',
-        address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
-        city: 'Bengaluru',
-        pin: '560001',
-        contactNumber: '9902991144', 
-        email: 'Copadmin@ksp.gov.in',
-        ddoCount: 5
-      },
-      { 
-        id: '2', 
-        gstNumber: '19ABCDE1234F1Z5', 
-        name: 'XYZ Corporation',
-        gstHolderName: 'XYZ Corporation',
-        address: '456 Brigade Road, Bangalore',
-        city: 'Bangalore',
-        pin: '560001',
-        contactNumber: '9876543211', 
-        email: 'xyz@example.com',
-        ddoCount: 2
-      },
-    ];
-    setData(demoData);
-    setFilteredData(demoData);
-    setLoading(false);
+    // const demoData = [
+    //   { 
+    //     id: '1', 
+    //     gstNumber: '29AAAGO1111W1ZB', 
+    //     name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
+    //     gstHolderName: 'Government of Karnataka',
+    //     address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
+    //     city: 'Bengaluru',
+    //     pin: '560001',
+    //     contactNumber: '9902991144', 
+    //     email: 'Copadmin@ksp.gov.in',
+    //     ddoCount: 5
+    //   },
+    //   { 
+    //     id: '2', 
+    //     gstNumber: '19ABCDE1234F1Z5', 
+    //     name: 'XYZ Corporation',
+    //     gstHolderName: 'XYZ Corporation',
+    //     address: '456 Brigade Road, Bangalore',
+    //     city: 'Bangalore',
+    //     pin: '560001',
+    //     contactNumber: '9876543211', 
+    //     email: 'xyz@example.com',
+    //     ddoCount: 2
+    //   },
+    // ];
+    // setData(demoData);
+    // setFilteredData(demoData);
+    // setLoading(false);
     
     try {
       setLoading(true);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
       
-      const response = await fetch(API_ENDPOINTS.GST_LIST, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result && result.status === 'success' && result.data && result.data.length > 0) {
-          // Fetch DDO count for each GST
-          const dataWithCounts = await Promise.all(
-            result.data.map(async (gst) => {
-              try {
-                const ddoResponse = await ApiService.handleGetRequest(
-                  `${API_ENDPOINTS.DDO_LIST}?gstin=${gst.gstNumber}`,
-                  1000
-                );
-                const ddoCount = ddoResponse?.data?.length || 0;
-                return { ...gst, ddoCount };
-              } catch {
-                return { ...gst, ddoCount: 0 };
-              }
-            })
-          );
-          setData(dataWithCounts);
-          setFilteredData(dataWithCounts);
-        }
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}` );
+      if (response  && response.status === 'success') {
+          setData(response.data);
+          setFilteredData(response.data);        
       }
+      
     } catch (error) {
       console.log('Using demo data');
     } finally {
@@ -210,6 +181,7 @@ export default function GSTMasterPage() {
   };
 
   const validateForm = (data) => {
+    console.log("validate form is called");
     const gstValidation = validateGSTIN(data.gstNumber);
     if (!gstValidation.valid) {
       return { valid: false, message: gstValidation.message };
@@ -234,7 +206,7 @@ export default function GSTMasterPage() {
       return { valid: false, message: emailValidation.message };
     }
     
-    const mobileValidation = validateMobile(data.contactNumber);
+    const mobileValidation = validateMobile(String(data.mobile));
     if (!mobileValidation.valid) {
       return { valid: false, message: mobileValidation.message };
     }
@@ -244,8 +216,9 @@ export default function GSTMasterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("submit is called");
     const validation = validateForm(formData);
+    console.log("validation is called ", validation);
     if (!validation.valid) {
       toast.error(validation.message || t('validation.required'));
       return;
@@ -348,11 +321,11 @@ export default function GSTMasterPage() {
   const columns = [
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'gstHolderName', label: 'GST Holder Name' },
-    { key: 'name', label: t('label.name') },
+    { key: 'gstName', label: t('label.name') },
     { key: 'address', label: t('label.address') },
     { key: 'city', label: 'City' },
-    { key: 'pin', label: 'PIN' },
-    { key: 'contactNumber', label: t('label.mobile') },
+    { key: 'pinCode', label: 'PIN' },
+    { key: 'mobile', label: t('label.mobile') },
     { key: 'email', label: t('label.email') },
     { 
       key: 'ddoCount', 
@@ -397,11 +370,11 @@ export default function GSTMasterPage() {
   const formFields = [
     { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
     { key: 'gstHolderName', label: 'GST Holder Name', required: true },
-    { key: 'name', label: t('label.name'), required: true },
+    { key: 'gstName', label: t('label.name'), required: true },
     { key: 'address', label: t('label.address'), type: 'textarea', required: true },
     { key: 'city', label: 'City', required: true },
-    { key: 'pin', label: 'PIN', required: true, maxLength: 6, type: 'text' },
-    { key: 'contactNumber', label: t('label.mobile'), required: true, maxLength: 10 },
+    { key: 'pinCode', label: 'PIN', required: true, maxLength: 6, type: 'text' },
+    { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
     { key: 'email', label: t('label.email'), type: 'email', required: true },
     { key: 'stateCode', label: t('label.stateCode'), type: 'number', required: false, min: 1, max: 99 },
     { key: 'logo', label: t('label.logo'), type: 'file', required: false, accept: 'image/*' },
@@ -516,6 +489,10 @@ export default function GSTMasterPage() {
                       value={formData[field.key] ?? ''}
                       onChange={(e) => {
                         let value = e.target.value;
+                         // ✅ Auto-uppercase for PAN or GST fields
+                        if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
+                          value = value.toUpperCase();
+                        }
                         if (field.type === 'number') {
                           const numValue = value === '' ? '' : parseInt(value);
                           updateFormData(field.key, isNaN(numValue) ? '' : numValue);
