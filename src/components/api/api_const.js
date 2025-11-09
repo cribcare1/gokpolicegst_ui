@@ -33,11 +33,13 @@ export const API_ENDPOINTS = {
   PAN_DELETE: `${API_BASE_URL}/pan/delete/`,
   
   // DDO Master Data Endpoints (already exists but adding for consistency)
-  DDO_LIST: `${API_BASE_URL}/ddo/list`,
-  DDO_ADD: `${API_BASE_URL}/ddo/add`,
-  DDO_UPDATE: `${API_BASE_URL}/ddo/update`,
+  DDO_LIST: `${API_BASE_URL}/gst/ddoList?gstId=`,
+  DDO_LIST_PER_GST: `${API_BASE_URL}/gst/ddoList?gstId=`,
+  DDO_ADD: `${API_BASE_URL}/user/addDDOByGSTIN`,
+  DDO_UPDATE: `${API_BASE_URL}/user/addDDOByGSTIN`,
   DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
-  
+  DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
+
   // HSN Master Data Endpoints
   HSN_LIST: `${API_BASE_URL}/hsn/getAllHSN`,
   HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
