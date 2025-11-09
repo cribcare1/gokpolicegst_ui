@@ -9,7 +9,7 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress } from '@/lib/gstUtils';
 
 export default function GstinDDORegistrationPage() {
   const [ddos, setDdos] = useState([]);
@@ -134,22 +134,54 @@ export default function GstinDDORegistrationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate
-    if (!formData.ddoCode || !formData.ddoName) {
-      toast.error('DDO Code and Name are required');
+    // Validate DDO Code
+    const ddoCodeValidation = validateDDOCode(formData.ddoCode);
+    if (!ddoCodeValidation.valid) {
+      toast.error(ddoCodeValidation.message);
       return;
     }
 
-    const emailValidation = validateEmail(formData.email);
-    if (formData.email && !emailValidation.valid) {
-      toast.error(emailValidation.message);
+    // Validate DDO Name
+    const ddoNameValidation = validateName(formData.ddoName, 'DDO Name');
+    if (!ddoNameValidation.valid) {
+      toast.error(ddoNameValidation.message);
       return;
     }
 
-    const mobileValidation = validateMobile(formData.contactNo);
-    if (formData.contactNo && !mobileValidation.valid) {
-      toast.error(mobileValidation.message);
-      return;
+    // Validate Area & City (optional but if provided, validate)
+    if (formData.ddoAreaCity && formData.ddoAreaCity.trim() !== '') {
+      const addressValidation = validateAddress(formData.ddoAreaCity);
+      if (!addressValidation.valid) {
+        toast.error('Area & City: ' + addressValidation.message);
+        return;
+      }
+    }
+
+    // Validate PIN (optional but if provided, validate)
+    if (formData.ddoPin && formData.ddoPin.trim() !== '') {
+      const pinValidation = validatePIN(formData.ddoPin);
+      if (!pinValidation.valid) {
+        toast.error(pinValidation.message);
+        return;
+      }
+    }
+
+    // Validate Contact Number (optional but if provided, validate)
+    if (formData.contactNo && formData.contactNo.trim() !== '') {
+      const mobileValidation = validateMobile(formData.contactNo);
+      if (!mobileValidation.valid) {
+        toast.error(mobileValidation.message);
+        return;
+      }
+    }
+
+    // Validate Email (optional but if provided, validate)
+    if (formData.email && formData.email.trim() !== '') {
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.valid) {
+        toast.error(emailValidation.message);
+        return;
+      }
     }
 
     setFormLoading(true);

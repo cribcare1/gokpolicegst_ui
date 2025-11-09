@@ -98,7 +98,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
               {sidebarOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <Menu size={20} className="sm:w-6 sm:h-6" />}
             </button>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent truncate">
-              KSP Bandobast GST
+              KSP Bandobast GST {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? '- DDO' : ''}
             </h1>
           </div>
           
