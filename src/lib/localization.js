@@ -12,7 +12,7 @@ export const translations = {
   "nav.gst": { en: "GST Master", kn: "GST ಮಾಸ್ಟರ್" },
   "nav.pan": { en: "PAN Master", kn: "PAN ಮಾಸ್ಟರ್" },
   "nav.ddo": { en: "DDO Mapping", kn: "DDO ಮ್ಯಾಪಿಂಗ್" },
-  "nav.hsn": { en: "HSN Details", kn: "HSN ವಿವರಗಳು" },
+  "nav.hsn": { en: "HSN Master", kn: "HSN ಮಾಸ್ಟರ್" },
   "nav.bank": { en: "Bank Details", kn: "ಬ್ಯಾಂಕ್ ವಿವರಗಳು" },
   "nav.customers": { en: "Customers", kn: "ಗ್ರಾಹಕರು" },
   "nav.generateBill": { en: "Generate Bill", kn: "ಬಿಲ್ ರಚಿಸಿ" },

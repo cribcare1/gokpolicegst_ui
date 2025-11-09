@@ -37,32 +37,33 @@ const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'md
         className={`
           relative bg-[var(--color-surface)] rounded-xl sm:rounded-2xl shadow-2xl
           w-full ${sizeClasses[size]}
-          max-h-[95vh] sm:max-h-[90vh] overflow-y-auto
+          max-h-[95vh] sm:max-h-[90vh]
           border border-[var(--color-border)]
           animate-fade-in
           mx-2 sm:mx-0
           touch-manipulation
+          flex flex-col
         `}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header - Fixed */}
         {title && (
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)]">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)] flex-shrink-0 sticky top-0 z-10">
             <h2 className="text-lg sm:text-2xl font-bold gradient-text truncate flex-1 pr-2">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:rotate-90"
+              className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 hover:scale-110 hover:rotate-90 flex items-center justify-center"
               aria-label="Close"
             >
-              <X size={22} className="text-red-500 hover:text-red-600" />
+              <X size={22} className="text-white" />
             </button>
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4 sm:p-6">{children}</div>
+        {/* Content - Scrollable */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

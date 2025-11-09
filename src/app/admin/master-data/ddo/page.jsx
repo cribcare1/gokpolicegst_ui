@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateDDOCode, validateName } from '@/lib/gstUtils';
 
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
@@ -14,7 +14,6 @@ const columns = [
   { key: 'gstinNumber', label: t('label.gstin') },
   { key: 'ddoCode', label: t('label.ddoCode') },
   { key: 'ddoName', label: t('label.ddoName') },
-  { key: 'mobile', label: t('label.mobile') },
   { key: 'email', label: t('label.email') },
 ];
 
@@ -22,7 +21,6 @@ const formFields = [
   { key: 'gstinNumber', label: t('label.gstin'), required: true, maxLength: 15 },
   { key: 'ddoCode', label: t('label.ddoCode'), required: true },
   { key: 'ddoName', label: t('label.ddoName'), required: true },
-  { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
   { key: 'email', label: t('label.email'), type: 'email', required: true },
 ];
 
@@ -32,14 +30,19 @@ const validateForm = (data) => {
     return { valid: false, message: gstValidation.message };
   }
   
+  const ddoCodeValidation = validateDDOCode(data.ddoCode);
+  if (!ddoCodeValidation.valid) {
+    return { valid: false, message: ddoCodeValidation.message };
+  }
+  
+  const ddoNameValidation = validateName(data.ddoName, 'DDO Name');
+  if (!ddoNameValidation.valid) {
+    return { valid: false, message: ddoNameValidation.message };
+  }
+  
   const emailValidation = validateEmail(data.email);
   if (!emailValidation.valid) {
     return { valid: false, message: emailValidation.message };
-  }
-  
-  const mobileValidation = validateMobile(data.mobile);
-  if (!mobileValidation.valid) {
-    return { valid: false, message: mobileValidation.message };
   }
   
   return { valid: true };
@@ -48,7 +51,7 @@ const validateForm = (data) => {
 export default function DDORecordsPage() {
   return (
     <MasterDataPage
-      title="DDO Details"
+      title="DDO Mapping"
       endpoint={{
         LIST: API_ENDPOINTS.DDO_LIST,
         ADD: API_ENDPOINTS.DDO_ADD,

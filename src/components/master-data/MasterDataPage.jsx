@@ -333,7 +333,7 @@ export default function MasterDataPage({
                   <select
                     value={formData[field.key] ?? ''}
                     onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     required={field.required}
                     disabled={field.readOnly}
                   >
@@ -348,7 +348,7 @@ export default function MasterDataPage({
                   <select
                     value={formData[field.key] ?? ''}
                     onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     required={field.required}
                     disabled={field.readOnly}
                   >
@@ -387,7 +387,7 @@ export default function MasterDataPage({
                     }}
 
                     readOnly={field.readOnly}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     placeholder={field.placeholder}
                     required={field.required}
                     maxLength={field.maxLength}

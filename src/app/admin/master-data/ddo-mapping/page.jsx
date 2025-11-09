@@ -86,8 +86,18 @@ export default function DDOMappingPage() {
   };
 
   const handleMove = async () => {
+    if (!currentGSTIN) {
+      toast.error('Please select current GSTIN');
+      return;
+    }
+    
     if (!targetGSTIN) {
       toast.error('Please select target GSTIN');
+      return;
+    }
+    
+    if (currentGSTIN === targetGSTIN) {
+      toast.error('Current and target GSTIN cannot be the same');
       return;
     }
 

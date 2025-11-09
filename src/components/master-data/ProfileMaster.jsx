@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X } from 'lucide-react';
+import { validateName, validateAddress, validateEmail, validateMobile } from '@/lib/gstUtils';
 
 export default function ProfileMaster() {
   // const [formData, setFormData] = useState({
@@ -47,6 +48,34 @@ export default function ProfileMaster() {
   };
 
   const handleSave = async () => {
+    // Validate Company Name
+    const nameValidation = validateName(formData.companyName, 'Company Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate Email
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.message);
+      return;
+    }
+    
+    // Validate Mobile
+    const mobileValidation = validateMobile(formData.mobile);
+    if (!mobileValidation.valid) {
+      toast.error(mobileValidation.message);
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await ApiService.handlePostRequest(

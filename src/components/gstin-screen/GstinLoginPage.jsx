@@ -9,6 +9,7 @@ import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+import { validateGSTIN, validatePassword } from '@/lib/gstUtils';
 
 // Toast component
 const Toast = ({ message, type, onClose }) => {
@@ -115,8 +116,15 @@ export default function GstinLoginPage() {
     e.preventDefault();
     setError('');
   
-    if (!gstin || !password) {
-      setError('Please enter both GSTIN and password');
+    const gstValidation = validateGSTIN(gstin);
+    if (!gstValidation.valid) {
+      setError(gstValidation.message);
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
       return;
     }
   
@@ -203,6 +211,18 @@ export default function GstinLoginPage() {
   };
 
   const resetPassword = async () => {
+    const gstValidation = validateGSTIN(gstin);
+    if (!gstValidation.valid) {
+      showToast(`❌ ${gstValidation.message}`, "error");
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      showToast(`❌ ${passwordValidation.message}`, "error");
+      return;
+    }
+    
     if (password !== confirmPassword) {
       showToast("❌ Passwords do not match", "error");
       return;

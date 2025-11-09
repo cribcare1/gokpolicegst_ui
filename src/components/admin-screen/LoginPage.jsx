@@ -8,6 +8,7 @@ import ApiService from "@/components/api/api_service";
 import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
+import { validateEmail, validatePassword } from '@/lib/gstUtils';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,22 @@ export default function AdminLogin() {
   const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Validate email/username
+    if (!email || email.trim() === '') {
+      setError('Username is required');
+      setIsLoading(false);
+      return;
+    }
+    
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
+      setIsLoading(false);
+      return;
+    }
+    
     localStorage.removeItem("userToken");
   
     const requestBody = {
@@ -152,6 +169,13 @@ export default function AdminLogin() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    
+    // Validate email
+    if (!resetEmail || resetEmail.trim() === '') {
+      setError('Username is required');
+      setIsLoading(false);
+      return;
+    }
     
     try {
       // Simulate API call to send OTP (you would replace this with your actual API call)

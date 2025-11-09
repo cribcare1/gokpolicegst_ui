@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
-import { validatePAN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validatePAN, validateEmail, validateMobile, validateName, validateAddress } from '@/lib/gstUtils';
 
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
@@ -30,6 +30,16 @@ const validateForm = (data) => {
   const panValidation = validatePAN(data.panNumber);
   if (!panValidation.valid) {
     return { valid: false, message: panValidation.message };
+  }
+  
+  const panNameValidation = validateName(data.panName, 'PAN Name');
+  if (!panNameValidation.valid) {
+    return { valid: false, message: panNameValidation.message };
+  }
+  
+  const addressValidation = validateAddress(data.address);
+  if (!addressValidation.valid) {
+    return { valid: false, message: addressValidation.message };
   }
   
   const emailValidation = validateEmail(data.email);

@@ -8,6 +8,7 @@ import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
 import {LOGIN_CONSTANT} from "@/components/utils/constant";
+import { validatePassword } from '@/lib/gstUtils';
 
 
 export default function ResetPasswordForm() {
@@ -82,10 +83,9 @@ export default function ResetPasswordForm() {
       newErrors.userId = 'User ID is required';
     }
     
-    if (!newPassword.trim()) {
-      newErrors.newPassword = 'New password is required';
-    } else if (newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters';
+    const passwordValidation = validatePassword(newPassword, 6);
+    if (!passwordValidation.valid) {
+      newErrors.newPassword = passwordValidation.message;
     }
     
     if (!confirmPassword.trim()) {

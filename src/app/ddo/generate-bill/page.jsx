@@ -6,8 +6,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { calculateGST, validateBillDate, canSubmitBill, formatCurrency } from '@/lib/gstUtils';
-import { validateGSTIN, validateEmail, validateMobile, validatePIN } from '@/lib/gstUtils';
+import { calculateGST, validateBillDate, canSubmitBill, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode } from '@/lib/gstUtils';
 import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -127,28 +126,52 @@ export default function GenerateBillPage() {
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     
-    // Validate
+    // Validate Name
+    const nameValidation = validateName(newCustomer.name, 'Customer Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate GSTIN
     const gstValidation = validateGSTIN(newCustomer.gstNumber);
     if (!gstValidation.valid) {
       toast.error(gstValidation.message);
       return;
     }
     
-    const emailValidation = validateEmail(newCustomer.email);
-    if (!emailValidation.valid) {
-      toast.error(emailValidation.message);
+    // Validate Address
+    const addressValidation = validateAddress(newCustomer.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
       return;
     }
     
+    // Validate State Code
+    const stateCodeValidation = validateStateCode(newCustomer.stateCode);
+    if (!stateCodeValidation.valid) {
+      toast.error(stateCodeValidation.message);
+      return;
+    }
+    
+    // Validate PIN
+    const pinValidation = validatePIN(newCustomer.pin);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
+    
+    // Validate Mobile
     const mobileValidation = validateMobile(newCustomer.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
       return;
     }
     
-    const pinValidation = validatePIN(newCustomer.pin);
-    if (!pinValidation.valid) {
-      toast.error(pinValidation.message);
+    // Validate Email
+    const emailValidation = validateEmail(newCustomer.email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.message);
       return;
     }
 
@@ -203,31 +226,84 @@ export default function GenerateBillPage() {
   };
 
   const handleSaveBill = async () => {
-    // Validate
-    if (!billDetails.gstinNumber || !billDetails.billNumber || !billDetails.date) {
-      toast.error('Please fill all bill details');
+    // Validate GSTIN
+    const gstValidation = validateGSTIN(billDetails.gstinNumber);
+    if (!gstValidation.valid) {
+      toast.error(gstValidation.message);
       return;
     }
     
-    if (!selectedCustomer) {
-      toast.error('Please select a customer');
+    // Validate GST Address
+    if (!billDetails.gstAddress || billDetails.gstAddress.trim() === '') {
+      toast.error('GST Address is required');
       return;
     }
     
+    // Validate DDO Code
+    if (!billDetails.ddoCode || billDetails.ddoCode.trim() === '') {
+      toast.error('DDO Code is required');
+      return;
+    }
+    
+    // Validate Bill Number
+    const billNumberValidation = validateBillNumber(billDetails.billNumber);
+    if (!billNumberValidation.valid) {
+      toast.error(billNumberValidation.message);
+      return;
+    }
+    
+    // Validate Date
     const dateValidation = validateBillDate(billDetails.date);
     if (!dateValidation.valid) {
       toast.error(dateValidation.message);
       return;
     }
     
+    // Validate Customer
+    if (!selectedCustomer) {
+      toast.error('Please select a customer');
+      return;
+    }
+    
+    // Validate Line Items
+    if (lineItems.length === 0) {
+      toast.error('Please add at least one line item');
+      return;
+    }
+    
+    for (let i = 0; i < lineItems.length; i++) {
+      const item = lineItems[i];
+      
+      // Validate Description
+      const descValidation = validateDescription(item.description);
+      if (!descValidation.valid) {
+        toast.error(`Line item ${i + 1}: ${descValidation.message}`);
+        return;
+      }
+      
+      // Validate Amount
+      const amountValidation = validateAmount(item.amount, `Line item ${i + 1} Amount`);
+      if (!amountValidation.valid) {
+        toast.error(`Line item ${i + 1}: ${amountValidation.message}`);
+        return;
+      }
+    }
+    
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     if (taxableValue <= 0) {
-      toast.error('Please add at least one line item with amount > 0');
+      toast.error('Total taxable value must be greater than 0');
+      return;
+    }
+    
+    // Validate Paid Amount
+    const paidAmountValidation = validateAmount(paidAmount, 'Paid Amount');
+    if (!paidAmountValidation.valid) {
+      toast.error(paidAmountValidation.message);
       return;
     }
     
     if (paidAmount > (gstCalculation?.finalAmount || 0)) {
-      toast.error(t('validation.amountExceed'));
+      toast.error('Paid amount cannot exceed final amount');
       return;
     }
 

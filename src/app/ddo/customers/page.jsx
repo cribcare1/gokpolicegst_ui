@@ -7,7 +7,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { validateGSTIN, validateEmail, validateMobile, validatePIN } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validatePIN, validateName, validateAddress, validateCity, validateStateCode, validateExemptionCert } from '@/lib/gstUtils';
 import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
@@ -148,29 +148,69 @@ export default function CustomersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate
+    // Validate Name
+    const nameValidation = validateName(formData.name, 'Customer Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate GSTIN
     const gstValidation = validateGSTIN(formData.gstNumber);
     if (!gstValidation.valid) {
       toast.error(gstValidation.message);
       return;
     }
     
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(formData.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate State Code
+    const stateCodeValidation = validateStateCode(formData.stateCode);
+    if (!stateCodeValidation.valid) {
+      toast.error(stateCodeValidation.message);
+      return;
+    }
+    
+    // Validate PIN
+    const pinValidation = validatePIN(formData.pin);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
+    
+    // Validate Email
     const emailValidation = validateEmail(formData.email);
     if (!emailValidation.valid) {
       toast.error(emailValidation.message);
       return;
     }
     
+    // Validate Mobile
     const mobileValidation = validateMobile(formData.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
       return;
     }
     
-    const pinValidation = validatePIN(formData.pin);
-    if (!pinValidation.valid) {
-      toast.error(pinValidation.message);
-      return;
+    // Validate Exemption Certificate (optional)
+    if (formData.exemptionCertNumber && formData.exemptionCertNumber.trim() !== '') {
+      const exemptionValidation = validateExemptionCert(formData.exemptionCertNumber);
+      if (!exemptionValidation.valid) {
+        toast.error(exemptionValidation.message);
+        return;
+      }
     }
 
     try {
