@@ -6,6 +6,7 @@ import Button from '@/components/shared/Button';
 import Table from '@/components/shared/Table';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
+import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
@@ -17,29 +18,40 @@ export default function GstinDDORegistrationPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDDO, setEditingDDO] = useState(null);
+  const [gstId, setGstId] = useState("");
+  const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     ddoCode: '',
     ddoName: '',
-    ddoAreaCity: '',
-    ddoPin: '',
-    contactNo: '',
+    city: '',
+    pinCode: '',
+    mobile: '',
     email: '',
     password: '',
+    
   });
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    fetchDDOs();
+    const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
+    const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+
+    console.log("Loaded from localStorage:", { gstId, userId });
+
+    if (gstId) setGstId(gstId);
+    if (userId) setUserId(userId);
+
+    if (gstId)fetchDDOs(gstId);
   }, []);
 
   useEffect(() => {
     filterDDOs();
   }, [searchTerm, ddos]);
 
-  const fetchDDOs = async () => {
+  const fetchDDOs = async (gstId) => {
     setLoading(true);
     try {
       const demoDDOs = [
@@ -47,9 +59,9 @@ export default function GstinDDORegistrationPage() {
           id: '1',
           ddoCode: '0200PO0032',
           ddoName: 'DCP CAR HQ',
-          ddoAreaCity: 'Mysore Road, Bengaluru',
-          ddoPin: '560018',
-          contactNo: '9902991313',
+          city: 'Mysore Road, Bengaluru',
+          pinCode: '560018',
+          mobile: '9902991313',
           email: 'Dcpadmin@ksp.gov.in',
         },
       ];
@@ -57,12 +69,24 @@ export default function GstinDDORegistrationPage() {
       setDdos(demoDDOs);
       setFilteredDdos(demoDDOs);
 
-      const gstinNumber = localStorage.getItem('gstinNumber');
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`);
-      if (response?.status === 'success' && response?.data) {
-        setDdos(response.data);
-        setFilteredDdos(response.data);
-      }
+      console.log("gstid---------",gstId);
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST_PER_GST}${gstId}`);
+      // if (response  && response.status === 'success') {
+      //     setDdos(response.data);
+      //     setFilteredDdos(response.data); 
+      // }
+      if (response?.status === 'success' && Array.isArray(response?.data)) {
+          setDdos(response.data.ddos);
+          setFilteredDdos(response.data.ddos);
+        } else if (response?.status === 'success' && Array.isArray(response?.data?.ddos)) {
+          setDdos(response.data.ddos);
+          setFilteredDdos(response.data.ddos);
+        } else {
+          setDdos([]);
+          setFilteredDdos([]);
+        }
+
+     
     } catch (error) {
       console.error('Error fetching DDOs:', error);
     } finally {
@@ -78,7 +102,7 @@ export default function GstinDDORegistrationPage() {
         (ddo) =>
           ddo.ddoCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ddo.ddoName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ddo.ddoAreaCity?.toLowerCase().includes(searchTerm.toLowerCase())
+          ddo.city?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -90,9 +114,9 @@ export default function GstinDDORegistrationPage() {
     setFormData({
       ddoCode: '',
       ddoName: '',
-      ddoAreaCity: '',
-      ddoPin: '',
-      contactNo: '',
+      city: '',
+      pinCode: '',
+      mobile: '',
       email: '',
       password: '',
     });
@@ -105,11 +129,12 @@ export default function GstinDDORegistrationPage() {
     setFormData({
       ddoCode: ddo.ddoCode || '',
       ddoName: ddo.ddoName || '',
-      ddoAreaCity: ddo.ddoAreaCity || ddo.areaCity || '',
-      ddoPin: ddo.ddoPin || ddo.pin || '',
-      contactNo: ddo.contactNo || ddo.mobile || '',
+      city: ddo.city || '',
+      pinCode: ddo.pinCode || '',
+      mobile: ddo.mobile|| '',
       email: ddo.email || '',
-      password: '', // Password field is empty by default, user can set new password
+      id: ddo.userId || '',
+     // password: '', // Password field is empty by default, user can set new password
     });
     setShowPassword(false);
     setIsModalOpen(true);
@@ -149,8 +174,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate Area & City (optional but if provided, validate)
-    if (formData.ddoAreaCity && formData.ddoAreaCity.trim() !== '') {
-      const addressValidation = validateAddress(formData.ddoAreaCity);
+    if (formData.city && formData.city.trim() !== '') {
+      const addressValidation = validateAddress(formData.city);
       if (!addressValidation.valid) {
         toast.error('Area & City: ' + addressValidation.message);
         return;
@@ -158,8 +183,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate PIN (optional but if provided, validate)
-    if (formData.ddoPin && formData.ddoPin.trim() !== '') {
-      const pinValidation = validatePIN(formData.ddoPin);
+    if (formData.pinCode && formData.pinCode.trim() !== '') {
+      const pinValidation = validatePIN(formData.pinCode);
       if (!pinValidation.valid) {
         toast.error(pinValidation.message);
         return;
@@ -167,8 +192,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate Contact Number (optional but if provided, validate)
-    if (formData.contactNo && formData.contactNo.trim() !== '') {
-      const mobileValidation = validateMobile(formData.contactNo);
+    if (formData.mobile && formData.mobile.trim() !== '') {
+      const mobileValidation = validateMobile(formData.mobile);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
@@ -189,8 +214,9 @@ export default function GstinDDORegistrationPage() {
       const gstinNumber = localStorage.getItem('gstinNumber');
       const payload = {
         ...formData,
-        gstinNumber: gstinNumber,
-        mobile: formData.contactNo,
+        gstId: gstId || '',
+        gstInUserId : userId || '',
+        mobile: formData.mobile,
       };
 
       // Only include password when editing (not when adding new DDO)
@@ -207,7 +233,7 @@ export default function GstinDDORegistrationPage() {
       if (response?.status === 'success') {
         toast.success(editingDDO ? 'DDO updated successfully' : 'DDO added successfully');
         setIsModalOpen(false);
-        fetchDDOs();
+        fetchDDOs(gstId);
       } else {
         toast.error(response?.message || 'Failed to save DDO');
       }
@@ -225,9 +251,9 @@ export default function GstinDDORegistrationPage() {
       render: (code) => <span className="font-medium text-[var(--color-text-primary)]">{code}</span>,
     },
     { key: 'ddoName', label: 'DDO Name' },
-    { key: 'ddoAreaCity', label: 'Area & City', render: (val, row) => val || row.areaCity || '-' },
-    { key: 'ddoPin', label: 'PIN', render: (val, row) => val || row.pin || '-' },
-    { key: 'contactNo', label: 'Contact No', render: (val, row) => val || row.mobile || '-' },
+    { key: 'city', label: 'Area & City', render: (val, row) => val || row.city || '-' },
+    { key: 'pinCode', label: 'PIN', render: (val, row) => val || row.pinCode || '-' },
+    { key: 'mobile', label: 'Contact No', render: (val, row) => val || row.mobile || '-' },
     { key: 'email', label: 'Email', render: (email) => email ? <a href={`mailto:${email}`} className="text-[var(--color-primary)] hover:underline">{email}</a> : '-' },
     {
       key: 'actions',
@@ -289,7 +315,7 @@ export default function GstinDDORegistrationPage() {
               <LoadingProgressBar message="Loading DDOs..." variant="primary" />
             </div>
           ) : (
-            <Table columns={columns} data={filteredDdos} />
+            <Table columns={columns} data={Array.isArray(filteredDdos) ? filteredDdos : []} />
           )}
         </div>
 
@@ -334,8 +360,8 @@ export default function GstinDDORegistrationPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.ddoAreaCity}
-                  onChange={(e) => setFormData({ ...formData, ddoAreaCity: e.target.value })}
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   className="premium-input w-full"
                 />
               </div>
@@ -346,8 +372,8 @@ export default function GstinDDORegistrationPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.ddoPin}
-                  onChange={(e) => setFormData({ ...formData, ddoPin: e.target.value })}
+                  value={formData.pinCode}
+                  onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
                   className="premium-input w-full"
                   maxLength={6}
                 />
@@ -359,8 +385,8 @@ export default function GstinDDORegistrationPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.contactNo}
-                  onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   className="premium-input w-full"
                   maxLength={10}
                 />
