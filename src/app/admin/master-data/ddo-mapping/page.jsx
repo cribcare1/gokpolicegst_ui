@@ -141,10 +141,10 @@ export default function DDOMappingPage() {
       <div className="space-y-6">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
-            <span className="gradient-text">DDO Mapping Master</span>
+            <span className="gradient-text">DDO Mapping</span>
           </h1>
           <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
-            Map DDOs to GSTINs for invoice generation
+            Map DDOs between different GSTINs
           </p>
         </div>
 
