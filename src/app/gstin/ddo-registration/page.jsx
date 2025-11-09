@@ -173,8 +173,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate Area & City (optional but if provided, validate)
-    if (formData.ddoAreaCity && formData.ddoAreaCity.trim() !== '') {
-      const addressValidation = validateAddress(formData.ddoAreaCity);
+    if (formData.city && formData.city.trim() !== '') {
+      const addressValidation = validateAddress(formData.city);
       if (!addressValidation.valid) {
         toast.error('Area & City: ' + addressValidation.message);
         return;
@@ -182,8 +182,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate PIN (optional but if provided, validate)
-    if (formData.ddoPin && formData.ddoPin.trim() !== '') {
-      const pinValidation = validatePIN(formData.ddoPin);
+    if (formData.pinCode && formData.pinCode.trim() !== '') {
+      const pinValidation = validatePIN(formData.pinCode);
       if (!pinValidation.valid) {
         toast.error(pinValidation.message);
         return;
@@ -191,8 +191,8 @@ export default function GstinDDORegistrationPage() {
     }
 
     // Validate Contact Number (optional but if provided, validate)
-    if (formData.contactNo && formData.contactNo.trim() !== '') {
-      const mobileValidation = validateMobile(formData.contactNo);
+    if (formData.mobile && formData.mobile.trim() !== '') {
+      const mobileValidation = validateMobile(formData.mobile);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
