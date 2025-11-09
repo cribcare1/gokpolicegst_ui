@@ -40,6 +40,8 @@ const formFields = [
 ];
 
 const validateForm = (data) => {
+  console.log("validate form ", data);
+
   const gstValidation = validateGSTIN(data.gstinNumber);
   if (!gstValidation.valid) {
     return { valid: false, message: gstValidation.message };

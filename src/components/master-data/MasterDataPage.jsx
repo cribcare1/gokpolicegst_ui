@@ -46,6 +46,7 @@ export default function MasterDataPage({
     }
   }, [searchTerm, data]);
 
+
   const getDemoData = () => {
     const endpointStr = endpoint.LIST || '';
     // if (endpointStr.includes('gst')) {
@@ -115,7 +116,18 @@ export default function MasterDataPage({
 
   const handleEdit = (item) => {
     setEditingItem(item);
-    setFormData(item);
+
+    const selectedGST = gstinList.find(
+    (gst) => gst.gstNumber === item.gstinNumber
+    );
+
+    // Create a new object to set in formData
+    const updatedItem = {
+      ...item,
+      gstId: selectedGST?.gstId || "", // Set gstId if found
+    };
+    setFormData(updatedItem);
+
     setIsModalOpen(true);
   };
 
@@ -141,9 +153,20 @@ export default function MasterDataPage({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("handle submit called", gstinList);
+    if (gstinList) {
+      setFormData({
+        ...formData,
+        gstId: gstinList.gstId,
+      });
+    }
+    const dataCopy = { ...formData };
+    delete dataCopy.gstinNumber;
+
+    console.log("form data ", dataCopy);
     // Validate form
-    const validation = validateForm(formData);
+    const validation = validateForm(dataCopy);
+    console.log("validation  form ", validation);
     if (!validation.valid) {
       toast.error(validation.message || t('validation.required'));
       return;
@@ -153,7 +176,7 @@ export default function MasterDataPage({
       const url = editingItem ? endpoint.UPDATE : endpoint.ADD;
       
       // Check if there are any file uploads
-      const hasFiles = Object.values(formData).some(value => value instanceof File);
+      const hasFiles = Object.values(dataCopy).some(value => value instanceof File);
       
       let response;
       if (hasFiles) {
@@ -162,11 +185,11 @@ export default function MasterDataPage({
         const jsonData = {};
         
         // Separate files from other data
-        Object.keys(formData).forEach(key => {
-          if (formData[key] instanceof File) {
-            multipartFormData.append(key, formData[key]);
+        Object.keys(dataCopy).forEach(key => {
+          if (dataCopy[key] instanceof File) {
+            multipartFormData.append(key, dataCopy[key]);
           } else {
-            jsonData[key] = formData[key];
+            jsonData[key] = dataCopy[key];
           }
         });
         
@@ -186,7 +209,7 @@ export default function MasterDataPage({
         response = await fetchResponse.json();
       } else {
         // Use regular JSON request
-        response = await ApiService.handlePostRequest(url, formData);
+        response = await ApiService.handlePostRequest(url, dataCopy);
       }
       
       if (response && response.status === 'success') {
@@ -348,7 +371,7 @@ export default function MasterDataPage({
                   <select
                     value={formData[field.key] ?? ''}
                     onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
                     required={field.required}
                     disabled={field.readOnly}
                   >
