@@ -5,66 +5,44 @@ import Button from '@/components/shared/Button';
 import Modal from '@/components/shared/Modal';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
-import { t } from '@/lib/localization';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
+import { useGstinList } from '@/hooks/useGstinList';
+import { useDdoList } from '@/hooks/useDdoList';
 
 export default function DDOMappingPage() {
-  const [gstinList, setGstinList] = useState([]);
-  const [ddoList, setDdoList] = useState([]);
+  const { gstinList } = useGstinList();
   const [currentGSTIN, setCurrentGSTIN] = useState('');
   const [targetGSTIN, setTargetGSTIN] = useState('');
   const [selectedDDOs, setSelectedDDOs] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Use hook for DDO list based on current GSTIN
+  const { ddoList, loading: ddoLoading, refetch: refetchDDOs } = useDdoList(currentGSTIN);
+
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch GSTIN list
-      const gstinResponse = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
-      if (gstinResponse?.status === 'success' && gstinResponse?.data) {
-        setGstinList(gstinResponse.data);
-        if (gstinResponse.data.length > 0) {
-          setCurrentGSTIN(gstinResponse.data[0].gstNumber || '');
-          setTargetGSTIN(gstinResponse.data.length > 1 ? gstinResponse.data[1].gstNumber : '');
-        }
-      } else {
-        // Demo data
-        const demoGSTINs = [
-          { id: '1', gstNumber: '29AAAGO1111W1ZB', name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka' },
-        ];
-        setGstinList(demoGSTINs);
-        setCurrentGSTIN('29AAAGO1111W1ZB');
-        setTargetGSTIN('29AAAGO1111W2ZC');
+    if (gstinList && gstinList.length > 0 && !currentGSTIN) {
+      const firstGSTIN = gstinList[0].gstNumber || gstinList[0].value || '';
+      const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
+      
+      if (firstGSTIN) {
+        setCurrentGSTIN(firstGSTIN);
       }
-
-      // Fetch DDO list
-      const ddoResponse = await ApiService.handleGetRequest(API_ENDPOINTS.DDO_LIST);
-      if (ddoResponse?.status === 'success' && ddoResponse?.data) {
-        setDdoList(ddoResponse.data);
-      } else {
-        // Demo data
-        const demoDDOs = [
-          { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ' },
-          { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South' },
-          { id: '3', ddoCode: '0200PO0034', ddoName: 'DCP North' },
-          { id: '4', ddoCode: '0200PO0035', ddoName: 'DCP West' },
-          { id: '5', ddoCode: '0200PO0036', ddoName: 'DCP east' },
-        ];
-        setDdoList(demoDDOs);
+      if (secondGSTIN && !targetGSTIN) {
+        setTargetGSTIN(secondGSTIN);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
-    } finally {
+      setLoading(false);
+    } else if (gstinList && gstinList.length === 0) {
       setLoading(false);
     }
+  }, [gstinList, currentGSTIN, targetGSTIN]);
+
+  const handleCurrentGSTINChange = (gstin) => {
+    setCurrentGSTIN(gstin);
+    setSelectedDDOs(new Set()); // Clear selection when GSTIN changes
+    // DDOs will be automatically fetched by useDdoList hook
   };
 
   const handleSelectAll = () => {
@@ -111,9 +89,8 @@ export default function DDOMappingPage() {
 
   const confirmMove = async () => {
     try {
-      // API call to map DDOs to target GSTIN
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.ewingstds.com:8443/tds";
-      const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE || `${API_BASE_URL}/ddo/mapping`, {
+      setLoading(true);
+      const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
         sourceGSTIN: currentGSTIN,
         targetGSTIN: targetGSTIN,
         ddoIds: Array.from(selectedDDOs),
@@ -122,24 +99,34 @@ export default function DDOMappingPage() {
       if (response?.status === 'success') {
         toast.success('DDOs mapped successfully');
         setSelectedDDOs(new Set());
-        fetchData();
+        // Refresh DDO list after successful mapping
+        refetchDDOs();
       } else {
         toast.error(response?.message || 'Failed to map DDOs');
       }
     } catch (error) {
       toast.error('Failed to map DDOs');
-      console.error(error);
+      console.error('Error mapping DDOs:', error);
     } finally {
+      setLoading(false);
       setIsModalOpen(false);
     }
   };
 
   const getGSTINName = (gstin) => {
-    const gstinObj = gstinList.find(g => g.gstNumber === gstin);
+    if (!gstin || !gstinList) return gstin || '';
+    const gstinObj = gstinList.find(g => (g.gstNumber || g.value) === gstin);
     return gstinObj?.name || gstin;
   };
 
-  if (loading) {
+  // Transform GSTIN list for dropdown
+  const transformedGstinList = gstinList.map((item, index) => ({
+    id: item.id || String(index + 1),
+    gstNumber: item.gstNumber || item.value || '',
+    name: item.name || ''
+  }));
+
+  if (loading && !gstinList.length) {
     return (
       <Layout role="admin">
         <div className="premium-card p-16">
@@ -169,10 +156,10 @@ export default function DDOMappingPage() {
             </label>
             <select
               value={currentGSTIN}
-              onChange={(e) => setCurrentGSTIN(e.target.value)}
+              onChange={(e) => handleCurrentGSTINChange(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
-              {gstinList.map((gstin) => (
+              {transformedGstinList.map((gstin) => (
                 <option key={gstin.id} value={gstin.gstNumber}>
                   {gstin.gstNumber} - {gstin.name}
                 </option>
@@ -186,22 +173,32 @@ export default function DDOMappingPage() {
           </div>
 
           {/* DDO Table */}
-          {/* Mobile Card View */}
-          <div className="block sm:hidden space-y-3">
-            <div className="flex items-center justify-between p-3 bg-[var(--color-muted)] rounded-xl mb-3">
-              <button
-                onClick={handleSelectAll}
-                className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors"
-              >
-                {selectedDDOs.size === ddoList.length ? (
-                  <CheckCircle size={18} className="text-green-500" />
-                ) : (
-                  <XCircle size={18} />
-                )}
-                Select All
-              </button>
+          {ddoLoading ? (
+            <div className="p-8 text-center">
+              <LoadingProgressBar message="Loading DDOs..." variant="primary" />
             </div>
-            {ddoList.map((ddo) => (
+          ) : ddoList.length === 0 ? (
+            <div className="p-8 text-center text-[var(--color-text-secondary)]">
+              No DDOs mapped to this GSTIN
+            </div>
+          ) : (
+            <>
+              {/* Mobile Card View */}
+              <div className="block sm:hidden space-y-3">
+                <div className="flex items-center justify-between p-3 bg-[var(--color-muted)] rounded-xl mb-3">
+                  <button
+                    onClick={handleSelectAll}
+                    className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    {selectedDDOs.size === ddoList.length && ddoList.length > 0 ? (
+                      <CheckCircle size={18} className="text-green-500" />
+                    ) : (
+                      <XCircle size={18} />
+                    )}
+                    {selectedDDOs.size === ddoList.length && ddoList.length > 0 ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                {ddoList.map((ddo) => (
               <div
                 key={ddo.id}
                 onClick={() => handleDDOSelect(ddo.id)}
@@ -222,10 +219,10 @@ export default function DDOMappingPage() {
                 </div>
               </div>
             ))}
-          </div>
+              </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-[var(--color-muted)]">
@@ -276,7 +273,9 @@ export default function DDOMappingPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+              </div>
+            </>
+          )}
 
           {/* Move To Section */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center gap-4 p-3 sm:p-4 bg-[var(--color-muted)] rounded-xl">
@@ -289,7 +288,7 @@ export default function DDOMappingPage() {
               className="flex-1 w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
               <option value="">Select Target GSTIN</option>
-              {gstinList
+              {transformedGstinList
                 .filter((g) => g.gstNumber !== currentGSTIN)
                 .map((gstin) => (
                   <option key={gstin.id} value={gstin.gstNumber}>
