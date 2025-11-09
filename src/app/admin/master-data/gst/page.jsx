@@ -7,7 +7,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN, validateStateCode, validatePassword } from '@/lib/gstUtils';
 import { Plus, Edit, Trash2, Search, ArrowLeft, Users } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
@@ -34,6 +34,7 @@ export default function GSTMasterPage() {
   const [editingDDO, setEditingDDO] = useState(null);
   const [ddoPasswordModal, setDdoPasswordModal] = useState(false);
   const [ddoPasswordData, setDdoPasswordData] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     fetchData();
@@ -151,12 +152,14 @@ export default function GSTMasterPage() {
   const handleAdd = () => {
     setEditingItem(null);
     setFormData({});
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData(item);
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
@@ -182,6 +185,8 @@ export default function GSTMasterPage() {
 
   const validateForm = (data) => {
     console.log("validate form is called");
+    
+    // Validate GSTIN
     const gstValidation = validateGSTIN(data.gstNumber);
     if (!gstValidation.valid) {
       return { valid: false, message: gstValidation.message };
@@ -201,14 +206,62 @@ export default function GSTMasterPage() {
       };
     }
     
+    // Validate GST Holder Name
+    const holderNameValidation = validateName(data.gstHolderName, 'GST Holder Name');
+    if (!holderNameValidation.valid) {
+      return { valid: false, message: holderNameValidation.message };
+    }
+    
+    // Validate GST Name
+    const gstNameValidation = validateName(data.gstName, 'GST Name');
+    if (!gstNameValidation.valid) {
+      return { valid: false, message: gstNameValidation.message };
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(data.address);
+    if (!addressValidation.valid) {
+      return { valid: false, message: addressValidation.message };
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(data.city);
+    if (!cityValidation.valid) {
+      return { valid: false, message: cityValidation.message };
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(data.pinCode);
+    if (!pinValidation.valid) {
+      return { valid: false, message: pinValidation.message };
+    }
+    
+    // Validate Email
     const emailValidation = validateEmail(data.email);
     if (!emailValidation.valid) {
       return { valid: false, message: emailValidation.message };
     }
     
+    // Validate Mobile
     const mobileValidation = validateMobile(String(data.mobile));
     if (!mobileValidation.valid) {
       return { valid: false, message: mobileValidation.message };
+    }
+    
+    // Validate State Code (if provided)
+    if (data.stateCode) {
+      const stateCodeValidation = validateStateCode(data.stateCode);
+      if (!stateCodeValidation.valid) {
+        return { valid: false, message: stateCodeValidation.message };
+      }
+    }
+    
+    // Validate Password (if provided in edit mode)
+    if (data.password && data.password.trim() !== '') {
+      const passwordValidation = validatePassword(data.password);
+      if (!passwordValidation.valid) {
+        return { valid: false, message: passwordValidation.message };
+      }
     }
     
     return { valid: true };
@@ -279,6 +332,69 @@ export default function GSTMasterPage() {
   const updateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+  
+  const validateField = (field, value) => {
+    let error = '';
+    
+    switch (field) {
+      case 'gstNumber':
+        const gstValidation = validateGSTIN(value);
+        if (!gstValidation.valid) error = gstValidation.message;
+        break;
+      case 'gstHolderName':
+        const holderNameValidation = validateName(value, 'GST Holder Name');
+        if (!holderNameValidation.valid) error = holderNameValidation.message;
+        break;
+      case 'gstName':
+        const gstNameValidation = validateName(value, 'GST Name');
+        if (!gstNameValidation.valid) error = gstNameValidation.message;
+        break;
+      case 'address':
+        const addressValidation = validateAddress(value);
+        if (!addressValidation.valid) error = addressValidation.message;
+        break;
+      case 'city':
+        const cityValidation = validateCity(value);
+        if (!cityValidation.valid) error = cityValidation.message;
+        break;
+      case 'pinCode':
+        const pinValidation = validatePIN(value);
+        if (!pinValidation.valid) error = pinValidation.message;
+        break;
+      case 'email':
+        const emailValidation = validateEmail(value);
+        if (!emailValidation.valid) error = emailValidation.message;
+        break;
+      case 'mobile':
+        const mobileValidation = validateMobile(String(value));
+        if (!mobileValidation.valid) error = mobileValidation.message;
+        break;
+      case 'stateCode':
+        if (value) {
+          const stateCodeValidation = validateStateCode(value);
+          if (!stateCodeValidation.valid) error = stateCodeValidation.message;
+        }
+        break;
+      case 'password':
+        if (value && value.trim() !== '') {
+          const passwordValidation = validatePassword(value);
+          if (!passwordValidation.valid) error = passwordValidation.message;
+        }
+        break;
+    }
+    
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+    
+    return !error;
+  };
 
   const handleDDOCountClick = async (gstItem) => {
     setSelectedGSTIN(gstItem);
@@ -294,8 +410,9 @@ export default function GSTMasterPage() {
 
   const handleDDOPasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!ddoPasswordData.password || ddoPasswordData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const passwordValidation = validatePassword(ddoPasswordData.password);
+    if (!passwordValidation.valid) {
+      toast.error(passwordValidation.message);
       return;
     }
 
@@ -442,13 +559,37 @@ export default function GSTMasterPage() {
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   {field.type === 'textarea' ? (
-                    <textarea
-                      value={formData[field.key] || ''}
-                      onChange={(e) => updateFormData(field.key, e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      rows={3}
-                      required={field.required}
-                    />
+                    <>
+                      <textarea
+                        value={formData[field.key] || ''}
+                        onChange={(e) => {
+                          updateFormData(field.key, e.target.value);
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (field.required || e.target.value) {
+                            validateField(field.key, e.target.value);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        rows={3}
+                        required={field.required}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   ) : field.type === 'file' ? (
                     <div>
                       <input
@@ -475,38 +616,88 @@ export default function GSTMasterPage() {
                       )}
                     </div>
                   ) : field.type === 'password' ? (
-                    <input
-                      type="password"
-                      value={formData[field.key] || ''}
-                      onChange={(e) => updateFormData(field.key, e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      placeholder="Leave blank to keep current password"
-                      required={field.required}
-                    />
+                    <>
+                      <input
+                        type="password"
+                        value={formData[field.key] || ''}
+                        onChange={(e) => {
+                          updateFormData(field.key, e.target.value);
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value && e.target.value.trim() !== '') {
+                            validateField(field.key, e.target.value);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        placeholder="Leave blank to keep current password"
+                        required={field.required}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   ) : (
-                    <input
-                      type={field.type || 'text'}
-                      value={formData[field.key] ?? ''}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                         // ✅ Auto-uppercase for PAN or GST fields
-                        if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
-                          value = value.toUpperCase();
-                        }
-                        if (field.type === 'number') {
-                          const numValue = value === '' ? '' : parseInt(value);
-                          updateFormData(field.key, isNaN(numValue) ? '' : numValue);
-                        } else {
-                          updateFormData(field.key, value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      placeholder={field.placeholder}
-                      required={field.required}
-                      maxLength={field.maxLength}
-                      min={field.min}
-                      max={field.max}
-                    />
+                    <>
+                      <input
+                        type={field.type || 'text'}
+                        value={formData[field.key] ?? ''}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                           // ✅ Auto-uppercase for PAN or GST fields
+                          if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
+                            value = value.toUpperCase();
+                          }
+                          if (field.type === 'number') {
+                            const numValue = value === '' ? '' : parseInt(value);
+                            updateFormData(field.key, isNaN(numValue) ? '' : numValue);
+                          } else {
+                            updateFormData(field.key, value);
+                          }
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          let valueToValidate = e.target.value;
+                          if (field.type === 'number') {
+                            valueToValidate = valueToValidate === '' ? '' : parseInt(valueToValidate);
+                          }
+                          if (field.required || valueToValidate) {
+                            validateField(field.key, valueToValidate);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        maxLength={field.maxLength}
+                        min={field.min}
+                        max={field.max}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

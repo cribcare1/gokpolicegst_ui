@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
+import { validateGSTIN, validateHSN, validateGSTRate, validateName } from '@/lib/gstUtils';
 
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
@@ -40,37 +41,47 @@ const formFields = [
 
 const validateForm = (data) => {
   console.log("validate form ", data);
-  if (!data.hsnCode || !data.serviceName) {
-    return { valid: false, message: 'HSN Number and Name are required' };
+
+  const gstValidation = validateGSTIN(data.gstinNumber);
+  if (!gstValidation.valid) {
+    return { valid: false, message: gstValidation.message };
   }
   
-  // Validate GST rates (values come as strings from dropdown)
-  if (!data.totalGst || !data.igst || !data.cgst || !data.sgst) {
-    return { valid: false, message: 'All GST rates are required' };
+  const hsnValidation = validateHSN(data.hsnCode);
+  if (!hsnValidation.valid) {
+    return { valid: false, message: hsnValidation.message };
   }
   
-  const gstRate = parseFloat(data.totalGst);
-  const igst = parseFloat(data.igst);
-  const cgst = parseFloat(data.cgst);
-  const sgst = parseFloat(data.sgst);
-  
-  if (isNaN(gstRate) || gstRate < 0 || gstRate > 100) {
-    return { valid: false, message: 'GST Tax Rate must be between 0 and 100' };
+  const serviceNameValidation = validateName(data.serviceName, 'Service Name');
+  if (!serviceNameValidation.valid) {
+    return { valid: false, message: serviceNameValidation.message };
   }
   
-  if (isNaN(igst) || igst < 0 || igst > 100) {
-    return { valid: false, message: 'IGST must be between 0 and 100' };
+  // Validate GST rates
+  const totalGstValidation = validateGSTRate(data.totalGst);
+  if (!totalGstValidation.valid) {
+    return { valid: false, message: totalGstValidation.message };
   }
   
-  if (isNaN(cgst) || cgst < 0 || cgst > 100) {
-    return { valid: false, message: 'CGST must be between 0 and 100' };
+  const igstValidation = validateGSTRate(data.igst);
+  if (!igstValidation.valid) {
+    return { valid: false, message: igstValidation.message };
   }
   
-  if (isNaN(sgst) || sgst < 0 || sgst > 100) {
-    return { valid: false, message: 'SGST must be between 0 and 100' };
+  const cgstValidation = validateGSTRate(data.cgst);
+  if (!cgstValidation.valid) {
+    return { valid: false, message: cgstValidation.message };
+  }
+  
+  const sgstValidation = validateGSTRate(data.sgst);
+  if (!sgstValidation.valid) {
+    return { valid: false, message: sgstValidation.message };
   }
   
   // Validate that CGST + SGST should equal IGST (or GST Tax Rate)
+  const cgst = cgstValidation.cleaned;
+  const sgst = sgstValidation.cleaned;
+  const igst = igstValidation.cleaned;
   if (Math.abs(cgst + sgst - igst) > 0.01) {
     return { valid: false, message: 'CGST + SGST should equal IGST' };
   }
@@ -81,7 +92,7 @@ const validateForm = (data) => {
 export default function HSNRecordsPage() {
   return (
     <MasterDataPage
-      title="HSN Details"
+      title="HSN Master"
       endpoint={{
         LIST: API_ENDPOINTS.HSN_LIST,
         ADD: API_ENDPOINTS.HSN_ADD,

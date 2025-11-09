@@ -300,3 +300,214 @@ export const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+/**
+ * Validates MICR code format (9 digits)
+ */
+export const validateMICR = (micr) => {
+  if (!micr) return { valid: false, message: 'MICR code is required' };
+  const cleaned = micr.trim().replace(/\D/g, '');
+  if (cleaned.length !== 9) {
+    return { valid: false, message: 'MICR code must be 9 digits' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates account number (minimum 9 digits, maximum 18 digits)
+ */
+export const validateAccountNumber = (accountNumber) => {
+  if (!accountNumber) return { valid: false, message: 'Account number is required' };
+  const cleaned = accountNumber.trim().replace(/\D/g, '');
+  if (cleaned.length < 9 || cleaned.length > 18) {
+    return { valid: false, message: 'Account number must be between 9 and 18 digits' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates name field (minimum 2 characters, only letters, spaces, and common punctuation)
+ */
+export const validateName = (name, fieldName = 'Name') => {
+  if (!name) return { valid: false, message: `${fieldName} is required` };
+  const cleaned = name.trim();
+  if (cleaned.length < 2) {
+    return { valid: false, message: `${fieldName} must be at least 2 characters` };
+  }
+  if (cleaned.length > 200) {
+    return { valid: false, message: `${fieldName} must be less than 200 characters` };
+  }
+  // Allow letters, spaces, hyphens, apostrophes, and common punctuation
+  if (!/^[a-zA-Z\s\-'.,()&]+$/.test(cleaned)) {
+    return { valid: false, message: `${fieldName} contains invalid characters` };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates address field (minimum 10 characters)
+ */
+export const validateAddress = (address) => {
+  if (!address) return { valid: false, message: 'Address is required' };
+  const cleaned = address.trim();
+  if (cleaned.length < 10) {
+    return { valid: false, message: 'Address must be at least 10 characters' };
+  }
+  if (cleaned.length > 500) {
+    return { valid: false, message: 'Address must be less than 500 characters' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates city name
+ */
+export const validateCity = (city) => {
+  if (!city) return { valid: false, message: 'City is required' };
+  const cleaned = city.trim();
+  if (cleaned.length < 2) {
+    return { valid: false, message: 'City must be at least 2 characters' };
+  }
+  if (cleaned.length > 100) {
+    return { valid: false, message: 'City must be less than 100 characters' };
+  }
+  if (!/^[a-zA-Z\s\-']+$/.test(cleaned)) {
+    return { valid: false, message: 'City contains invalid characters' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates state code (1-99)
+ */
+export const validateStateCode = (stateCode) => {
+  if (!stateCode) return { valid: false, message: 'State code is required' };
+  const code = parseInt(stateCode);
+  if (isNaN(code) || code < 1 || code > 99) {
+    return { valid: false, message: 'State code must be between 1 and 99' };
+  }
+  return { valid: true, cleaned: code.toString() };
+};
+
+/**
+ * Validates DDO code format
+ */
+export const validateDDOCode = (ddoCode) => {
+  if (!ddoCode) return { valid: false, message: 'DDO Code is required' };
+  const cleaned = ddoCode.trim().toUpperCase();
+  if (cleaned.length < 3) {
+    return { valid: false, message: 'DDO Code must be at least 3 characters' };
+  }
+  if (cleaned.length > 20) {
+    return { valid: false, message: 'DDO Code must be less than 20 characters' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates HSN code (4-8 digits)
+ */
+export const validateHSN = (hsn) => {
+  if (!hsn) return { valid: false, message: 'HSN code is required' };
+  const cleaned = hsn.trim().replace(/\D/g, '');
+  if (cleaned.length < 4 || cleaned.length > 8) {
+    return { valid: false, message: 'HSN code must be between 4 and 8 digits' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates GST rate (0-100)
+ */
+export const validateGSTRate = (rate) => {
+  if (rate === undefined || rate === null || rate === '') {
+    return { valid: false, message: 'GST rate is required' };
+  }
+  const numRate = parseFloat(rate);
+  if (isNaN(numRate) || numRate < 0 || numRate > 100) {
+    return { valid: false, message: 'GST rate must be between 0 and 100' };
+  }
+  return { valid: true, cleaned: numRate };
+};
+
+/**
+ * Validates password (minimum 6 characters, at least one letter and one number)
+ */
+export const validatePassword = (password, minLength = 6) => {
+  if (!password) return { valid: false, message: 'Password is required' };
+  if (password.length < minLength) {
+    return { valid: false, message: `Password must be at least ${minLength} characters` };
+  }
+  if (password.length > 50) {
+    return { valid: false, message: 'Password must be less than 50 characters' };
+  }
+  // Optional: Check for at least one letter and one number
+  // if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
+  //   return { valid: false, message: 'Password must contain at least one letter and one number' };
+  // }
+  return { valid: true };
+};
+
+/**
+ * Validates bill number
+ */
+export const validateBillNumber = (billNumber) => {
+  if (!billNumber) return { valid: false, message: 'Bill number is required' };
+  const cleaned = billNumber.trim();
+  if (cleaned.length < 3) {
+    return { valid: false, message: 'Bill number must be at least 3 characters' };
+  }
+  if (cleaned.length > 50) {
+    return { valid: false, message: 'Bill number must be less than 50 characters' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates amount (must be positive number)
+ */
+export const validateAmount = (amount, fieldName = 'Amount') => {
+  if (amount === undefined || amount === null || amount === '') {
+    return { valid: false, message: `${fieldName} is required` };
+  }
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount < 0) {
+    return { valid: false, message: `${fieldName} must be a positive number` };
+  }
+  return { valid: true, cleaned: numAmount };
+};
+
+/**
+ * Validates description field
+ */
+export const validateDescription = (description) => {
+  if (!description) return { valid: false, message: 'Description is required' };
+  const cleaned = description.trim();
+  if (cleaned.length < 3) {
+    return { valid: false, message: 'Description must be at least 3 characters' };
+  }
+  if (cleaned.length > 500) {
+    return { valid: false, message: 'Description must be less than 500 characters' };
+  }
+  return { valid: true, cleaned };
+};
+
+/**
+ * Validates exemption certificate number (alphanumeric, optional)
+ */
+export const validateExemptionCert = (certNumber) => {
+  if (!certNumber || certNumber.trim() === '') {
+    return { valid: true, cleaned: '' }; // Optional field
+  }
+  const cleaned = certNumber.trim().toUpperCase();
+  if (cleaned.length < 3) {
+    return { valid: false, message: 'Exemption certificate number must be at least 3 characters' };
+  }
+  if (cleaned.length > 50) {
+    return { valid: false, message: 'Exemption certificate number must be less than 50 characters' };
+  }
+  if (!/^[A-Z0-9\-/]+$/.test(cleaned)) {
+    return { valid: false, message: 'Exemption certificate number contains invalid characters' };
+  }
+  return { valid: true, cleaned };
+};
+

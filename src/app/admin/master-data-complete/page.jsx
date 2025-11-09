@@ -43,7 +43,7 @@ export default function MasterDataCompletePage() {
     },
     {
       id: 'ddo-mapping',
-      title: 'DDO Mapping Master',
+      title: 'DDO Mapping',
       icon: MapPin,
       href: '/admin/master-data/ddo-mapping',
       description: 'Map DDOs to GSTINs',

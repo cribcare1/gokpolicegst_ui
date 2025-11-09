@@ -7,7 +7,7 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, Building2, MapPin, Mail, Phone } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Helper function to parse address and extract city and pin code
@@ -113,12 +113,35 @@ export default function AdminProfilePage() {
   };
 
   const handleSave = async () => {
-    // Validate form
-    if (!formData.fullName || formData.fullName.trim() === '') {
-      toast.error('Profile Name is required');
+    // Validate Profile Name
+    const nameValidation = validateName(formData.fullName, 'Profile Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
       return;
     }
 
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(formData.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(formData.pinCode);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
+
+    // Validate Email
     if (formData.email) {
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.valid) {
@@ -127,6 +150,7 @@ export default function AdminProfilePage() {
       }
     }
 
+    // Validate Mobile
     if (formData.mobileNumber) {
       const mobileValidation = validateMobile(formData.mobileNumber);
       if (!mobileValidation.valid) {

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
+import { validatePassword } from '@/lib/gstUtils';
 
 // Toast component
 const Toast = ({ message, type, onClose }) => {
@@ -102,8 +103,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
   
-    if (!username || !password) {
-      setError('Please enter both username and password');
+    if (!username || username.trim() === '') {
+      setError('Username is required');
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
       return;
     }
   
@@ -213,6 +220,17 @@ export default function LoginPage() {
   };
 
   const resetPassword = async () => {
+    if (!username || username.trim() === '') {
+      showToast("❌ Username is required", "error");
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      showToast(`❌ ${passwordValidation.message}`, "error");
+      return;
+    }
+    
     if (password !== confirmPassword) {
       showToast("❌ Passwords do not match", "error");
       return;

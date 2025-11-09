@@ -7,7 +7,7 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, MapPin, Building2, Mail, Phone, FileText } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { useGstinList } from '@/hooks/useGstinList';
 
 // Helper function to parse address and extract city and pin code
@@ -106,19 +106,49 @@ export default function GstinProfilePage() {
   };
 
   const handleSave = async () => {
-    // Validate form
+    // Validate GSTIN
     const gstValidation = validateGSTIN(formData.gstinNumber);
     if (!gstValidation.valid) {
       toast.error(gstValidation.message);
       return;
     }
+    
+    // Validate GSTIN Name
+    const nameValidation = validateName(formData.gstinName, 'GSTIN Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(formData.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(formData.pinCode);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
 
+    // Validate Email
     const emailValidation = validateEmail(formData.email);
     if (!emailValidation.valid) {
       toast.error(emailValidation.message);
       return;
     }
 
+    // Validate Mobile
     const mobileValidation = validateMobile(formData.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
