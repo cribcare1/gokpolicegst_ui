@@ -39,7 +39,8 @@ const formFields = [
 ];
 
 const validateForm = (data) => {
-  if (!data.hsnNumber || !data.name) {
+  console.log("validate form ", data);
+  if (!data.hsnCode || !data.serviceName) {
     return { valid: false, message: 'HSN Number and Name are required' };
   }
   

@@ -38,11 +38,13 @@ const formFields = [
 ];
 
 const validateForm = (data) => {
-  const gstValidation = validateGSTIN(data.gstinNumber);
-  if (!gstValidation.valid) {
-    return { valid: false, message: gstValidation.message };
-  }
+  console.log("Bank validate form: ", data);
+  // const gstValidation = validateGSTIN(data.gstinNumber);
+  // if (!gstValidation.valid) {
+  //   return { valid: false, message: gstValidation.message };
+  // }
   
+
   const ifscValidation = validateIFSC(data.ifscCode);
   if (!ifscValidation.valid) {
     return { valid: false, message: ifscValidation.message };
