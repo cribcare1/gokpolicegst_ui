@@ -31,6 +31,7 @@ export default function GstinDDORegistrationPage() {
     mobile: '',
     email: '',
     password: '',
+    
   });
   const [showPassword, setShowPassword] = useState(false);
 
