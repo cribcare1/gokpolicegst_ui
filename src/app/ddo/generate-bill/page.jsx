@@ -6,7 +6,7 @@ import Modal from '@/components/shared/Modal';
 import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
-import { t } from '@/lib/localization';
+import { t, getLanguage } from '@/lib/localization';
 import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode } from '@/lib/gstUtils';
 import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Trash2, X, Download, Printer, FileText } from 'lucide-react';
@@ -65,12 +65,37 @@ export default function GenerateBillPage() {
   const [note, setNote] = useState('');
   
   const [loading, setLoading] = useState(false);
+  const [currentLang, setCurrentLang] = useState('en');
   const { gstinList } = useGstinList();
 
   useEffect(() => {
     fetchCustomers();
     fetchHSNList();
     loadDDOInfo();
+    setCurrentLang(getLanguage());
+    
+    // Listen for language changes
+    const handleLanguageChange = (event) => {
+      const newLang = event?.detail?.language || getLanguage();
+      setCurrentLang(newLang);
+    };
+    
+    // Listen to custom language change event
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languageChanged', handleLanguageChange);
+      // Also listen to storage events (for cross-tab communication)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'preferredLanguage') {
+          setCurrentLang(getLanguage());
+        }
+      });
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('languageChanged', handleLanguageChange);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -162,7 +187,7 @@ export default function GenerateBillPage() {
     if (calculation.note) {
       setNote(calculation.note);
     } else if (calculation.isGovernment) {
-      setNote('GST Not Applicable - Government Entity (Karnataka)');
+      setNote(t('bill.gstNotApplicable'));
     } else if (calculation.isSameState) {
       setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
     } else {
@@ -264,12 +289,12 @@ export default function GenerateBillPage() {
     // Validate all required fields
     const validations = [
       validateGSTIN(billDetails.gstinNumber),
-      { valid: billDetails.gstAddress?.trim(), message: 'GST Address is required' },
-      { valid: billDetails.ddoCode?.trim(), message: 'DDO Code is required' },
+      { valid: billDetails.gstAddress?.trim(), message: t('bill.gstAddressRequired') },
+      { valid: billDetails.ddoCode?.trim(), message: t('bill.ddoCodeRequired') },
       validateBillNumber(billDetails.billNumber),
       validateBillDate(billDetails.date),
-      { valid: selectedCustomer, message: 'Please select a customer' },
-      { valid: lineItems.length > 0, message: 'Please add at least one line item' }
+      { valid: selectedCustomer, message: t('bill.selectCustomerRequired') },
+      { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') }
     ];
 
     for (const validation of validations) {
@@ -283,21 +308,21 @@ export default function GenerateBillPage() {
     for (let i = 0; i < lineItems.length; i++) {
       const item = lineItems[i];
       const descValidation = validateDescription(item.description);
-      const amountValidation = validateAmount(item.amount, `Line item ${i + 1} Amount`);
+      const amountValidation = validateAmount(item.amount, `${t('bill.lineItem')} ${i + 1} ${t('label.amount')}`);
       
       if (!descValidation.valid) {
-        toast.error(`Line item ${i + 1}: ${descValidation.message}`);
+        toast.error(`${t('bill.lineItem')} ${i + 1}: ${descValidation.message}`);
         return;
       }
       if (!amountValidation.valid) {
-        toast.error(`Line item ${i + 1}: ${amountValidation.message}`);
+        toast.error(`${t('bill.lineItem')} ${i + 1}: ${amountValidation.message}`);
         return;
       }
     }
 
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     if (taxableValue <= 0) {
-      toast.error('Total taxable value must be greater than 0');
+      toast.error(t('bill.totalTaxableValueGreater'));
       return;
     }
 
@@ -329,7 +354,7 @@ export default function GenerateBillPage() {
       );
       
       if (response && response.status === 'success') {
-        toast.success('Bill saved successfully!');
+        toast.success(t('bill.savedSuccessfully'));
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -418,7 +443,7 @@ export default function GenerateBillPage() {
                 <span className="gradient-text">{t('nav.generateBill')}</span>
               </h1>
               <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
-                Generate GST Bill - Government of Karnataka Format
+                {t('bill.generateBillSubtitle')}
               </p>
             </div>
           </div>
@@ -467,7 +492,7 @@ export default function GenerateBillPage() {
           {/* TAX INVOICE Header */}
           <div className="text-center">
             <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)] border-b-2 border-[var(--color-border)] pb-2">
-              TAX INVOICE
+              {t('bill.taxInvoice')}
             </h2>
           </div>
 
@@ -475,10 +500,10 @@ export default function GenerateBillPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Bill To Section */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-[var(--color-text-primary)]">Details of Service Receiver (BILL TO)</h3>
+              <h3 className="font-semibold text-[var(--color-text-primary)]">{t('bill.serviceReceiver')}</h3>
               
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Select Customer</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.selectCustomer')}</label>
                 <select
                   value={selectedCustomer?.id || ''}
                   onChange={(e) => {
@@ -487,10 +512,10 @@ export default function GenerateBillPage() {
                   }}
                   className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
                 >
-                  <option value="">Select a customer</option>
+                  <option value="">{t('bill.selectCustomerPlaceholder')}</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.gstNumber || 'No GSTIN'}
+                      {customer.name} - {customer.gstNumber || t('common.noGstin')}
                     </option>
                   ))}
                 </select>
@@ -501,45 +526,45 @@ export default function GenerateBillPage() {
                   className="mt-2"
                 >
                   <Plus className="mr-2" size={14} />
-                  Add New Customer
+                  {t('bill.addNewCustomer')}
                 </Button>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">M/s</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('common.ms')}</label>
                 <input
                   type="text"
                   value={selectedCustomer?.name || ''}
                   readOnly
                   className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
-                  placeholder="Customer Name"
+                  placeholder={t('bill.customerName')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Address</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.address')}</label>
                 <textarea
                   value={selectedCustomer?.address || ''}
                   readOnly
                   className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded resize-none"
                   rows="2"
-                  placeholder="Customer Address"
+                  placeholder={t('bill.customerAddress')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">GSTIN</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.gstin')}</label>
                   <input
                     type="text"
                     value={selectedCustomer?.gstNumber || ''}
                     readOnly
                     className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded uppercase"
-                    placeholder="GSTIN Number"
+                    placeholder={t('label.gstin')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">State Code</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.stateCode')}</label>
                   <input
                     type="text"
                     value={selectedCustomer?.stateCode || '29'}
@@ -550,9 +575,9 @@ export default function GenerateBillPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Exempted Service / RCM / FCM</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.exemptedService')}</label>
                 <select className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded">
-                  <option>Exempted Service</option>
+                  <option>{t('bill.exemptedServiceOption')}</option>
                   <option>RCM</option>
                   <option>FCM</option>
                 </select>
@@ -563,7 +588,7 @@ export default function GenerateBillPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">INVOICE NO</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.invoiceNo')}</label>
                   <input
                     type="text"
                     value={billDetails.billNumber}
@@ -572,7 +597,7 @@ export default function GenerateBillPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">INVOICE DATE</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.invoiceDate')}</label>
                   <input
                     type="date"
                     value={billDetails.date}
@@ -583,7 +608,7 @@ export default function GenerateBillPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Place of Supply</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.placeOfSupply')}</label>
                 <input
                   type="text"
                   value="Karnataka"
@@ -594,7 +619,7 @@ export default function GenerateBillPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">DDO Code</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.ddoCode')}</label>
                   <input
                     type="text"
                     value={billDetails.ddoCode}
@@ -603,7 +628,7 @@ export default function GenerateBillPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">DDO Name</label>
+                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.ddoName')}</label>
                   <input
                     type="text"
                     value="DCP CAR HQ"
@@ -614,7 +639,7 @@ export default function GenerateBillPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">DDO City/District</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.ddoCityDistrict')}</label>
                 <input
                   type="text"
                   value="Bengaluru"
@@ -630,13 +655,13 @@ export default function GenerateBillPage() {
             <table className="w-full border-collapse border border-[var(--color-border)]">
               <thead>
                 <tr className="bg-[var(--color-muted)]">
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Sl. No</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Item Description</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">HSN Code</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Qty</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Amount (Rs.)</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Taxable Value (Rs.)</th>
-                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">Action</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.serialNo')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.itemDescription')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.hsnCode')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.quantity')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.amount')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.taxableValueRs')}</th>
+                  <th className="border border-[var(--color-border)] p-2 text-left font-semibold text-sm">{t('bill.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -698,13 +723,13 @@ export default function GenerateBillPage() {
               <tfoot>
                 <tr>
                   <td colSpan="3" className="border border-[var(--color-border)] p-2 text-sm font-semibold text-right">
-                    Qty.
+                    {t('bill.totalQty')}
                   </td>
                   <td className="border border-[var(--color-border)] p-2 text-sm font-semibold text-center">
                     {totalQuantity}
                   </td>
                   <td className="border border-[var(--color-border)] p-2 text-sm font-semibold text-right">
-                    Total Amt
+                    {t('bill.totalAmt')}
                   </td>
                   <td className="border border-[var(--color-border)] p-2 text-sm font-semibold text-right">
                     {formatCurrency(totalAmount)}
@@ -724,34 +749,34 @@ export default function GenerateBillPage() {
 
           <Button onClick={handleAddLineItem} variant="secondary" className="mt-2">
             <Plus className="mr-2" size={16} />
-            Add Line Item
+            {t('bill.addLineItem')}
           </Button>
 
           {/* GST Calculation Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Tax is Payable on Reverse Charges</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.taxPayableReverse')}</label>
                 <select className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded">
-                  <option>YES</option>
-                  <option>NO</option>
-                  <option>NA</option>
+                  <option>{t('bill.yes')}</option>
+                  <option>{t('bill.no')}</option>
+                  <option>{t('bill.na')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Invoice Remarks</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.invoiceRemarks')}</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded resize-none"
                   rows="3"
-                  placeholder="Notification details will be displayed"
+                  placeholder={t('bill.invoiceRemarksPlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Total Invoice Value in Words</label>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.totalInvoiceValueWords')}</label>
                 <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded italic">
                   {amountInWords(gstCalculation?.finalAmount || totalAmount)}
                 </div>
@@ -760,34 +785,34 @@ export default function GenerateBillPage() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-sm font-medium">Total Taxable Value</div>
+                <div className="text-sm font-medium">{t('bill.totalTaxableValue')}</div>
                 <div className="text-sm font-semibold text-right">{formatCurrency(totalAmount)}</div>
 
-                <div className="text-sm font-medium">GST Collectable Under FCM</div>
+                <div className="text-sm font-medium">{t('bill.gstCollectableFCM')}</div>
                 <div className="text-sm text-right">-</div>
 
-                <div className="text-sm font-medium">IGST @ 18%</div>
+                <div className="text-sm font-medium">{t('bill.igst18')}</div>
                 <div className="text-sm text-right">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</div>
 
-                <div className="text-sm font-medium">CGST @ 9%</div>
+                <div className="text-sm font-medium">{t('bill.cgst9')}</div>
                 <div className="text-sm font-semibold text-right">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</div>
 
-                <div className="text-sm font-medium">SGST @ 9%</div>
+                <div className="text-sm font-medium">{t('bill.sgst9')}</div>
                 <div className="text-sm font-semibold text-right">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</div>
 
-                <div className="text-sm font-medium border-t border-[var(--color-border)] pt-2">Total GST Amount</div>
+                <div className="text-sm font-medium border-t border-[var(--color-border)] pt-2">{t('bill.totalGstAmount')}</div>
                 <div className="text-sm font-semibold text-right border-t border-[var(--color-border)] pt-2">
                   {formatCurrency(gstCalculation?.gstAmount || 0)}
                 </div>
 
-                <div className="text-sm font-medium">Total Invoice Amount</div>
+                <div className="text-sm font-medium">{t('bill.totalInvoiceAmount')}</div>
                 <div className="text-sm font-bold text-right text-[var(--color-primary)]">
                   {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
                 </div>
               </div>
 
               <div className="text-xs text-[var(--color-text-secondary)] mt-4">
-                <p>GST Payable Under RCM by the Recipient = IGST: CGST: SGST:</p>
+                <p>{t('bill.gstPayableRCM')}</p>
               </div>
             </div>
           </div>
@@ -796,10 +821,10 @@ export default function GenerateBillPage() {
           <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6 border-t border-[var(--color-border)]">
             <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <FileText className="mr-2" size={16} />
-              Preview
+              {t('bill.preview')}
             </Button>
             <Button variant="primary" onClick={handleSaveBill} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Bill'}
+              {loading ? t('bill.saving') : t('bill.saveBill')}
             </Button>
           </div>
         </div>
@@ -808,27 +833,27 @@ export default function GenerateBillPage() {
         <Modal
           isOpen={showCustomerModal}
           onClose={() => setShowCustomerModal(false)}
-          title="Add New Customer"
+          title={t('bill.addNewCustomer')}
           size="lg"
         >
           <form onSubmit={handleAddCustomer} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                Customer Name *
+                {t('bill.customerNameRequired')}
               </label>
               <input
                 type="text"
                 value={newCustomer.name}
                 onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
                 className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
-                placeholder="Enter customer name"
+                placeholder={t('bill.enterCustomerName')}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                GSTIN Number *
+                {t('bill.gstinNumberRequired')}
               </label>
               <input
                 type="text"
@@ -843,14 +868,14 @@ export default function GenerateBillPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                Address *
+                {t('bill.addressRequired')}
               </label>
               <textarea
                 value={newCustomer.address}
                 onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
                 className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded resize-none"
                 rows="3"
-                placeholder="Enter complete address"
+                placeholder={t('bill.enterCompleteAddress')}
                 required
               />
             </div>
@@ -858,7 +883,7 @@ export default function GenerateBillPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                  State Code *
+                  {t('bill.stateCodeRequired')}
                 </label>
                 <input
                   type="number"
@@ -873,7 +898,7 @@ export default function GenerateBillPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                  PIN Code *
+                  {t('bill.pinCodeRequired')}
                 </label>
                 <input
                   type="text"
@@ -890,7 +915,7 @@ export default function GenerateBillPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                  Mobile Number *
+                  {t('bill.mobileNumberRequired')}
                 </label>
                 <input
                   type="text"
@@ -904,7 +929,7 @@ export default function GenerateBillPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
-                  Email *
+                  {t('bill.emailRequired')}
                 </label>
                 <input
                   type="email"
@@ -934,10 +959,10 @@ export default function GenerateBillPage() {
                   });
                 }}
               >
-                Cancel
+                {t('btn.cancel')}
               </Button>
               <Button type="submit" variant="primary">
-                Add Customer
+                {t('btn.addCustomer')}
               </Button>
             </div>
           </form>
@@ -947,7 +972,7 @@ export default function GenerateBillPage() {
         <Modal
           isOpen={showPreviewModal}
           onClose={() => setShowPreviewModal(false)}
-          title="Bill Preview"
+          title={t('bill.billPreview')}
           size="full"
         >
           <div id="bill-preview-content" className="p-6 bg-white dark:bg-gray-900 text-black dark:text-white">
@@ -980,45 +1005,45 @@ export default function GenerateBillPage() {
             </div>
 
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold border-b-2 border-black dark:border-white pb-2">TAX INVOICE</h2>
+              <h2 className="text-xl font-bold border-b-2 border-black dark:border-white pb-2">{t('bill.taxInvoice')}</h2>
             </div>
 
             {/* Bill Details */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <div>
-                <h3 className="font-semibold mb-2">Details of Service Receiver (BILL TO)</h3>
-                <p>Customer Type : Govt / Non Govt</p>
-                <p className="font-semibold">M/s {selectedCustomer?.name || 'Karnataka Education Board'}</p>
+                <h3 className="font-semibold mb-2">{t('bill.serviceReceiver')}</h3>
+                <p>{t('bill.customerType')}</p>
+                <p className="font-semibold">{t('common.ms')} {selectedCustomer?.name || 'Karnataka Education Board'}</p>
                 <p>{selectedCustomer?.address || 'O/o GOK Education Board, 1ST FLOOR, Bengaluru-560016'}</p>
-                <p>GSTIN: {selectedCustomer?.gstNumber || ''}</p>
-                <p>State Code: 29</p>
-                <p className="font-semibold">Exempted Service / RCM / FCM</p>
+                <p>{t('label.gstin')}: {selectedCustomer?.gstNumber || ''}</p>
+                <p>{t('label.stateCode')}: 29</p>
+                <p className="font-semibold">{t('bill.exemptedService')}</p>
               </div>
 
               <div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="font-semibold">INVOICE NO</p>
+                    <p className="font-semibold">{t('bill.invoiceNo')}</p>
                     <p>{billDetails.billNumber}</p>
                   </div>
                   <div>
-                    <p className="font-semibold">INVOICE DATE</p>
+                    <p className="font-semibold">{t('bill.invoiceDate')}</p>
                     <p>{formatDate(billDetails.date)}</p>
                   </div>
                 </div>
-                <p className="font-semibold">Place of Supply</p>
+                <p className="font-semibold">{t('bill.placeOfSupply')}</p>
                 <p>Karnataka</p>
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   <div>
-                    <p className="font-semibold">DDO Code</p>
+                    <p className="font-semibold">{t('label.ddoCode')}</p>
                     <p>{billDetails.ddoCode}</p>
                   </div>
                   <div>
-                    <p className="font-semibold">DDO Name</p>
+                    <p className="font-semibold">{t('label.ddoName')}</p>
                     <p>DCP CAR HQ</p>
                   </div>
                 </div>
-                <p className="font-semibold mt-2">DDO City/District</p>
+                <p className="font-semibold mt-2">{t('bill.ddoCityDistrict')}</p>
                 <p>Bengaluru</p>
               </div>
             </div>
@@ -1027,12 +1052,12 @@ export default function GenerateBillPage() {
             <table className="w-full border-collapse border border-black dark:border-white mb-6">
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-800">
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">Sl. No</th>
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">Item Description</th>
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">HSN Code</th>
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">Qty</th>
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">Amount (Rs.)</th>
-                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">Taxable Value (Rs.)</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.serialNo')}</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.itemDescription')}</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.hsnCode')}</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.quantity')}</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.amount')}</th>
+                  <th className="border border-black dark:border-white p-2 text-left font-semibold text-sm">{t('bill.taxableValueRs')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1040,16 +1065,16 @@ export default function GenerateBillPage() {
                   <tr key={index}>
                     <td className="border border-black dark:border-white p-2 text-sm">{item.serialNo}</td>
                     <td className="border border-black dark:border-white p-2 text-sm">{item.description}</td>
-                    <td className="border border-black dark:border-white p-2 text-sm">{item.hsnNumber} - Public Administration and Security Services</td>
+                    <td className="border border-black dark:border-white p-2 text-sm">{item.hsnNumber} - {t('bill.publicAdministration')}</td>
                     <td className="border border-black dark:border-white p-2 text-sm text-center">{item.quantity}</td>
                     <td className="border border-black dark:border-white p-2 text-sm text-right">{formatCurrency(item.amount)}</td>
                     <td className="border border-black dark:border-white p-2 text-sm text-right">{formatCurrency(item.amount)}</td>
                   </tr>
                 ))}
                 <tr>
-                  <td colSpan="3" className="border border-black dark:border-white p-2 text-sm font-semibold text-right">Qty.</td>
+                  <td colSpan="3" className="border border-black dark:border-white p-2 text-sm font-semibold text-right">{t('bill.totalQty')}</td>
                   <td className="border border-black dark:border-white p-2 text-sm font-semibold text-center">{totalQuantity}</td>
-                  <td className="border border-black dark:border-white p-2 text-sm font-semibold text-right">Total Amt</td>
+                  <td className="border border-black dark:border-white p-2 text-sm font-semibold text-right">{t('bill.totalAmt')}</td>
                   <td className="border border-black dark:border-white p-2 text-sm font-semibold text-right">{formatCurrency(totalAmount)}</td>
                 </tr>
               </tbody>
@@ -1058,61 +1083,61 @@ export default function GenerateBillPage() {
             {/* GST Calculation */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <p className="font-semibold mb-2">Tax is Payable on Reverse Charges: YES / NO/ NA</p>
-                <p className="font-semibold">Invoice Remarks:</p>
-                <p className="mb-4">{note || 'Notification Details will be displayed'}</p>
-                <p className="font-semibold">Total Invoice Value in Words</p>
+                <p className="font-semibold mb-2">{t('bill.taxPayableReverse')}: {t('bill.yes')} / {t('bill.no')}/ {t('bill.na')}</p>
+                <p className="font-semibold">{t('bill.invoiceRemarks')}:</p>
+                <p className="mb-4">{note || t('bill.notificationDetails')}</p>
+                <p className="font-semibold">{t('bill.totalInvoiceValueWords')}</p>
                 <p className="italic">{amountInWords(gstCalculation?.finalAmount || totalAmount)}</p>
               </div>
 
               <div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>Total Taxable Value</span>
+                    <span>{t('bill.totalTaxableValue')}</span>
                     <span className="font-semibold">{formatCurrency(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>GST Collectable Under FCM</span>
+                    <span>{t('bill.gstCollectableFCM')}</span>
                     <span>-</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>IGST @ 18%</span>
+                    <span>{t('bill.igst18')}</span>
                     <span>{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>CGST @ 9%</span>
+                    <span>{t('bill.cgst9')}</span>
                     <span className="font-semibold">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>SGST @ 9%</span>
+                    <span>{t('bill.sgst9')}</span>
                     <span className="font-semibold">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                   </div>
                   <div className="flex justify-between border-t border-black dark:border-white pt-2">
-                    <span>Total GST Amount</span>
+                    <span>{t('bill.totalGstAmount')}</span>
                     <span className="font-semibold">{formatCurrency(gstCalculation?.gstAmount || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total Invoice Amount</span>
+                    <span>{t('bill.totalInvoiceAmount')}</span>
                     <span>{formatCurrency(gstCalculation?.finalAmount || totalAmount)}</span>
                   </div>
                 </div>
-                <p className="text-sm mt-4">GST Payable Under RCM by the Recipient = IGST: CGST: SGST:</p>
+                <p className="text-sm mt-4">{t('bill.gstPayableRCM')}</p>
               </div>
             </div>
 
             {/* Footer */}
             <div className="mt-8 text-center">
-              <p className="text-sm">** This is a computer generated invoice **</p>
+              <p className="text-sm">{t('bill.computerGenerated')}</p>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="secondary" onClick={() => setShowPreviewModal(false)}>
-              Close
+              {t('bill.close')}
             </Button>
             <Button variant="primary" onClick={handlePrintBill}>
               <Printer className="mr-2" size={16} />
-              Print
+              {t('bill.print')}
             </Button>
           </div>
         </Modal>
