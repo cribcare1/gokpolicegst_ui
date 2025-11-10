@@ -14,6 +14,7 @@ const DEMO_DDO_LIST = [
 ];
 
 export function useDdoList(gstin) {
+  console.log("gstin==rrrrr======", gstin);
   const [ddoList, setDdoList] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,35 +27,35 @@ export function useDdoList(gstin) {
     // Show demo data immediately for instant UI
     const filteredDemo = DEMO_DDO_LIST.filter(ddo => ddo.gstin === gstin);
     setDdoList(filteredDemo);
-
+    console.log("gstin========", gstin);
     // Then try to fetch real data from API
     fetchDdoList(gstin);
   }, [gstin]);
 
-  const fetchDdoList = async (gstinNumber) => {
-    if (!gstinNumber) return;
-
+  const fetchDdoList = async (gstId) => {
+    if (!gstId) return;
+    console.log("gstid========", gstId);
     setLoading(true);
     try {
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`);
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}${gstId}`);
       if (response?.status === 'success' && response?.data) {
         // Transform API response to match expected format
-        const transformedDDOs = response.data.map((item) => ({
-          id: item.id || item.ddoId || String(Date.now() + Math.random()),
-          ddoCode: item.ddoCode || item.code || '',
-          ddoName: item.ddoName || item.name || '',
-          gstin: gstinNumber
+        const transformedDDOs = response.data.ddos.map((item) => ({
+          id: item.userId ||'',
+          ddoCode: item.ddoCode || '',
+          ddoName: item.ddoName  || '',
+          gstin: item.gstNumber
         }));
         setDdoList(transformedDDOs);
       } else {
         // Keep demo data if API fails
-        const filteredDemo = DEMO_DDO_LIST.filter(ddo => ddo.gstin === gstinNumber);
+        const filteredDemo = DEMO_DDO_LIST.filter(ddo => ddo.id === gstin);
         setDdoList(filteredDemo);
       }
     } catch (error) {
       console.error('Error fetching DDO list:', error);
       // Keep demo data on error
-      const filteredDemo = DEMO_DDO_LIST.filter(ddo => ddo.gstin === gstinNumber);
+      const filteredDemo = DEMO_DDO_LIST.filter(ddo => ddo.id === gstin);
       setDdoList(filteredDemo);
     } finally {
       setLoading(false);
