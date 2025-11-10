@@ -46,7 +46,7 @@ const parseAddress = (fullAddress) => {
 export default function GstinProfilePage() {
   const [formData, setFormData] = useState({
     gstinNumber: '29AAAGO1111W1ZB',
-    gstinName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
+    gstName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
     address: 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle',
     city: 'Bengaluru',
     pinCode: '560001',
@@ -78,7 +78,7 @@ export default function GstinProfilePage() {
         if (gstinData.city && gstinData.pinCode) {
           setFormData({
             gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstinName: gstinData.name || '',
+            gstName: gstinData.gstName || '',
             address: gstinData.address || '',
             city: gstinData.city || '',
             pinCode: gstinData.pinCode || '',
@@ -90,7 +90,7 @@ export default function GstinProfilePage() {
           const parsed = parseAddress(gstinData.address || 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle Bengaluru-560001');
           setFormData({
             gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstinName: gstinData.name || '',
+            gstName: gstinData.gstName || '',
             address: parsed.address || '',
             city: parsed.city || 'Bengaluru',
             pinCode: parsed.pinCode || '560001',
@@ -159,7 +159,7 @@ export default function GstinProfilePage() {
     try {
       const updateData = {
         gstNumber: formData.gstinNumber,
-        name: formData.gstinName,
+        gstName: formData.gstName,
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
@@ -309,15 +309,15 @@ export default function GstinProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="gstinName"
-                        value={formData.gstinName}
+                        name="gstName"
+                        value={formData.gstName}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter GSTIN name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstinName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstName}</p>
                       </div>
                     )}
                   </div>
