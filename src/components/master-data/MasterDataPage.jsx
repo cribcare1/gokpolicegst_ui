@@ -11,6 +11,26 @@ import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+import { 
+  validateGSTIN, 
+  validatePAN, 
+  validateEmail, 
+  validateMobile, 
+  validatePIN, 
+  validateName, 
+  validateAddress, 
+  validateCity, 
+  validateStateCode,
+  validateIFSC,
+  validateMICR,
+  validateAccountNumber,
+  validateHSN,
+  validateGSTRate,
+  validateDDOCode,
+  validateAmount,
+  validateDescription,
+  validatePassword
+} from '@/lib/gstUtils';
 
 export default function MasterDataPage({
   title,
@@ -27,6 +47,7 @@ export default function MasterDataPage({
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const { gstinList } = useGstinList();
 
   useEffect(() => {
@@ -111,11 +132,13 @@ export default function MasterDataPage({
   const handleAdd = () => {
     setEditingItem(null);
     setFormData({});
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
   const handleEdit = (item) => {
     setEditingItem(item);
+    setFieldErrors({});
 
     const selectedGST = gstinList.find(
     (gst) => gst.gstNumber === item.gstinNumber
@@ -164,12 +187,34 @@ export default function MasterDataPage({
     delete dataCopy.gstinNumber;
 
     console.log("form data ", dataCopy);
-    // Validate form
-    const validation = validateForm(dataCopy);
-    console.log("validation  form ", validation);
-    if (!validation.valid) {
-      toast.error(validation.message || t('validation.required'));
+    
+    // Validate all fields before submission
+    let hasErrors = false;
+    const newErrors = {};
+    
+    formFields.forEach((field) => {
+      if (!field.readOnly) {
+        const value = dataCopy[field.key];
+        const isValid = validateField(field.key, value, field);
+        if (!isValid) {
+          hasErrors = true;
+        }
+      }
+    });
+
+    if (hasErrors) {
+      toast.error('Please fix the validation errors before submitting');
       return;
+    }
+
+    // Validate form using custom validateForm function if provided
+    if (validateForm) {
+      const validation = validateForm(dataCopy);
+      console.log("validation  form ", validation);
+      if (!validation.valid) {
+        toast.error(validation.message || t('validation.required'));
+        return;
+      }
     }
 
     try {
@@ -226,6 +271,123 @@ export default function MasterDataPage({
 
   const updateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateField = (fieldKey, value, fieldConfig) => {
+    let error = '';
+    const fieldName = fieldConfig?.label || fieldKey;
+    const fieldLower = fieldKey.toLowerCase();
+
+    // Skip validation for read-only fields
+    if (fieldConfig?.readOnly) {
+      return true;
+    }
+
+    // Required field validation
+    if (fieldConfig?.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
+      error = `${fieldName} is required`;
+      setFieldErrors((prev) => ({ ...prev, [fieldKey]: error }));
+      return false;
+    }
+
+    // Skip further validation if field is empty and not required
+    if (!value || (typeof value === 'string' && value.trim() === '')) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldKey];
+        return newErrors;
+      });
+      return true;
+    }
+
+    // Field-specific validation based on field key or type
+    if (fieldLower.includes('gstin') || fieldLower.includes('gstnumber')) {
+      const validation = validateGSTIN(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('pan') || fieldLower.includes('pannumber')) {
+      const validation = validatePAN(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('email')) {
+      const validation = validateEmail(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+      const validation = validateMobile(String(value));
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+      const validation = validatePIN(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('name') && !fieldLower.includes('number') && !fieldLower.includes('code')) {
+      const validation = validateName(value, fieldName);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('address')) {
+      const validation = validateAddress(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('city')) {
+      const validation = validateCity(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('statecode')) {
+      const validation = validateStateCode(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
+      const validation = validateIFSC(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+      const validation = validateMICR(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+      const validation = validateAccountNumber(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('hsn') || fieldLower.includes('hsnnumber')) {
+      const validation = validateHSN(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('gstrate') || fieldLower.includes('gsttaxrate') || fieldLower.includes('igst') || fieldLower.includes('cgst') || fieldLower.includes('sgst')) {
+      const validation = validateGSTRate(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('ddocode') || fieldLower.includes('ddo code')) {
+      const validation = validateDDOCode(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('amount') || fieldLower.includes('price') || fieldLower.includes('total')) {
+      const validation = validateAmount(value, fieldName);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('description')) {
+      const validation = validateDescription(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldLower.includes('password')) {
+      const validation = validatePassword(value);
+      if (!validation.valid) error = validation.message;
+    } else if (fieldConfig?.type === 'number' || fieldConfig?.type === 'tel') {
+      // Validate number fields
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) {
+        error = `${fieldName} must be a valid number`;
+      } else if (fieldConfig?.min !== undefined && numValue < fieldConfig.min) {
+        error = `${fieldName} must be at least ${fieldConfig.min}`;
+      } else if (fieldConfig?.max !== undefined && numValue > fieldConfig.max) {
+        error = `${fieldName} must be at most ${fieldConfig.max}`;
+      }
+    } else if (fieldConfig?.maxLength && String(value).length > fieldConfig.maxLength) {
+      error = `${fieldName} must be less than ${fieldConfig.maxLength} characters`;
+    }
+
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [fieldKey]: error }));
+      return false;
+    } else {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldKey];
+        return newErrors;
+      });
+      return true;
+    }
   };
 
   const tableColumns = [
@@ -320,13 +482,21 @@ export default function MasterDataPage({
                   {field.label} {field.required && <span className="text-red-500">*</span>}
                 </label>
                 {field.type === 'textarea' ? (
-                  <textarea
-                    value={formData[field.key] || ''}
-                    onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                    rows={3}
-                    required={field.required}
-                  />
+                  <>
+                    <textarea
+                      value={formData[field.key] || ''}
+                      onChange={(e) => updateFormData(field.key, e.target.value)}
+                      onBlur={(e) => validateField(field.key, e.target.value, field)}
+                      className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                        fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                      }`}
+                      rows={3}
+                      required={field.required}
+                    />
+                    {fieldErrors[field.key] && (
+                      <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
+                    )}
+                  </>
                 ) : field.type === 'file' ? (
                   <div>
                     <input
@@ -353,70 +523,147 @@ export default function MasterDataPage({
                     )}
                   </div>
                 ) : field.type === 'select' && field.options ? (
-                  <select
-                    value={formData[field.key] ?? ''}
-                    onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
-                    required={field.required}
-                    disabled={field.readOnly}
-                  >
-                    <option value="">Select {field.label}</option>
-                    {field.options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      value={formData[field.key] ?? ''}
+                      onChange={(e) => updateFormData(field.key, e.target.value)}
+                      onBlur={(e) => validateField(field.key, e.target.value, field)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                        fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                      } ${field.readOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
+                      required={field.required}
+                      disabled={field.readOnly}
+                    >
+                      <option value="">Select {field.label}</option>
+                      {field.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors[field.key] && (
+                      <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
+                    )}
+                  </>
                 ) : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
-                  <select
-                    value={formData[field.key] ?? ''}
-                    onChange={(e) => updateFormData(field.key, e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${field.readOnly ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
-                    required={field.required}
-                    disabled={field.readOnly}
-                  >
-                    <option value="">Select GSTIN Number</option>
-                    {gstinList.map((gstin) => (
-                      <option key={gstin.value} value={gstin.value}>
-                        {gstin.label}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      value={formData[field.key] ?? ''}
+                      onChange={(e) => updateFormData(field.key, e.target.value)}
+                      onBlur={(e) => validateField(field.key, e.target.value, field)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase ${
+                        fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                      } ${field.readOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-[var(--color-background)]'}`}
+                      required={field.required}
+                      disabled={field.readOnly}
+                    >
+                      <option value="">Select GSTIN Number</option>
+                      {gstinList.map((gstin) => (
+                        <option key={gstin.value} value={gstin.value}>
+                          {gstin.label}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors[field.key] && (
+                      <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
+                    )}
+                  </>
                 ) : (
-                  <input
-                    type={field.type || 'text'}
-                    value={formData[field.key] ?? ''}
-                   onChange={(e) => {
-                      let value = e.target.value;
+                  <>
+                    <input
+                      type={field.type || 'text'}
+                      value={formData[field.key] ?? ''}
+                      onChange={(e) => {
+                        let value = e.target.value;
+                        const fieldLower = field.key.toLowerCase();
 
-                      // ✅ Auto-uppercase for PAN or GST fields
-                      if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
-                        value = value.toUpperCase();
-                      }
+                        // ✅ Only allow integers for mobile, account number, and PIN fields
+                        if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                          // Mobile: only digits, max 10
+                          value = value.replace(/\D/g, '').slice(0, 10);
+                        } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                          // Account number: only digits
+                          value = value.replace(/\D/g, '');
+                        } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                          // PIN: only digits, max 6
+                          value = value.replace(/\D/g, '').slice(0, 6);
+                        } else if (fieldLower.includes('hsn') || fieldLower.includes('hsnnumber')) {
+                          // HSN: only digits
+                          value = value.replace(/\D/g, '');
+                        } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+                          // MICR: only digits, max 9
+                          value = value.replace(/\D/g, '').slice(0, 9);
+                        } else if (fieldLower.includes('gstrate') || fieldLower.includes('gsttaxrate') || fieldLower.includes('igst') || fieldLower.includes('cgst') || fieldLower.includes('sgst')) {
+                          // GST Rate: only numbers (allow decimal)
+                          value = value.replace(/[^\d.]/g, '');
+                          // Allow only one decimal point
+                          const parts = value.split('.');
+                          if (parts.length > 2) {
+                            value = parts[0] + '.' + parts.slice(1).join('');
+                          }
+                        } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                          // State Code: only digits, max 2
+                          value = value.replace(/\D/g, '').slice(0, 2);
+                        } else if (fieldLower.includes('amount') || fieldLower.includes('price') || fieldLower.includes('total')) {
+                          // Amount: only numbers (allow decimal)
+                          value = value.replace(/[^\d.]/g, '');
+                          // Allow only one decimal point
+                          const parts = value.split('.');
+                          if (parts.length > 2) {
+                            value = parts[0] + '.' + parts.slice(1).join('');
+                          }
+                        } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
+                          // ✅ Auto-uppercase for PAN or GST fields
+                          value = value.toUpperCase();
+                        } else if (field.type === 'number' || field.type === 'tel') {
+                          // Number type fields: only digits (allow decimal for number type)
+                          if (field.type === 'number') {
+                            value = value.replace(/[^\d.]/g, '');
+                            // Allow only one decimal point
+                            const parts = value.split('.');
+                            if (parts.length > 2) {
+                              value = parts[0] + '.' + parts.slice(1).join('');
+                            }
+                          } else {
+                            // tel type: only digits
+                            value = value.replace(/\D/g, '');
+                          }
+                        }
 
-                      if (field.type === 'number') {
-                        const numValue = value === '' ? '' : parseInt(value);
-                        updateFormData(field.key, isNaN(numValue) ? '' : numValue);
-
-                      } else if (field.key === 'totalGst') {
+                        if (field.type === 'number') {
+                          const numValue = value === '' ? '' : parseFloat(value);
+                          updateFormData(field.key, isNaN(numValue) ? '' : numValue);
+                        } else if (field.key === 'totalGst') {
                           const total = parseFloat(value) || 0;
                           updateFormData('totalGst', total);
                           updateFormData('igst', total);
                           updateFormData('cgst', total / 2);
                           updateFormData('sgst', total / 2);
-                      }else{
-                        updateFormData(field.key, value);
-                      }
-                    }}
-
-                    readOnly={field.readOnly}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${field.readOnly ? 'bg-[var(--color-background)] border-[var(--color-border)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)] border-[var(--color-border)]'}`}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    maxLength={field.maxLength}
-                    min={field.min}
-                    max={field.max}
-                  />
+                        } else {
+                          updateFormData(field.key, value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        let valueToValidate = e.target.value;
+                        if (field.type === 'number') {
+                          valueToValidate = valueToValidate === '' ? '' : parseFloat(valueToValidate);
+                        }
+                        validateField(field.key, valueToValidate, field);
+                      }}
+                      readOnly={field.readOnly}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                        fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                      } ${field.readOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
+                      placeholder={field.placeholder}
+                      required={field.required}
+                      maxLength={field.maxLength}
+                      min={field.min}
+                      max={field.max}
+                    />
+                    {fieldErrors[field.key] && (
+                      <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
+                    )}
+                  </>
                 )}
               </div>
             ))}

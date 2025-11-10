@@ -292,7 +292,10 @@ export default function DDOProfilePage() {
                         type="text"
                         name="ddoPin"
                         value={formData.ddoPin}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'ddoPin', value } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -321,7 +324,10 @@ export default function DDOProfilePage() {
                         type="tel"
                         name="contactNo"
                         value={formData.contactNo}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'contactNo', value } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter contact number"

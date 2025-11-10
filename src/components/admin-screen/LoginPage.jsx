@@ -14,6 +14,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -432,10 +433,38 @@ export default function AdminLogin() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.email;
+                      return newErrors;
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value.trim();
+                  if (!value) {
+                    setFieldErrors(prev => ({ ...prev, email: 'Username is required' }));
+                  } else if (value.length < 3) {
+                    setFieldErrors(prev => ({ ...prev, email: 'Username must be at least 3 characters' }));
+                  } else {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.email;
+                      return newErrors;
+                    });
+                  }
+                }}
+                className={`block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300 ${
+                  fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-teal-500'
+                }`}
                 placeholder="UserName"
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
           </div>
 
@@ -456,10 +485,37 @@ export default function AdminLogin() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.password;
+                      return newErrors;
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  const passwordValidation = validatePassword(value);
+                  if (!passwordValidation.valid) {
+                    setFieldErrors(prev => ({ ...prev, password: passwordValidation.message }));
+                  } else {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.password;
+                      return newErrors;
+                    });
+                  }
+                }}
+                className={`block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300 ${
+                  fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-teal-500'
+                }`}
                 placeholder="Password"
               />
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+              )}
               <div 
                 className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" 
                 onClick={togglePasswordVisibility}

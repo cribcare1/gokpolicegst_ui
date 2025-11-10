@@ -76,8 +76,10 @@ export default function GenerateBillPage() {
   useEffect(() => {
     if (selectedCustomer && lineItems.length > 0) {
       calculateGSTAmount();
+    } else {
+      setGstCalculation(null);
     }
-  }, [selectedCustomer, lineItems]);
+  }, [selectedCustomer, lineItems, billDetails.gstinNumber]);
 
   const loadDDOInfo = () => {
     const ddoCode = localStorage.getItem('ddoCode') || '0200PO0032';
@@ -127,16 +129,44 @@ export default function GenerateBillPage() {
       return;
     }
 
-    const calculation = calculateGST(selectedCustomer.gstNumber, taxableValue);
+    // Get supplier GSTIN from bill details
+    const supplierGSTIN = billDetails.gstinNumber;
+    const customerGSTIN = selectedCustomer.gstNumber || '';
+    const customerPAN = selectedCustomer.pan || '';
+    
+    // Determine invoice type (default to FCM)
+    const invoiceType = 'FCM'; // Can be 'FCM', 'RCM', or 'EXEMPTED'
+    
+    // Get HSN details if available (for GST rates)
+    const firstHSN = lineItems[0]?.hsnNumber;
+    const hsnDetails = firstHSN ? hsnList.find(h => 
+      h.hsnNumber === firstHSN || 
+      h.hsnCode === firstHSN || 
+      h.code === firstHSN
+    ) : null;
+    
+    // Call calculateGST with proper parameters
+    const calculation = calculateGST(
+      supplierGSTIN,
+      customerGSTIN,
+      customerPAN,
+      taxableValue,
+      18, // Default GST rate
+      invoiceType,
+      hsnDetails
+    );
+    
     setGstCalculation(calculation);
     
     // Update note based on GST calculation
-    if (calculation.isGovernment) {
+    if (calculation.note) {
+      setNote(calculation.note);
+    } else if (calculation.isGovernment) {
       setNote('GST Not Applicable - Government Entity (Karnataka)');
-    } else if (calculation.isKarnataka) {
-      setNote('CGST @9% + SGST @9% = 18% (Karnataka Non-Government)');
+    } else if (calculation.isSameState) {
+      setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
     } else {
-      setNote(`GST @18% (Standard Rate)`);
+      setNote(`IGST @18% (Different State)`);
     }
   };
 
@@ -179,7 +209,20 @@ export default function GenerateBillPage() {
           mobile: '',
           email: '',
         });
-        fetchCustomers();
+        // Refresh customers list and select the newly added customer
+        const updatedResponse = await ApiService.handleGetRequest(API_ENDPOINTS.CUSTOMER_LIST);
+        if (updatedResponse && updatedResponse.status === 'success') {
+          setCustomers(updatedResponse.data || []);
+          // Select the newly added customer (it should be the last one or match by GSTIN)
+          if (updatedResponse.data && updatedResponse.data.length > 0) {
+            const newCustomerData = updatedResponse.data.find(c => c.gstNumber === newCustomer.gstNumber) || updatedResponse.data[updatedResponse.data.length - 1];
+            if (newCustomerData) {
+              setSelectedCustomer(newCustomerData);
+            }
+          }
+        } else {
+          fetchCustomers();
+        }
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -435,11 +478,31 @@ export default function GenerateBillPage() {
               <h3 className="font-semibold text-[var(--color-text-primary)]">Details of Service Receiver (BILL TO)</h3>
               
               <div>
-                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Customer Type</label>
-                <select className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded">
-                  <option>Govt</option>
-                  <option>Non Govt</option>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Select Customer</label>
+                <select
+                  value={selectedCustomer?.id || ''}
+                  onChange={(e) => {
+                    const customer = customers.find(c => c.id === e.target.value);
+                    setSelectedCustomer(customer || null);
+                  }}
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                >
+                  <option value="">Select a customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name} - {customer.gstNumber || 'No GSTIN'}
+                    </option>
+                  ))}
                 </select>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowCustomerModal(true)}
+                  className="mt-2"
+                >
+                  <Plus className="mr-2" size={14} />
+                  Add New Customer
+                </Button>
               </div>
 
               <div>
@@ -447,8 +510,8 @@ export default function GenerateBillPage() {
                 <input
                   type="text"
                   value={selectedCustomer?.name || ''}
-                  onChange={(e) => setSelectedCustomer(prev => prev ? {...prev, name: e.target.value} : null)}
-                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                  readOnly
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   placeholder="Customer Name"
                 />
               </div>
@@ -457,8 +520,8 @@ export default function GenerateBillPage() {
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">Address</label>
                 <textarea
                   value={selectedCustomer?.address || ''}
-                  onChange={(e) => setSelectedCustomer(prev => prev ? {...prev, address: e.target.value} : null)}
-                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded resize-none"
+                  readOnly
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded resize-none"
                   rows="2"
                   placeholder="Customer Address"
                 />
@@ -470,8 +533,8 @@ export default function GenerateBillPage() {
                   <input
                     type="text"
                     value={selectedCustomer?.gstNumber || ''}
-                    onChange={(e) => setSelectedCustomer(prev => prev ? {...prev, gstNumber: e.target.value} : null)}
-                    className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded uppercase"
+                    readOnly
+                    className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded uppercase"
                     placeholder="GSTIN Number"
                   />
                 </div>
@@ -479,7 +542,7 @@ export default function GenerateBillPage() {
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">State Code</label>
                   <input
                     type="text"
-                    value="29"
+                    value={selectedCustomer?.stateCode || '29'}
                     readOnly
                     className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   />
@@ -652,8 +715,8 @@ export default function GenerateBillPage() {
             </table>
             <datalist id="hsn-list">
               {hsnList.map((hsn) => (
-                <option key={hsn.id} value={hsn.hsnNumber}>
-                  {hsn.name}
+                <option key={hsn.id || hsn.hsnNumber} value={hsn.hsnNumber || hsn.hsnCode || hsn.code}>
+                  {hsn.name || hsn.description || hsn.hsnNumber}
                 </option>
               ))}
             </datalist>
@@ -704,22 +767,22 @@ export default function GenerateBillPage() {
                 <div className="text-sm text-right">-</div>
 
                 <div className="text-sm font-medium">IGST @ 18%</div>
-                <div className="text-sm text-right">-</div>
+                <div className="text-sm text-right">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</div>
 
                 <div className="text-sm font-medium">CGST @ 9%</div>
-                <div className="text-sm font-semibold text-right">{formatCurrency(gstCalculation?.cgst || 63000)}</div>
+                <div className="text-sm font-semibold text-right">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</div>
 
                 <div className="text-sm font-medium">SGST @ 9%</div>
-                <div className="text-sm font-semibold text-right">{formatCurrency(gstCalculation?.sgst || 63000)}</div>
+                <div className="text-sm font-semibold text-right">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</div>
 
                 <div className="text-sm font-medium border-t border-[var(--color-border)] pt-2">Total GST Amount</div>
                 <div className="text-sm font-semibold text-right border-t border-[var(--color-border)] pt-2">
-                  {formatCurrency(gstCalculation?.gstAmount || 126000)}
+                  {formatCurrency(gstCalculation?.gstAmount || 0)}
                 </div>
 
                 <div className="text-sm font-medium">Total Invoice Amount</div>
                 <div className="text-sm font-bold text-right text-[var(--color-primary)]">
-                  {formatCurrency(gstCalculation?.finalAmount || 826000)}
+                  {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
                 </div>
               </div>
 
@@ -740,6 +803,145 @@ export default function GenerateBillPage() {
             </Button>
           </div>
         </div>
+
+        {/* Add Customer Modal */}
+        <Modal
+          isOpen={showCustomerModal}
+          onClose={() => setShowCustomerModal(false)}
+          title="Add New Customer"
+          size="lg"
+        >
+          <form onSubmit={handleAddCustomer} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                Customer Name *
+              </label>
+              <input
+                type="text"
+                value={newCustomer.name}
+                onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
+                className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                placeholder="Enter customer name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                GSTIN Number *
+              </label>
+              <input
+                type="text"
+                value={newCustomer.gstNumber}
+                onChange={(e) => setNewCustomer({...newCustomer, gstNumber: e.target.value.toUpperCase()})}
+                className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded uppercase"
+                placeholder="29XXXXXXXXXXXXX"
+                maxLength={15}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                Address *
+              </label>
+              <textarea
+                value={newCustomer.address}
+                onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
+                className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded resize-none"
+                rows="3"
+                placeholder="Enter complete address"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                  State Code *
+                </label>
+                <input
+                  type="number"
+                  value={newCustomer.stateCode}
+                  onChange={(e) => setNewCustomer({...newCustomer, stateCode: e.target.value})}
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                  placeholder="29"
+                  min="1"
+                  max="99"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                  PIN Code *
+                </label>
+                <input
+                  type="text"
+                  value={newCustomer.pin}
+                  onChange={(e) => setNewCustomer({...newCustomer, pin: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                  placeholder="560001"
+                  maxLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                  Mobile Number *
+                </label>
+                <input
+                  type="text"
+                  value={newCustomer.mobile}
+                  onChange={(e) => setNewCustomer({...newCustomer, mobile: e.target.value.replace(/\D/g, '').slice(0, 10)})}
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                  placeholder="9876543210"
+                  maxLength={10}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={newCustomer.email}
+                  onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                  placeholder="customer@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowCustomerModal(false);
+                  setNewCustomer({
+                    name: '',
+                    gstNumber: '',
+                    address: '',
+                    stateCode: '',
+                    pin: '',
+                    mobile: '',
+                    email: '',
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                Add Customer
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         {/* Bill Preview Modal */}
         <Modal
@@ -875,23 +1077,23 @@ export default function GenerateBillPage() {
                   </div>
                   <div className="flex justify-between">
                     <span>IGST @ 18%</span>
-                    <span>-</span>
+                    <span>{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>CGST @ 9%</span>
-                    <span className="font-semibold">{formatCurrency(gstCalculation?.cgst || 63000)}</span>
+                    <span className="font-semibold">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>SGST @ 9%</span>
-                    <span className="font-semibold">{formatCurrency(gstCalculation?.sgst || 63000)}</span>
+                    <span className="font-semibold">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                   </div>
                   <div className="flex justify-between border-t border-black dark:border-white pt-2">
                     <span>Total GST Amount</span>
-                    <span className="font-semibold">{formatCurrency(gstCalculation?.gstAmount || 126000)}</span>
+                    <span className="font-semibold">{formatCurrency(gstCalculation?.gstAmount || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total Invoice Amount</span>
-                    <span>{formatCurrency(gstCalculation?.finalAmount || 826000)}</span>
+                    <span>{formatCurrency(gstCalculation?.finalAmount || totalAmount)}</span>
                   </div>
                 </div>
                 <p className="text-sm mt-4">GST Payable Under RCM by the Recipient = IGST: CGST: SGST:</p>
