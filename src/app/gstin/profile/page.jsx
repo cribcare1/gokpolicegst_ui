@@ -395,7 +395,10 @@ export default function GstinProfilePage() {
                         type="text"
                         name="pinCode"
                         value={formData.pinCode}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -424,7 +427,10 @@ export default function GstinProfilePage() {
                         type="tel"
                         name="mobile"
                         value={formData.mobile}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobile', value } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter mobile number"
