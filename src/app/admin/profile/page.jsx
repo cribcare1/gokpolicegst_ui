@@ -430,7 +430,10 @@ export default function AdminProfilePage() {
                         type="tel"
                         name="mobileNumber"
                         value={formData.mobileNumber}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobileNumber', value } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter mobile number"

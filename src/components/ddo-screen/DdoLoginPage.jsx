@@ -63,6 +63,7 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -400,11 +401,39 @@ export default function LoginPage() {
                     type="text"
                     autoComplete="username"
                     required
-                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300"
+                    className={`focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 ${
+                      fieldErrors.username ? 'border-red-500 focus:border-red-500' : 'border-gray-200'
+                    }`}
                     placeholder="Enter the TAN"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (fieldErrors.username) {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.username;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      if (!value) {
+                        setFieldErrors(prev => ({ ...prev, username: 'TAN/User ID is required' }));
+                      } else if (value.length < 3) {
+                        setFieldErrors(prev => ({ ...prev, username: 'TAN/User ID must be at least 3 characters' }));
+                      } else {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.username;
+                          return newErrors;
+                        });
+                      }
+                    }}
                   />
+                  {fieldErrors.username && (
+                    <p className="mt-1 text-xs text-red-500">{fieldErrors.username}</p>
+                  )}
                 </div>
               </div>
               
@@ -422,11 +451,38 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
-                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300"
+                    className={`focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 ${
+                      fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200'
+                    }`}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const passwordValidation = validatePassword(value);
+                      if (!passwordValidation.valid) {
+                        setFieldErrors(prev => ({ ...prev, password: passwordValidation.message }));
+                      } else {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
                   />
+                  {fieldErrors.password && (
+                    <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+                  )}
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                     <button
                       type="button"
