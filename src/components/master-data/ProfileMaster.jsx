@@ -209,7 +209,20 @@ export default function ProfileMaster() {
             <input
               type="tel"
               value={formData?.mobile || ''}
-              onChange={(e) => updateFormData('mobile', e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                updateFormData('mobile', value);
+              }}
+              onKeyPress={(e) => {
+                if (!/[0-9]/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                updateFormData('mobile', pastedText);
+              }}
               maxLength={10}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />

@@ -643,6 +643,44 @@ export default function MasterDataPage({
                           updateFormData(field.key, value);
                         }
                       }}
+                      onKeyPress={(e) => {
+                        const fieldLower = field.key.toLowerCase();
+                        // Block non-numeric input for mobile, account number, and PIN fields
+                        if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone') ||
+                            fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
+                            fieldLower.includes('pin') || fieldLower.includes('pincode') ||
+                            fieldLower.includes('micr') || fieldLower.includes('micr code') ||
+                            fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }
+                      }}
+                      onPaste={(e) => {
+                        const fieldLower = field.key.toLowerCase();
+                        // Handle paste for numeric fields
+                        if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          updateFormData(field.key, pastedText);
+                        } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
+                          updateFormData(field.key, pastedText);
+                        } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          updateFormData(field.key, pastedText);
+                        } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 9);
+                          updateFormData(field.key, pastedText);
+                        } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 2);
+                          updateFormData(field.key, pastedText);
+                        }
+                      }}
                       onBlur={(e) => {
                         let valueToValidate = e.target.value;
                         if (field.type === 'number') {
