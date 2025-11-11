@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
 import { validatePAN, validateEmail, validateMobile, validateName, validateAddress } from '@/lib/gstUtils';
-
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
   loading: () => <div className="premium-card p-8 animate-pulse"><div className="h-96 bg-gray-200 rounded"></div></div>,

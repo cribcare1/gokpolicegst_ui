@@ -11,6 +11,7 @@ import { validateGSTIN, validateEmail, validateMobile, validateName, validateAdd
 import { Plus, Edit, Trash2, Search, ArrowLeft, Users } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 
 // Extract PAN from GSTIN (positions 2-11, 0-indexed: 2-12)
 const extractPANFromGSTIN = (gstin) => {
@@ -76,35 +77,6 @@ export default function GSTMasterPage() {
   };
 
   const fetchData = async () => {
-    // const demoData = [
-    //   { 
-    //     id: '1', 
-    //     gstNumber: '29AAAGO1111W1ZB', 
-    //     name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
-    //     gstHolderName: 'Government of Karnataka',
-    //     address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
-    //     city: 'Bengaluru',
-    //     pin: '560001',
-    //     contactNumber: '9902991144', 
-    //     email: 'Copadmin@ksp.gov.in',
-    //     ddoCount: 5
-    //   },
-    //   { 
-    //     id: '2', 
-    //     gstNumber: '19ABCDE1234F1Z5', 
-    //     name: 'XYZ Corporation',
-    //     gstHolderName: 'XYZ Corporation',
-    //     address: '456 Brigade Road, Bangalore',
-    //     city: 'Bangalore',
-    //     pin: '560001',
-    //     contactNumber: '9876543211', 
-    //     email: 'xyz@example.com',
-    //     ddoCount: 2
-    //   },
-    // ];
-    // setData(demoData);
-    // setFilteredData(demoData);
-    // setLoading(false);
     
     try {
       setLoading(true);
@@ -167,8 +139,10 @@ export default function GSTMasterPage() {
     if (!confirm('Are you sure you want to delete this record?')) return;
     
     try {
+      console.log("item===", item);
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.GST_DELETE}${item.id}`,
+        `${API_ENDPOINTS.GST_DELETE}${item.userId}/${userId}`,
         {}
       );
       
