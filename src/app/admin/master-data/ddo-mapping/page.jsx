@@ -10,17 +10,19 @@ import { CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
 import { useDdoList } from '@/hooks/useDdoList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function DDOMappingPage() {
   const { gstinList } = useGstinList();
   const [currentGSTIN, setCurrentGSTIN] = useState('');
+  const [fromGstId, setFromGstId] = useState('');
   const [targetGSTIN, setTargetGSTIN] = useState('');
   const [selectedDDOs, setSelectedDDOs] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Use hook for DDO list based on current GSTIN
-  const { ddoList, loading: ddoLoading, refetch: refetchDDOs } = useDdoList(currentGSTIN);
+  const { ddoList, loading: ddoLoading, refetch: refetchDDOs } = useDdoList(fromGstId);
 
   useEffect(() => {
     if (gstinList && gstinList.length > 0 && !currentGSTIN) {
@@ -28,6 +30,8 @@ export default function DDOMappingPage() {
       const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
       
       if (firstGSTIN) {
+        console.log("gstinList[0].gstId------------------", gstinList[0].gstId);
+        setFromGstId(gstinList[0].gstId);
         setCurrentGSTIN(firstGSTIN);
       }
       if (secondGSTIN && !targetGSTIN) {
@@ -40,10 +44,21 @@ export default function DDOMappingPage() {
   }, [gstinList, currentGSTIN, targetGSTIN]);
 
   const handleCurrentGSTINChange = (gstin) => {
-    setCurrentGSTIN(gstin);
-    setSelectedDDOs(new Set()); // Clear selection when GSTIN changes
-    // DDOs will be automatically fetched by useDdoList hook
-  };
+      console.log("Selected GSTIN:", gstin, gstinList);
+
+      const getGstId = (gstin) => {
+        return gstinList.find(item => item.gstNumber === gstin)?.gstId;
+      };
+
+      const gstId = getGstId(gstin);
+      console.log("Corresponding GST ID:", gstId);
+
+      setFromGstId(gstId);           // <-- Execute the function
+      setCurrentGSTIN(gstin);
+      setSelectedDDOs(new Set());    // Clear selection
+      // DDOs will be automatically fetched by useDdoList hook
+};
+
 
   const handleSelectAll = () => {
     if (selectedDDOs.size === ddoList.length) {
@@ -90,10 +105,19 @@ export default function DDOMappingPage() {
   const confirmMove = async () => {
     try {
       setLoading(true);
+      
+      const getGstId = (gstin) => {
+        return gstinList.find(item => item.gstNumber === gstin)?.gstId;
+      };
+
+      const targetGstId = getGstId(targetGSTIN);
+      console.log("targetGstId GST ID:", targetGstId);
+
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
-        sourceGSTIN: currentGSTIN,
-        targetGSTIN: targetGSTIN,
+        fromGstId: fromGstId,
+        toGstId: targetGstId,
         ddoIds: Array.from(selectedDDOs),
+        updatedBy: localStorage.getItem(LOGIN_CONSTANT.USER_ID),
       });
 
       if (response?.status === 'success') {

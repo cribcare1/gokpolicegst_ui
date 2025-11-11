@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8443/tds"; //"http://13.126.232.163:8888/tds";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://13.204.137.0:8443/tds"; //"http://13.126.232.163:8888/tds";
 
 export const API_ENDPOINTS = {
   UPLOAD: `${API_BASE_URL}/upload`,
@@ -23,7 +23,7 @@ export const API_ENDPOINTS = {
   GST_LIST: `${API_BASE_URL}/gst/activeGSTDetails`,
   GST_ADD: `${API_BASE_URL}/gst/saveOrUpdate`,
   GST_UPDATE: `${API_BASE_URL}/gst/saveOrUpdate`,
-  GST_DELETE: `${API_BASE_URL}/gst/delete/`,
+  GST_DELETE: `${API_BASE_URL}/gst/deleteGst/`,
   GST_GET: `${API_BASE_URL}/gst/get/`,
   
   // PAN Master Data Endpoints
@@ -37,7 +37,7 @@ export const API_ENDPOINTS = {
   DDO_LIST_PER_GST: `${API_BASE_URL}/gst/ddoList?gstId=`,
   DDO_ADD: `${API_BASE_URL}/user/addDDOByGSTIN`,
   DDO_UPDATE: `${API_BASE_URL}/user/addDDOByGSTIN`,
-  DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
+  DDO_DELETE: `${API_BASE_URL}/user/delete-ddo/`,
   DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
 
   // HSN Master Data Endpoints
@@ -50,7 +50,7 @@ export const API_ENDPOINTS = {
   BANK_LIST: `${API_BASE_URL}/banks/activeBankDetails`,
   BANK_ADD: `${API_BASE_URL}/banks/saveOrUpdateBank`,
   BANK_UPDATE: `${API_BASE_URL}/banks/saveOrUpdateBank`,
-  BANK_DELETE: `${API_BASE_URL}/banks/delete/`,
+  BANK_DELETE: `${API_BASE_URL}/banks/deleteBank/`,
   
   // Customer Endpoints
   CUSTOMER_LIST: `${API_BASE_URL}/customer/list`,
@@ -91,7 +91,7 @@ export const API_ENDPOINTS = {
   ADMIN_PROFILE_UPDATE: `${API_BASE_URL}/user/editAdmin`,
   
   // DDO Mapping Endpoints
-  DDO_MAPPING_UPDATE: `${API_BASE_URL}/ddo/mapping`,
+  DDO_MAPPING_UPDATE: `${API_BASE_URL}/gst/migrate-ddos`,
   
 };
 

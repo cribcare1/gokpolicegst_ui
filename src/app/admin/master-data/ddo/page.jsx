@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, ArrowRight, ChevronRight, ChevronLeft } from 'luc
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
 import { useDdoList } from '@/hooks/useDdoList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function DDOMappingPage() {
   const { gstinList } = useGstinList();
@@ -21,10 +22,11 @@ export default function DDOMappingPage() {
   const [movedDDOIds, setMovedDDOIds] = useState(new Set()); // Track DDOs moved to target
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fromGstId, setFromGstId] = useState('');
 
   // Use hooks for DDO lists
-  const { ddoList: sourceDDOsFromAPI, loading: sourceLoading, refetch: refetchSource } = useDdoList(sourceGSTIN);
-  const { ddoList: targetDDOsFromAPI, loading: targetLoading, refetch: refetchTarget } = useDdoList(targetGSTIN);
+  const { ddoList: sourceDDOsFromAPI, loading: sourceLoading, refetch: refetchSource } = useDdoList(fromGstId);
+  // const { ddoList: targetDDOsFromAPI, loading: targetLoading, refetch: refetchTarget } = useDdoList(targetGSTIN);
 
   // Filter out moved DDOs from source list
   const sourceDDOs = sourceDDOsFromAPI.filter(ddo => !movedDDOIds.has(ddo.id));
@@ -35,6 +37,7 @@ export default function DDOMappingPage() {
       const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
       
       if (firstGSTIN) {
+        setFromGstId(gstinList[0].gstId);
         setSourceGSTIN(firstGSTIN);
       }
       if (secondGSTIN && !targetGSTIN) {
@@ -48,6 +51,16 @@ export default function DDOMappingPage() {
 
 
   const handleSourceGSTINChange = (gstin) => {
+    console.log("Selected GSTIN:", gstin, gstinList);
+
+      const getGstId = (gstin) => {
+        return gstinList.find(item => item.gstNumber === gstin)?.gstId;
+      };
+
+      const gstId = getGstId(gstin);
+      console.log("Corresponding GST ID:", gstId);
+
+      setFromGstId(gstId); 
     setSourceGSTIN(gstin);
     setSelectedSourceDDOs(new Set());
     setMovedDDOIds(new Set()); // Reset moved DDOs when source GSTIN changes
@@ -162,10 +175,24 @@ export default function DDOMappingPage() {
   const confirmSave = async () => {
     try {
       setLoading(true);
+      const getGstId = (gstin) => {
+        return gstinList.find(item => item.gstNumber === gstin)?.gstId;
+      };
+
+      const fromGstId = getGstId(sourceGSTIN);
+      console.log("targetGstId GST ID:", fromGstId);
+
+      const targetGstId = getGstId(targetGSTIN);
+      console.log("targetGstId GST ID:", targetGstId);
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
-        sourceGSTIN: sourceGSTIN,
-        targetGSTIN: targetGSTIN,
+        // sourceGSTIN: sourceGSTIN,
+        // targetGSTIN: targetGSTIN,
+        // ddoIds: targetDDOs.map(ddo => ddo.id),
+
+        fromGstId: fromGstId,
+        toGstId: targetGstId,
         ddoIds: targetDDOs.map(ddo => ddo.id),
+        updatedBy: localStorage.getItem(LOGIN_CONSTANT.USER_ID),
       });
 
       if (response?.status === 'success') {

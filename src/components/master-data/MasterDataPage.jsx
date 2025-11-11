@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 import { 
   validateGSTIN, 
   validatePAN, 
@@ -158,8 +159,9 @@ export default function MasterDataPage({
     if (!confirm('Are you sure you want to delete this record?')) return;
     
     try {
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       const response = await ApiService.handlePostRequest(
-        `${endpoint.DELETE}${item.id}`,
+        `${endpoint.DELETE}${item.id}/${userId}`,
         {}
       );
       

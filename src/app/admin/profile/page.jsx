@@ -113,6 +113,7 @@ export default function AdminProfilePage() {
   };
 
   const handleSave = async () => {
+    console.log("Edit called");
     // Validate Profile Name
     const nameValidation = validateName(formData.fullName, 'Profile Name');
     if (!nameValidation.valid) {
@@ -161,8 +162,9 @@ export default function AdminProfilePage() {
 
     setLoading(true);
     try {
+      console.log("formada===", formData);
       const updateData = {
-        id: formData.id,
+        id: formData.userId,
         fullName: formData.fullName,
         address: formData.address,
         city: formData.city,

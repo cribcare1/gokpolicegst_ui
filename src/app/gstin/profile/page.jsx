@@ -9,6 +9,7 @@ import { Edit, Save, X, MapPin, Building2, Mail, Phone, FileText } from 'lucide-
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { useGstinList } from '@/hooks/useGstinList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Helper function to parse address and extract city and pin code
 const parseAddress = (fullAddress) => {
@@ -106,6 +107,7 @@ export default function GstinProfilePage() {
   };
 
   const handleSave = async () => {
+    console.log("GSTIN Profile Edit called", formData);
     // Validate GSTIN
     const gstValidation = validateGSTIN(formData.gstinNumber);
     if (!gstValidation.valid) {
@@ -114,7 +116,7 @@ export default function GstinProfilePage() {
     }
     
     // Validate GSTIN Name
-    const nameValidation = validateName(formData.gstinName, 'GSTIN Name');
+    const nameValidation = validateName(formData.gstName, 'GSTIN Name');
     if (!nameValidation.valid) {
       toast.error(nameValidation.message);
       return;
@@ -157,8 +159,13 @@ export default function GstinProfilePage() {
 
     setLoading(true);
     try {
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
+      console.log("formada===", formData);
       const updateData = {
-        gstNumber: formData.gstinNumber,
+        id: userId,
+        gstId: gstId,
+       // gstNumber: formData.gstinNumber,
         gstName: formData.gstName,
         address: formData.address,
         city: formData.city,
