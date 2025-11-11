@@ -373,7 +373,20 @@ export default function GstinDDORegistrationPage() {
                 <input
                   type="text"
                   value={formData.pinCode}
-                  onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setFormData({ ...formData, pinCode: value });
+                  }}
+                  onKeyPress={(e) => {
+                    if (!/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                    setFormData({ ...formData, pinCode: pastedText });
+                  }}
                   className="premium-input w-full"
                   maxLength={6}
                 />
@@ -386,7 +399,20 @@ export default function GstinDDORegistrationPage() {
                 <input
                   type="text"
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, mobile: value });
+                  }}
+                  onKeyPress={(e) => {
+                    if (!/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, mobile: pastedText });
+                  }}
                   className="premium-input w-full"
                   maxLength={10}
                 />
