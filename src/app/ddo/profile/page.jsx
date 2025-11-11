@@ -296,6 +296,16 @@ export default function DDOProfilePage() {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                           handleChange({ target: { name: 'ddoPin', value } });
                         }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'ddoPin', value: pastedText } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -327,6 +337,16 @@ export default function DDOProfilePage() {
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                           handleChange({ target: { name: 'contactNo', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'contactNo', value: pastedText } });
                         }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"

@@ -373,7 +373,20 @@ export default function AdminProfilePage() {
                         type="text"
                         name="pinCode"
                         value={formData.pinCode}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value: pastedText } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -433,6 +446,16 @@ export default function AdminProfilePage() {
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                           handleChange({ target: { name: 'mobileNumber', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobileNumber', value: pastedText } });
                         }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"

@@ -655,10 +655,26 @@ export default function GSTMasterPage() {
                         value={formData[field.key] ?? ''}
                         onChange={(e) => {
                           let value = e.target.value;
-                           // ✅ Auto-uppercase for PAN or GST fields
-                          if (field.key.toLowerCase().includes('pan') || field.key.toLowerCase().includes('gst')) {
+                          const fieldLower = field.key.toLowerCase();
+                          
+                          // ✅ Only allow integers for mobile, PIN, and account number fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                            // Mobile: only digits, max 10
+                            value = value.replace(/\D/g, '').slice(0, 10);
+                          } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                            // PIN: only digits, max 6
+                            value = value.replace(/\D/g, '').slice(0, 6);
+                          } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                            // Account number: only digits
+                            value = value.replace(/\D/g, '');
+                          } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            // State Code: only digits, max 2
+                            value = value.replace(/\D/g, '').slice(0, 2);
+                          } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
+                            // ✅ Auto-uppercase for PAN or GST fields
                             value = value.toUpperCase();
                           }
+                          
                           if (field.type === 'number') {
                             const numValue = value === '' ? '' : parseInt(value);
                             updateFormData(field.key, isNaN(numValue) ? '' : numValue);
@@ -672,6 +688,39 @@ export default function GSTMasterPage() {
                               delete newErrors[field.key];
                               return newErrors;
                             });
+                          }
+                        }}
+                        onKeyPress={(e) => {
+                          const fieldLower = field.key.toLowerCase();
+                          // Block non-numeric input for mobile, PIN, and account number fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone') ||
+                              fieldLower.includes('pin') || fieldLower.includes('pincode') ||
+                              fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
+                              fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            if (!/[0-9]/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }
+                        }}
+                        onPaste={(e) => {
+                          const fieldLower = field.key.toLowerCase();
+                          // Handle paste for numeric fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 2);
+                            updateFormData(field.key, pastedText);
                           }
                         }}
                         onBlur={(e) => {
