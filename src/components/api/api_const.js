@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://13.204.137.0:8443/tds";  //"http://13.126.232.163:8888/tds";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.gokpolicegst.com:8888/tds"; //"http://api.gokpolicegst.com:8888/tds"; https://13.204.137.0:8443/tds
 
 export const API_ENDPOINTS = {
   UPLOAD: `${API_BASE_URL}/upload`,
