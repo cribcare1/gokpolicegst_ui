@@ -7,10 +7,11 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN, validateStateCode, validatePassword } from '@/lib/gstUtils';
 import { Plus, Edit, Trash2, Search, ArrowLeft, Users } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 
 // Extract PAN from GSTIN (positions 2-11, 0-indexed: 2-12)
 const extractPANFromGSTIN = (gstin) => {
@@ -34,6 +35,7 @@ export default function GSTMasterPage() {
   const [editingDDO, setEditingDDO] = useState(null);
   const [ddoPasswordModal, setDdoPasswordModal] = useState(false);
   const [ddoPasswordData, setDdoPasswordData] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     fetchData();
@@ -75,74 +77,16 @@ export default function GSTMasterPage() {
   };
 
   const fetchData = async () => {
-    const demoData = [
-      { 
-        id: '1', 
-        gstNumber: '29AAAGO1111W1ZB', 
-        name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
-        gstHolderName: 'Government of Karnataka',
-        address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
-        city: 'Bengaluru',
-        pin: '560001',
-        contactNumber: '9902991144', 
-        email: 'Copadmin@ksp.gov.in',
-        ddoCount: 5
-      },
-      { 
-        id: '2', 
-        gstNumber: '19ABCDE1234F1Z5', 
-        name: 'XYZ Corporation',
-        gstHolderName: 'XYZ Corporation',
-        address: '456 Brigade Road, Bangalore',
-        city: 'Bangalore',
-        pin: '560001',
-        contactNumber: '9876543211', 
-        email: 'xyz@example.com',
-        ddoCount: 2
-      },
-    ];
-    setData(demoData);
-    setFilteredData(demoData);
-    setLoading(false);
     
     try {
       setLoading(true);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
       
-      const response = await fetch(API_ENDPOINTS.GST_LIST, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result && result.status === 'success' && result.data && result.data.length > 0) {
-          // Fetch DDO count for each GST
-          const dataWithCounts = await Promise.all(
-            result.data.map(async (gst) => {
-              try {
-                const ddoResponse = await ApiService.handleGetRequest(
-                  `${API_ENDPOINTS.DDO_LIST}?gstin=${gst.gstNumber}`,
-                  1000
-                );
-                const ddoCount = ddoResponse?.data?.length || 0;
-                return { ...gst, ddoCount };
-              } catch {
-                return { ...gst, ddoCount: 0 };
-              }
-            })
-          );
-          setData(dataWithCounts);
-          setFilteredData(dataWithCounts);
-        }
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}` );
+      if (response  && response.status === 'success') {
+          setData(response.data);
+          setFilteredData(response.data);        
       }
+      
     } catch (error) {
       console.log('Using demo data');
     } finally {
@@ -180,12 +124,14 @@ export default function GSTMasterPage() {
   const handleAdd = () => {
     setEditingItem(null);
     setFormData({});
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData(item);
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
@@ -193,8 +139,10 @@ export default function GSTMasterPage() {
     if (!confirm('Are you sure you want to delete this record?')) return;
     
     try {
+      console.log("item===", item);
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.GST_DELETE}${item.id}`,
+        `${API_ENDPOINTS.GST_DELETE}${item.userId}/${userId}`,
         {}
       );
       
@@ -210,6 +158,9 @@ export default function GSTMasterPage() {
   };
 
   const validateForm = (data) => {
+    console.log("validate form is called");
+    
+    // Validate GSTIN
     const gstValidation = validateGSTIN(data.gstNumber);
     if (!gstValidation.valid) {
       return { valid: false, message: gstValidation.message };
@@ -229,14 +180,62 @@ export default function GSTMasterPage() {
       };
     }
     
+    // Validate GST Holder Name
+    const holderNameValidation = validateName(data.gstHolderName, 'GST Holder Name');
+    if (!holderNameValidation.valid) {
+      return { valid: false, message: holderNameValidation.message };
+    }
+    
+    // Validate GST Name
+    const gstNameValidation = validateName(data.gstName, 'GST Name');
+    if (!gstNameValidation.valid) {
+      return { valid: false, message: gstNameValidation.message };
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(data.address);
+    if (!addressValidation.valid) {
+      return { valid: false, message: addressValidation.message };
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(data.city);
+    if (!cityValidation.valid) {
+      return { valid: false, message: cityValidation.message };
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(data.pinCode);
+    if (!pinValidation.valid) {
+      return { valid: false, message: pinValidation.message };
+    }
+    
+    // Validate Email
     const emailValidation = validateEmail(data.email);
     if (!emailValidation.valid) {
       return { valid: false, message: emailValidation.message };
     }
     
-    const mobileValidation = validateMobile(data.contactNumber);
+    // Validate Mobile
+    const mobileValidation = validateMobile(String(data.mobile));
     if (!mobileValidation.valid) {
       return { valid: false, message: mobileValidation.message };
+    }
+    
+    // Validate State Code (if provided)
+    if (data.stateCode) {
+      const stateCodeValidation = validateStateCode(data.stateCode);
+      if (!stateCodeValidation.valid) {
+        return { valid: false, message: stateCodeValidation.message };
+      }
+    }
+    
+    // Validate Password (if provided in edit mode)
+    if (data.password && data.password.trim() !== '') {
+      const passwordValidation = validatePassword(data.password);
+      if (!passwordValidation.valid) {
+        return { valid: false, message: passwordValidation.message };
+      }
     }
     
     return { valid: true };
@@ -244,8 +243,9 @@ export default function GSTMasterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("submit is called");
     const validation = validateForm(formData);
+    console.log("validation is called ", validation);
     if (!validation.valid) {
       toast.error(validation.message || t('validation.required'));
       return;
@@ -277,7 +277,7 @@ export default function GSTMasterPage() {
         
         multipartFormData.append('formData', JSON.stringify(jsonData));
         
-        const token = localStorage.getItem('userToken') || '';
+        const token = localStorage.getItem('token') || '';
         const fetchResponse = await fetch(url, {
           method: 'POST',
           headers: {
@@ -306,6 +306,69 @@ export default function GSTMasterPage() {
   const updateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+  
+  const validateField = (field, value) => {
+    let error = '';
+    
+    switch (field) {
+      case 'gstNumber':
+        const gstValidation = validateGSTIN(value);
+        if (!gstValidation.valid) error = gstValidation.message;
+        break;
+      case 'gstHolderName':
+        const holderNameValidation = validateName(value, 'GST Holder Name');
+        if (!holderNameValidation.valid) error = holderNameValidation.message;
+        break;
+      case 'gstName':
+        const gstNameValidation = validateName(value, 'GST Name');
+        if (!gstNameValidation.valid) error = gstNameValidation.message;
+        break;
+      case 'address':
+        const addressValidation = validateAddress(value);
+        if (!addressValidation.valid) error = addressValidation.message;
+        break;
+      case 'city':
+        const cityValidation = validateCity(value);
+        if (!cityValidation.valid) error = cityValidation.message;
+        break;
+      case 'pinCode':
+        const pinValidation = validatePIN(value);
+        if (!pinValidation.valid) error = pinValidation.message;
+        break;
+      case 'email':
+        const emailValidation = validateEmail(value);
+        if (!emailValidation.valid) error = emailValidation.message;
+        break;
+      case 'mobile':
+        const mobileValidation = validateMobile(String(value));
+        if (!mobileValidation.valid) error = mobileValidation.message;
+        break;
+      case 'stateCode':
+        if (value) {
+          const stateCodeValidation = validateStateCode(value);
+          if (!stateCodeValidation.valid) error = stateCodeValidation.message;
+        }
+        break;
+      case 'password':
+        if (value && value.trim() !== '') {
+          const passwordValidation = validatePassword(value);
+          if (!passwordValidation.valid) error = passwordValidation.message;
+        }
+        break;
+    }
+    
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+    
+    return !error;
+  };
 
   const handleDDOCountClick = async (gstItem) => {
     setSelectedGSTIN(gstItem);
@@ -321,8 +384,9 @@ export default function GSTMasterPage() {
 
   const handleDDOPasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!ddoPasswordData.password || ddoPasswordData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const passwordValidation = validatePassword(ddoPasswordData.password);
+    if (!passwordValidation.valid) {
+      toast.error(passwordValidation.message);
       return;
     }
 
@@ -348,11 +412,11 @@ export default function GSTMasterPage() {
   const columns = [
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'gstHolderName', label: 'GST Holder Name' },
-    { key: 'name', label: t('label.name') },
+    { key: 'gstName', label: t('label.name') },
     { key: 'address', label: t('label.address') },
     { key: 'city', label: 'City' },
-    { key: 'pin', label: 'PIN' },
-    { key: 'contactNumber', label: t('label.mobile') },
+    { key: 'pinCode', label: 'PIN' },
+    { key: 'mobile', label: t('label.mobile') },
     { key: 'email', label: t('label.email') },
     { 
       key: 'ddoCount', 
@@ -397,11 +461,11 @@ export default function GSTMasterPage() {
   const formFields = [
     { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
     { key: 'gstHolderName', label: 'GST Holder Name', required: true },
-    { key: 'name', label: t('label.name'), required: true },
+    { key: 'gstName', label: t('label.name'), required: true },
     { key: 'address', label: t('label.address'), type: 'textarea', required: true },
     { key: 'city', label: 'City', required: true },
-    { key: 'pin', label: 'PIN', required: true, maxLength: 6, type: 'text' },
-    { key: 'contactNumber', label: t('label.mobile'), required: true, maxLength: 10 },
+    { key: 'pinCode', label: 'PIN', required: true, maxLength: 6, type: 'text' },
+    { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
     { key: 'email', label: t('label.email'), type: 'email', required: true },
     { key: 'stateCode', label: t('label.stateCode'), type: 'number', required: false, min: 1, max: 99 },
     { key: 'logo', label: t('label.logo'), type: 'file', required: false, accept: 'image/*' },
@@ -469,13 +533,37 @@ export default function GSTMasterPage() {
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   {field.type === 'textarea' ? (
-                    <textarea
-                      value={formData[field.key] || ''}
-                      onChange={(e) => updateFormData(field.key, e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      rows={3}
-                      required={field.required}
-                    />
+                    <>
+                      <textarea
+                        value={formData[field.key] || ''}
+                        onChange={(e) => {
+                          updateFormData(field.key, e.target.value);
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (field.required || e.target.value) {
+                            validateField(field.key, e.target.value);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        rows={3}
+                        required={field.required}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   ) : field.type === 'file' ? (
                     <div>
                       <input
@@ -502,34 +590,137 @@ export default function GSTMasterPage() {
                       )}
                     </div>
                   ) : field.type === 'password' ? (
-                    <input
-                      type="password"
-                      value={formData[field.key] || ''}
-                      onChange={(e) => updateFormData(field.key, e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      placeholder="Leave blank to keep current password"
-                      required={field.required}
-                    />
+                    <>
+                      <input
+                        type="password"
+                        value={formData[field.key] || ''}
+                        onChange={(e) => {
+                          updateFormData(field.key, e.target.value);
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value && e.target.value.trim() !== '') {
+                            validateField(field.key, e.target.value);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        placeholder="Leave blank to keep current password"
+                        required={field.required}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   ) : (
-                    <input
-                      type={field.type || 'text'}
-                      value={formData[field.key] ?? ''}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        if (field.type === 'number') {
-                          const numValue = value === '' ? '' : parseInt(value);
-                          updateFormData(field.key, isNaN(numValue) ? '' : numValue);
-                        } else {
-                          updateFormData(field.key, value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      placeholder={field.placeholder}
-                      required={field.required}
-                      maxLength={field.maxLength}
-                      min={field.min}
-                      max={field.max}
-                    />
+                    <>
+                      <input
+                        type={field.type || 'text'}
+                        value={formData[field.key] ?? ''}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          const fieldLower = field.key.toLowerCase();
+                          
+                          // ✅ Only allow integers for mobile, PIN, and account number fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                            // Mobile: only digits, max 10
+                            value = value.replace(/\D/g, '').slice(0, 10);
+                          } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                            // PIN: only digits, max 6
+                            value = value.replace(/\D/g, '').slice(0, 6);
+                          } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                            // Account number: only digits
+                            value = value.replace(/\D/g, '');
+                          } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            // State Code: only digits, max 2
+                            value = value.replace(/\D/g, '').slice(0, 2);
+                          } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
+                            // ✅ Auto-uppercase for PAN or GST fields
+                            value = value.toUpperCase();
+                          }
+                          
+                          if (field.type === 'number') {
+                            const numValue = value === '' ? '' : parseInt(value);
+                            updateFormData(field.key, isNaN(numValue) ? '' : numValue);
+                          } else {
+                            updateFormData(field.key, value);
+                          }
+                          // Clear error when user starts typing
+                          if (fieldErrors[field.key]) {
+                            setFieldErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[field.key];
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        onKeyPress={(e) => {
+                          const fieldLower = field.key.toLowerCase();
+                          // Block non-numeric input for mobile, PIN, and account number fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone') ||
+                              fieldLower.includes('pin') || fieldLower.includes('pincode') ||
+                              fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
+                              fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            if (!/[0-9]/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }
+                        }}
+                        onPaste={(e) => {
+                          const fieldLower = field.key.toLowerCase();
+                          // Handle paste for numeric fields
+                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
+                            updateFormData(field.key, pastedText);
+                          } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            e.preventDefault();
+                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 2);
+                            updateFormData(field.key, pastedText);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          let valueToValidate = e.target.value;
+                          if (field.type === 'number') {
+                            valueToValidate = valueToValidate === '' ? '' : parseInt(valueToValidate);
+                          }
+                          if (field.required || valueToValidate) {
+                            validateField(field.key, valueToValidate);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                          fieldErrors[field.key] 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        }`}
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        maxLength={field.maxLength}
+                        min={field.min}
+                        max={field.max}
+                      />
+                      {fieldErrors[field.key] && (
+                        <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

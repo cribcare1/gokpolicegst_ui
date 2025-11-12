@@ -9,6 +9,7 @@ import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+import { validateGSTIN, validatePassword } from '@/lib/gstUtils';
 
 // Toast component
 const Toast = ({ message, type, onClose }) => {
@@ -63,6 +64,7 @@ export default function GstinLoginPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -115,8 +117,15 @@ export default function GstinLoginPage() {
     e.preventDefault();
     setError('');
   
-    if (!gstin || !password) {
-      setError('Please enter both GSTIN and password');
+    const gstValidation = validateGSTIN(gstin);
+    if (!gstValidation.valid) {
+      setError(gstValidation.message);
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
       return;
     }
   
@@ -128,7 +137,7 @@ export default function GstinLoginPage() {
   const fetchLoginData = async () => {
     setLoading(true);
     setError(null);
-    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
     
     // Check for demo credentials first (development mode)
     if (gstin === DEMO_CREDENTIALS.gstin.gstin && password === DEMO_CREDENTIALS.gstin.password) {
@@ -149,11 +158,23 @@ export default function GstinLoginPage() {
         localStorage.removeItem('rememberedPassword');
         localStorage.removeItem('rememberMe');
       }
-      
-      localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, mockResponse.token);
-      localStorage.setItem(LOGIN_CONSTANT.USER_ID, mockResponse.userId);
-      localStorage.setItem('gstinNumber', mockResponse.gstinNumber);
-      localStorage.setItem('userRole', 'gstin');
+        console.log("gstid==================", response.login_response.gstId);
+        localStorage.setItem(LOGIN_CONSTANT.GSTID, response.login_response.gstId);
+        localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
+        localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
+        
+        localStorage.setItem(LOGIN_CONSTANT.FULL_NAME, response.login_response.fullName);
+        localStorage.setItem(LOGIN_CONSTANT.MOBILE_NUMBER, response.login_response.mobileNumber);
+        localStorage.setItem(LOGIN_CONSTANT.EMAIL, response.login_response.email);
+        localStorage.setItem(LOGIN_CONSTANT.ADDRESS, response.login_response.address);
+        localStorage.setItem(LOGIN_CONSTANT.CITY, response.login_response.city);
+        localStorage.setItem(LOGIN_CONSTANT.PINCODE, response.login_response.pinCode);
+        
+       
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
+        localStorage.setItem('gstinNumber', response.login_response.gstinNumber);
+        
+        localStorage.setItem('userRole', 'gstin');
       
       showToast("🎉 Demo Login successful! Welcome back.", "success");
       router.push("/gstin_dashboard");
@@ -163,7 +184,7 @@ export default function GstinLoginPage() {
     }
     
     const requestBody = {
-      gstin: gstin,
+      userName: gstin,
       password: password,
       role: "gstin"
     };
@@ -184,6 +205,8 @@ export default function GstinLoginPage() {
         }
         
         setUserData(response.login_response);
+        console.log("gstid==================", response.login_response.gstId);
+        localStorage.setItem(LOGIN_CONSTANT.GSTID, response.login_response.gstId);
         localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
         localStorage.setItem('gstinNumber', response.login_response.gstinNumber || gstin);
@@ -203,6 +226,18 @@ export default function GstinLoginPage() {
   };
 
   const resetPassword = async () => {
+    const gstValidation = validateGSTIN(gstin);
+    if (!gstValidation.valid) {
+      showToast(`❌ ${gstValidation.message}`, "error");
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      showToast(`❌ ${passwordValidation.message}`, "error");
+      return;
+    }
+    
     if (password !== confirmPassword) {
       showToast("❌ Passwords do not match", "error");
       return;
@@ -351,11 +386,38 @@ export default function GstinLoginPage() {
                     autoComplete="username"
                     required
                     maxLength={15}
-                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 uppercase"
+                    className={`focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 uppercase ${
+                      fieldErrors.gstin ? 'border-red-500 focus:border-red-500' : 'border-gray-200'
+                    }`}
                     placeholder="Enter GSTIN Number"
                     value={gstin}
-                    onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setGstin(e.target.value.toUpperCase());
+                      if (fieldErrors.gstin) {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.gstin;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim().toUpperCase();
+                      const gstinValidation = validateGSTIN(value);
+                      if (!gstinValidation.valid) {
+                        setFieldErrors(prev => ({ ...prev, gstin: gstinValidation.message }));
+                      } else {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.gstin;
+                          return newErrors;
+                        });
+                      }
+                    }}
                   />
+                  {fieldErrors.gstin && (
+                    <p className="mt-1 text-xs text-red-500">{fieldErrors.gstin}</p>
+                  )}
                 </div>
               </div>
               
@@ -373,11 +435,38 @@ export default function GstinLoginPage() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
-                    className="focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300"
+                    className={`focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 rounded-xl shadow-sm placeholder-gray-400 text-slate-800 focus:outline-none bg-gradient-to-br from-gray-50 to-white focus:bg-white transition-all duration-200 group-hover:border-teal-300 ${
+                      fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200'
+                    }`}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const passwordValidation = validatePassword(value);
+                      if (!passwordValidation.valid) {
+                        setFieldErrors(prev => ({ ...prev, password: passwordValidation.message }));
+                      } else {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
                   />
+                  {fieldErrors.password && (
+                    <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+                  )}
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                     <button
                       type="button"

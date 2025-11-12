@@ -8,11 +8,13 @@ import ApiService from "@/components/api/api_service";
 import { useNetworkStatus } from '@/components/utils/network';
 import { FOOTER_TEXT } from "@/components/utils/constant";
 import { toast, Toaster } from 'sonner';
+import { validateEmail, validatePassword } from '@/lib/gstUtils';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -35,6 +37,22 @@ export default function AdminLogin() {
   const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Validate email/username
+    if (!email || email.trim() === '') {
+      setError('Username is required');
+      setIsLoading(false);
+      return;
+    }
+    
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
+      setIsLoading(false);
+      return;
+    }
+    
     localStorage.removeItem("userToken");
   
     const requestBody = {
@@ -79,9 +97,14 @@ export default function AdminLogin() {
         setUserData(response.login_response);
         localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
-        localStorage.setItem(LOGIN_CONSTANT.DDO_COUNT, response.login_response.ddoCount);
-        localStorage.setItem(LOGIN_CONSTANT.FORM_16_COUNT, response.login_response.form16Count);
-        localStorage.setItem(LOGIN_CONSTANT.FORM_16A_COUNT, response.login_response.form16ACount);
+        localStorage.setItem(LOGIN_CONSTANT.FULL_NAME, response.login_response.fullName);
+        localStorage.setItem(LOGIN_CONSTANT.MOBILE_NUMBER, response.login_response.mobileNumber);
+        localStorage.setItem(LOGIN_CONSTANT.EMAIL, response.login_response.email);
+        localStorage.setItem(LOGIN_CONSTANT.ADDRESS, response.login_response.address);
+        localStorage.setItem(LOGIN_CONSTANT.CITY, response.login_response.city);
+        localStorage.setItem(LOGIN_CONSTANT.PINCODE, response.login_response.pinCode);
+
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
   
         if (rememberMe) {
           localStorage.setItem('rememberedEmail', email);
@@ -147,6 +170,13 @@ export default function AdminLogin() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    
+    // Validate email
+    if (!resetEmail || resetEmail.trim() === '') {
+      setError('Username is required');
+      setIsLoading(false);
+      return;
+    }
     
     try {
       // Simulate API call to send OTP (you would replace this with your actual API call)
@@ -403,10 +433,38 @@ export default function AdminLogin() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.email;
+                      return newErrors;
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value.trim();
+                  if (!value) {
+                    setFieldErrors(prev => ({ ...prev, email: 'Username is required' }));
+                  } else if (value.length < 3) {
+                    setFieldErrors(prev => ({ ...prev, email: 'Username must be at least 3 characters' }));
+                  } else {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.email;
+                      return newErrors;
+                    });
+                  }
+                }}
+                className={`block w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300 ${
+                  fieldErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-teal-500'
+                }`}
                 placeholder="UserName"
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
           </div>
 
@@ -427,10 +485,37 @@ export default function AdminLogin() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.password;
+                      return newErrors;
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  const passwordValidation = validatePassword(value);
+                  if (!passwordValidation.valid) {
+                    setFieldErrors(prev => ({ ...prev, password: passwordValidation.message }));
+                  } else {
+                    setFieldErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.password;
+                      return newErrors;
+                    });
+                  }
+                }}
+                className={`block w-full pl-9 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 text-sm sm:text-base border-2 bg-gradient-to-br from-gray-50 to-white text-slate-800 placeholder-gray-400 focus:ring-2 focus:ring-teal-500/50 focus:bg-white rounded-xl shadow-sm transition-all duration-200 group-hover:border-teal-300 ${
+                  fieldErrors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-teal-500'
+                }`}
                 placeholder="Password"
               />
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+              )}
               <div 
                 className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" 
                 onClick={togglePasswordVisibility}

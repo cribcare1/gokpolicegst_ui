@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
+import { validateGSTIN, validateHSN, validateGSTRate, validateName } from '@/lib/gstUtils';
 
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
@@ -10,9 +11,10 @@ const MasterDataPage = dynamic(() => import('@/components/master-data/MasterData
 });
 
 const columns = [
-  { key: 'hsnNumber', label: t('label.hsnNumber') },
-  { key: 'name', label: t('label.name') },
-  { key: 'gstTaxRate', label: 'GST Tax Rate (%)' },
+  { key: 'gstinNumber', label: t('label.gstin') },
+  { key: 'hsnCode', label: t('label.hsnNumber') },
+  { key: 'serviceName', label: t('label.name') },
+  { key: 'totalGst', label: 'GST Tax Rate (%)' },
   { key: 'igst', label: 'IGST (%)' },
   { key: 'cgst', label: 'CGST (%)' },
   { key: 'sgst', label: 'SGST (%)' },
@@ -28,46 +30,58 @@ const gstRateOptions = [
 ];
 
 const formFields = [
-  { key: 'hsnNumber', label: t('label.hsnNumber'), required: true },
-  { key: 'name', label: t('label.name'), required: true },
-  { key: 'gstTaxRate', label: 'GST Tax Rate (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'igst', label: 'IGST (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'cgst', label: 'CGST (%)', type: 'select', required: true, options: gstRateOptions },
-  { key: 'sgst', label: 'SGST (%)', type: 'select', required: true, options: gstRateOptions },
+  { key: 'gstinNumber', label: t('label.gstin'), required: true, maxLength: 15 },
+  { key: 'hsnCode', label: t('label.hsnNumber'), required: true },
+  { key: 'serviceName', label: t('label.name'), required: true },
+  { key: 'totalGst', label: 'GST Tax Rate (%)',  required: true },
+  { key: 'igst', label: 'IGST (%)',  required: true, readOnly: true },
+  { key: 'cgst', label: 'CGST (%)',  required: true, readOnly: true },
+  { key: 'sgst', label: 'SGST (%)',  required: true, readOnly: true },
 ];
 
 const validateForm = (data) => {
-  if (!data.hsnNumber || !data.name) {
-    return { valid: false, message: 'HSN Number and Name are required' };
+  console.log("validate form ", data);
+
+  const gstValidation = validateGSTIN(data.gstinNumber);
+  if (!gstValidation.valid) {
+    return { valid: false, message: gstValidation.message };
   }
   
-  // Validate GST rates (values come as strings from dropdown)
-  if (!data.gstTaxRate || !data.igst || !data.cgst || !data.sgst) {
-    return { valid: false, message: 'All GST rates are required' };
+  const hsnValidation = validateHSN(data.hsnCode);
+  if (!hsnValidation.valid) {
+    return { valid: false, message: hsnValidation.message };
   }
   
-  const gstRate = parseFloat(data.gstTaxRate);
-  const igst = parseFloat(data.igst);
-  const cgst = parseFloat(data.cgst);
-  const sgst = parseFloat(data.sgst);
-  
-  if (isNaN(gstRate) || gstRate < 0 || gstRate > 100) {
-    return { valid: false, message: 'GST Tax Rate must be between 0 and 100' };
+  const serviceNameValidation = validateName(data.serviceName, 'Service Name');
+  if (!serviceNameValidation.valid) {
+    return { valid: false, message: serviceNameValidation.message };
   }
   
-  if (isNaN(igst) || igst < 0 || igst > 100) {
-    return { valid: false, message: 'IGST must be between 0 and 100' };
+  // Validate GST rates
+  const totalGstValidation = validateGSTRate(data.totalGst);
+  if (!totalGstValidation.valid) {
+    return { valid: false, message: totalGstValidation.message };
   }
   
-  if (isNaN(cgst) || cgst < 0 || cgst > 100) {
-    return { valid: false, message: 'CGST must be between 0 and 100' };
+  const igstValidation = validateGSTRate(data.igst);
+  if (!igstValidation.valid) {
+    return { valid: false, message: igstValidation.message };
   }
   
-  if (isNaN(sgst) || sgst < 0 || sgst > 100) {
-    return { valid: false, message: 'SGST must be between 0 and 100' };
+  const cgstValidation = validateGSTRate(data.cgst);
+  if (!cgstValidation.valid) {
+    return { valid: false, message: cgstValidation.message };
+  }
+  
+  const sgstValidation = validateGSTRate(data.sgst);
+  if (!sgstValidation.valid) {
+    return { valid: false, message: sgstValidation.message };
   }
   
   // Validate that CGST + SGST should equal IGST (or GST Tax Rate)
+  const cgst = cgstValidation.cleaned;
+  const sgst = sgstValidation.cleaned;
+  const igst = igstValidation.cleaned;
   if (Math.abs(cgst + sgst - igst) > 0.01) {
     return { valid: false, message: 'CGST + SGST should equal IGST' };
   }
@@ -78,7 +92,7 @@ const validateForm = (data) => {
 export default function HSNRecordsPage() {
   return (
     <MasterDataPage
-      title="HSN Details"
+      title="HSN Master"
       endpoint={{
         LIST: API_ENDPOINTS.HSN_LIST,
         ADD: API_ENDPOINTS.HSN_ADD,

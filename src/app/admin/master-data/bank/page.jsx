@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
-import { validateGSTIN, validateIFSC } from '@/lib/gstUtils';
+import { validateGSTIN, validateIFSC, validateMICR, validateAccountNumber, validateName } from '@/lib/gstUtils';
 
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
@@ -38,14 +38,38 @@ const formFields = [
 ];
 
 const validateForm = (data) => {
-  const gstValidation = validateGSTIN(data.gstinNumber);
-  if (!gstValidation.valid) {
-    return { valid: false, message: gstValidation.message };
+  console.log("Bank validate form: ", data);
+  // const gstValidation = validateGSTIN(data.gstinNumber);
+  // if (!gstValidation.valid) {
+  //   return { valid: false, message: gstValidation.message };
+  // }
+  const accountNumberValidation = validateAccountNumber(data.accountNumber);
+  if (!accountNumberValidation.valid) {
+    return { valid: false, message: accountNumberValidation.message };
   }
   
+  const accountHolderNameValidation = validateName(data.accountHolderName, 'Account Holder Name');
+  if (!accountHolderNameValidation.valid) {
+    return { valid: false, message: accountHolderNameValidation.message };
+  }
+  
+  const bankNameValidation = validateName(data.bankName, 'Bank Name');
+  if (!bankNameValidation.valid) {
+    return { valid: false, message: bankNameValidation.message };
+  }
+  
+  const branchNameValidation = validateName(data.branchName, 'Branch Name');
+  if (!branchNameValidation.valid) {
+    return { valid: false, message: branchNameValidation.message };
+  }
   const ifscValidation = validateIFSC(data.ifscCode);
   if (!ifscValidation.valid) {
     return { valid: false, message: ifscValidation.message };
+  }
+  
+  const micrValidation = validateMICR(data.micrCode);
+  if (!micrValidation.valid) {
+    return { valid: false, message: micrValidation.message };
   }
   
   return { valid: true };

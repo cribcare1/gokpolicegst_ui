@@ -5,19 +5,33 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X } from 'lucide-react';
+import { validateName, validateAddress, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function ProfileMaster() {
   const [formData, setFormData] = useState({
-    companyName: 'Wings - E-business Services',
-    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016',
-    email: 'Wingdebs@gmail.com',
-    mobile: '9902991133',
+    companyName: '',
+    address: '',
+    email: '',
+    mobile: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchProfileData();
+ useEffect(() => {
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+
+    if (storedProfile) {
+      const userProfile = JSON.parse(storedProfile);
+      // If data exists and not empty
+      if (userProfile && Object.keys(userProfile).length > 0) {
+        setFormData(userProfile);
+      } else {
+        fetchProfileData();
+      }
+    } else {
+      fetchProfileData();
+    }
   }, []);
 
   const fetchProfileData = async () => {
@@ -34,6 +48,34 @@ export default function ProfileMaster() {
   };
 
   const handleSave = async () => {
+    // Validate Company Name
+    const nameValidation = validateName(formData?.companyName, 'Company Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(formData?.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate Email
+    const emailValidation = validateEmail(formData?.email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.message);
+      return;
+    }
+    
+    // Validate Mobile
+    const mobileValidation = validateMobile(formData?.mobile);
+    if (!mobileValidation.valid) {
+      toast.error(mobileValidation.message);
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await ApiService.handlePostRequest(
@@ -112,13 +154,13 @@ export default function ProfileMaster() {
           {isEditing ? (
             <input
               type="text"
-              value={formData.companyName}
+              value={formData?.companyName || ''}
               onChange={(e) => updateFormData('companyName', e.target.value)}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />
           ) : (
             <p className="px-3 py-2 bg-[var(--color-muted)] rounded-lg text-[var(--color-text-primary)]">
-              {formData.companyName}
+              {formData?.companyName || 'N/A'}
             </p>
           )}
         </div>
@@ -129,14 +171,14 @@ export default function ProfileMaster() {
           </label>
           {isEditing ? (
             <textarea
-              value={formData.address}
+              value={formData?.address || ''}
               onChange={(e) => updateFormData('address', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />
           ) : (
             <p className="px-3 py-2 bg-[var(--color-muted)] rounded-lg text-[var(--color-text-primary)]">
-              {formData.address}
+              {formData?.address || 'N/A'}
             </p>
           )}
         </div>
@@ -148,13 +190,13 @@ export default function ProfileMaster() {
           {isEditing ? (
             <input
               type="email"
-              value={formData.email}
+              value={formData?.email || ''}
               onChange={(e) => updateFormData('email', e.target.value)}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />
           ) : (
             <p className="px-3 py-2 bg-[var(--color-muted)] rounded-lg text-[var(--color-text-primary)]">
-              {formData.email}
+              {formData?.email || 'N/A'}
             </p>
           )}
         </div>
@@ -166,14 +208,27 @@ export default function ProfileMaster() {
           {isEditing ? (
             <input
               type="tel"
-              value={formData.mobile}
-              onChange={(e) => updateFormData('mobile', e.target.value)}
+              value={formData?.mobile || ''}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                updateFormData('mobile', value);
+              }}
+              onKeyPress={(e) => {
+                if (!/[0-9]/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                updateFormData('mobile', pastedText);
+              }}
               maxLength={10}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />
           ) : (
             <p className="px-3 py-2 bg-[var(--color-muted)] rounded-lg text-[var(--color-text-primary)]">
-              {formData.mobile}
+              {formData?.mobile || 'N/A'}
             </p>
           )}
         </div>

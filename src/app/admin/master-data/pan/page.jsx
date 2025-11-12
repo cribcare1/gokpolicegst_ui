@@ -2,8 +2,8 @@
 import dynamic from 'next/dynamic';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { t } from '@/lib/localization';
-import { validatePAN, validateEmail, validateMobile } from '@/lib/gstUtils';
-
+import { validatePAN, validateEmail, validateMobile, validateName, validateAddress } from '@/lib/gstUtils';
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 // Lazy load MasterDataPage for better performance
 const MasterDataPage = dynamic(() => import('@/components/master-data/MasterDataPage'), {
   loading: () => <div className="premium-card p-8 animate-pulse"><div className="h-96 bg-gray-200 rounded"></div></div>,
@@ -12,7 +12,7 @@ const MasterDataPage = dynamic(() => import('@/components/master-data/MasterData
 
 const columns = [
   { key: 'panNumber', label: t('label.panNumber') },
-  { key: 'name', label: t('label.name') },
+  { key: 'panName', label: t('label.name') },
   { key: 'address', label: t('label.address') },
   { key: 'mobile', label: t('label.mobile') },
   { key: 'email', label: t('label.email') },
@@ -20,7 +20,7 @@ const columns = [
 
 const formFields = [
   { key: 'panNumber', label: t('label.panNumber'), required: true, maxLength: 10 },
-  { key: 'name', label: t('label.name'), required: true },
+  { key: 'panName', label: t('label.name'), required: true },
   { key: 'address', label: t('label.address'), type: 'textarea', required: true },
   { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
   { key: 'email', label: t('label.email'), type: 'email', required: true },
@@ -30,6 +30,16 @@ const validateForm = (data) => {
   const panValidation = validatePAN(data.panNumber);
   if (!panValidation.valid) {
     return { valid: false, message: panValidation.message };
+  }
+  
+  const panNameValidation = validateName(data.panName, 'PAN Name');
+  if (!panNameValidation.valid) {
+    return { valid: false, message: panNameValidation.message };
+  }
+  
+  const addressValidation = validateAddress(data.address);
+  if (!addressValidation.valid) {
+    return { valid: false, message: addressValidation.message };
   }
   
   const emailValidation = validateEmail(data.email);

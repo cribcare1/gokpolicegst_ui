@@ -70,7 +70,7 @@ export function useGstinList() {
         // Extract GSTIN numbers from the response
         const gstinNumbers = response.data.map(item => ({
           value: item.gstNumber || item.gstinNumber || item.gstin,
-          label: `${item.gstNumber || item.gstinNumber || item.gstin}${item.name ? ` - ${item.name}` : ''}`,
+          label: `${item.gstNumber || item.gstinNumber || item.gstin}${item.gstName ? ` - ${item.gstName}` : ''}`,
           ...item
         }));
         // Update with real data if available

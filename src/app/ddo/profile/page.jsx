@@ -7,7 +7,7 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress } from '@/lib/gstUtils';
 
 export default function DDOProfilePage() {
   const [formData, setFormData] = useState({
@@ -52,17 +52,54 @@ export default function DDOProfilePage() {
   };
 
   const handleSave = async () => {
-    // Validate form
-    const emailValidation = validateEmail(formData.email);
-    if (formData.email && !emailValidation.valid) {
-      toast.error(emailValidation.message);
+    // Validate DDO Code
+    const ddoCodeValidation = validateDDOCode(formData.ddoCode);
+    if (!ddoCodeValidation.valid) {
+      toast.error(ddoCodeValidation.message);
       return;
     }
-
-    const mobileValidation = validateMobile(formData.contactNo);
-    if (formData.contactNo && !mobileValidation.valid) {
-      toast.error(mobileValidation.message);
+    
+    // Validate DDO Name
+    const ddoNameValidation = validateName(formData.ddoName, 'DDO Name');
+    if (!ddoNameValidation.valid) {
+      toast.error(ddoNameValidation.message);
       return;
+    }
+    
+    // Validate Area & City (if provided)
+    if (formData.ddoAreaCity && formData.ddoAreaCity.trim() !== '') {
+      const addressValidation = validateAddress(formData.ddoAreaCity);
+      if (!addressValidation.valid) {
+        toast.error('Area & City: ' + addressValidation.message);
+        return;
+      }
+    }
+    
+    // Validate PIN (if provided)
+    if (formData.ddoPin && formData.ddoPin.trim() !== '') {
+      const pinValidation = validatePIN(formData.ddoPin);
+      if (!pinValidation.valid) {
+        toast.error(pinValidation.message);
+        return;
+      }
+    }
+    
+    // Validate Email
+    if (formData.email && formData.email.trim() !== '') {
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.valid) {
+        toast.error(emailValidation.message);
+        return;
+      }
+    }
+
+    // Validate Mobile
+    if (formData.contactNo && formData.contactNo.trim() !== '') {
+      const mobileValidation = validateMobile(formData.contactNo);
+      if (!mobileValidation.valid) {
+        toast.error(mobileValidation.message);
+        return;
+      }
     }
 
     setLoading(true);
@@ -255,7 +292,20 @@ export default function DDOProfilePage() {
                         type="text"
                         name="ddoPin"
                         value={formData.ddoPin}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'ddoPin', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'ddoPin', value: pastedText } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -284,7 +334,20 @@ export default function DDOProfilePage() {
                         type="tel"
                         name="contactNo"
                         value={formData.contactNo}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'contactNo', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'contactNo', value: pastedText } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter contact number"

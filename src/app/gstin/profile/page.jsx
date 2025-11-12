@@ -7,8 +7,9 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, MapPin, Building2, Mail, Phone, FileText } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateGSTIN, validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { useGstinList } from '@/hooks/useGstinList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Helper function to parse address and extract city and pin code
 const parseAddress = (fullAddress) => {
@@ -46,7 +47,7 @@ const parseAddress = (fullAddress) => {
 export default function GstinProfilePage() {
   const [formData, setFormData] = useState({
     gstinNumber: '29AAAGO1111W1ZB',
-    gstinName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
+    gstName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
     address: 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle',
     city: 'Bengaluru',
     pinCode: '560001',
@@ -78,7 +79,7 @@ export default function GstinProfilePage() {
         if (gstinData.city && gstinData.pinCode) {
           setFormData({
             gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstinName: gstinData.name || '',
+            gstName: gstinData.gstName || '',
             address: gstinData.address || '',
             city: gstinData.city || '',
             pinCode: gstinData.pinCode || '',
@@ -90,7 +91,7 @@ export default function GstinProfilePage() {
           const parsed = parseAddress(gstinData.address || 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle Bengaluru-560001');
           setFormData({
             gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstinName: gstinData.name || '',
+            gstName: gstinData.gstName || '',
             address: parsed.address || '',
             city: parsed.city || 'Bengaluru',
             pinCode: parsed.pinCode || '560001',
@@ -106,19 +107,50 @@ export default function GstinProfilePage() {
   };
 
   const handleSave = async () => {
-    // Validate form
+    console.log("GSTIN Profile Edit called", formData);
+    // Validate GSTIN
     const gstValidation = validateGSTIN(formData.gstinNumber);
     if (!gstValidation.valid) {
       toast.error(gstValidation.message);
       return;
     }
+    
+    // Validate GSTIN Name
+    const nameValidation = validateName(formData.gstName, 'GSTIN Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(formData.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(formData.pinCode);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
 
+    // Validate Email
     const emailValidation = validateEmail(formData.email);
     if (!emailValidation.valid) {
       toast.error(emailValidation.message);
       return;
     }
 
+    // Validate Mobile
     const mobileValidation = validateMobile(formData.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
@@ -127,9 +159,14 @@ export default function GstinProfilePage() {
 
     setLoading(true);
     try {
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
+      console.log("formada===", formData);
       const updateData = {
-        gstNumber: formData.gstinNumber,
-        name: formData.gstinName,
+        id: userId,
+        gstId: gstId,
+       // gstNumber: formData.gstinNumber,
+        gstName: formData.gstName,
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
@@ -279,15 +316,15 @@ export default function GstinProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="gstinName"
-                        value={formData.gstinName}
+                        name="gstName"
+                        value={formData.gstName}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter GSTIN name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstinName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstName}</p>
                       </div>
                     )}
                   </div>
@@ -365,7 +402,20 @@ export default function GstinProfilePage() {
                         type="text"
                         name="pinCode"
                         value={formData.pinCode}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value: pastedText } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -394,7 +444,20 @@ export default function GstinProfilePage() {
                         type="tel"
                         name="mobile"
                         value={formData.mobile}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobile', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobile', value: pastedText } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter mobile number"

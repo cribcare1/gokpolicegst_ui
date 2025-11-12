@@ -7,7 +7,7 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, Building2, MapPin, Mail, Phone } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateEmail, validateMobile } from '@/lib/gstUtils';
+import { validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Helper function to parse address and extract city and pin code
@@ -44,20 +44,35 @@ const parseAddress = (fullAddress) => {
 };
 
 export default function AdminProfilePage() {
-  const [formData, setFormData] = useState({
-    profileName: 'Wings - E-business Services',
-    address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
-    city: 'Bengaluru',
-    pinCode: '560016',
-    email: 'Wingdebs@gmail.com',
-    mobile: '9902991133',
-  });
+  // const [formData, setFormData] = useState({
+  //   fullName: 'Wings - E-business Services',
+  //   address: 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
+  //   city: 'Bengaluru',
+  //   pinCode: '560016',
+  //   email: 'Wingdebs@gmail.com',
+  //   mobileNumber: '9902991133',
+  // });
+  const [formData, setFormData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
-    fetchProfileData();
+ useEffect(() => {
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+
+    if (storedProfile) {
+      const userProfile = JSON.parse(storedProfile);
+      // If data exists and not empty
+      if (userProfile && Object.keys(userProfile).length > 0) {
+        setFormData(userProfile);
+        setLoading(false);
+        setFetching(false);
+      } else {
+        fetchProfileData();
+      }
+    } else {
+      fetchProfileData();
+    }
   }, []);
 
   const fetchProfileData = async () => {
@@ -69,23 +84,23 @@ export default function AdminProfilePage() {
         // If API returns separate city and pinCode, use them directly
         if (response.data.city && response.data.pinCode) {
           setFormData({
-            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            fullName: response.data.companyName || response.data.fullName || 'Wings - E-business Services',
             address: response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
             city: response.data.city || 'Bengaluru',
             pinCode: response.data.pinCode || '560016',
             email: response.data.email || 'Wingdebs@gmail.com',
-            mobile: response.data.mobile || '9902991133',
+            mobileNumber: response.data.mobileNumber || '9902991133',
           });
         } else {
           // Parse the old format address string
           const parsed = parseAddress(response.data.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross, Bengaluru-560016');
           setFormData({
-            profileName: response.data.companyName || response.data.profileName || 'Wings - E-business Services',
+            fullName: response.data.companyName || response.data.fullName || 'Wings - E-business Services',
             address: parsed.address || 'No: 119, 3rd Floor, The Oasis Building, Pai Layout, 8th Cross',
             city: parsed.city || 'Bengaluru',
             pinCode: parsed.pinCode || '560016',
             email: response.data.email || 'Wingdebs@gmail.com',
-            mobile: response.data.mobile || '9902991133',
+            mobileNumber: response.data.mobileNumber || '9902991133',
           });
         }
       }
@@ -98,12 +113,36 @@ export default function AdminProfilePage() {
   };
 
   const handleSave = async () => {
-    // Validate form
-    if (!formData.profileName || formData.profileName.trim() === '') {
-      toast.error('Profile Name is required');
+    console.log("Edit called");
+    // Validate Profile Name
+    const nameValidation = validateName(formData.fullName, 'Profile Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
       return;
     }
 
+    // Validate Address
+    const addressValidation = validateAddress(formData.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(formData.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate PIN Code
+    const pinValidation = validatePIN(formData.pinCode);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
+
+    // Validate Email
     if (formData.email) {
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.valid) {
@@ -112,8 +151,9 @@ export default function AdminProfilePage() {
       }
     }
 
-    if (formData.mobile) {
-      const mobileValidation = validateMobile(formData.mobile);
+    // Validate Mobile
+    if (formData.mobileNumber) {
+      const mobileValidation = validateMobile(formData.mobileNumber);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
@@ -122,17 +162,19 @@ export default function AdminProfilePage() {
 
     setLoading(true);
     try {
+      console.log("formada===", formData);
       const updateData = {
-        companyName: formData.profileName,
+        id: formData.userId,
+        fullName: formData.fullName,
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
         email: formData.email,
-        mobile: formData.mobile,
+        mobileNumber: formData.mobileNumber,
       };
 
       const response = await ApiService.handlePostRequest(
-        API_ENDPOINTS.PROFILE_UPDATE,
+        API_ENDPOINTS.ADMIN_PROFILE_UPDATE,
         updateData
       );
 
@@ -247,15 +289,15 @@ export default function AdminProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="profileName"
-                        value={formData.profileName}
+                        name="fullName"
+                        value={formData.fullName}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter profile name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.profileName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.fullName}</p>
                       </div>
                     )}
                   </div>
@@ -333,7 +375,20 @@ export default function AdminProfilePage() {
                         type="text"
                         name="pinCode"
                         value={formData.pinCode}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          handleChange({ target: { name: 'pinCode', value: pastedText } });
+                        }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter pin code"
@@ -388,16 +443,29 @@ export default function AdminProfilePage() {
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="mobile"
-                        value={formData.mobile}
-                        onChange={handleChange}
+                        name="mobileNumber"
+                        value={formData.mobileNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobileNumber', value } });
+                        }}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          handleChange({ target: { name: 'mobileNumber', value: pastedText } });
+                        }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter mobile number"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobileNumber}</p>
                       </div>
                     )}
                   </div>

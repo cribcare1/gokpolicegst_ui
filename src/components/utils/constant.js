@@ -1,11 +1,13 @@
 export const LOGIN_CONSTANT = {
- USER_TOKEN: 'userToken',
+ USER_TOKEN: 'token',
  USER_ID: 'userId',
- DDO_COUNT: 'ddoCount',
- FORM_16_COUNT: 'form16Count',
- FORM_16A_COUNT: 'form16ACount',
- DDO_USER_NAME: 'ddoUserName',
- DDO_TAN_NUMBER: 'ddoTanNumber',
+ FULL_NAME: 'fullName',
+ MOBILE_NUMBER: 'mobileNumber',
+ ADDRESS: 'address',
+ PINCODE: 'pinCode',
+ CITY: 'city',
  EMAIL: 'email',
+ GSTID: 'gstId',
 }
+export const USER_PROFILE_DATA = "user_profile_data";
 export const FOOTER_TEXT = "© 2025 Dravinlabs Technology Pvt. Ltd. All rights reserved.";

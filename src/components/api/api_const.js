@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.gokpolicegst.com:8443/tds"; //"http://13.126.232.163:8888/tds";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.gokpolicegst.com:8443/tds"; //"http://api.gokpolicegst.com:8443/tds"; https://13.204.137.0:8443/tds
+
 
 export const API_ENDPOINTS = {
   UPLOAD: `${API_BASE_URL}/upload`,
@@ -20,35 +21,37 @@ export const API_ENDPOINTS = {
   DDO_DETAILS_EDITBUTTON: `${API_BASE_URL}/user/editDdo/`,
   
   // GST Master Data Endpoints
-  GST_LIST: `${API_BASE_URL}/gst/list`,
-  GST_ADD: `${API_BASE_URL}/gst/add`,
-  GST_UPDATE: `${API_BASE_URL}/gst/update`,
-  GST_DELETE: `${API_BASE_URL}/gst/delete/`,
+  GST_LIST: `${API_BASE_URL}/gst/activeGSTDetails`,
+  GST_ADD: `${API_BASE_URL}/gst/saveOrUpdate`,
+  GST_UPDATE: `${API_BASE_URL}/gst/saveOrUpdate`,
+  GST_DELETE: `${API_BASE_URL}/gst/deleteGst/`,
   GST_GET: `${API_BASE_URL}/gst/get/`,
   
   // PAN Master Data Endpoints
-  PAN_LIST: `${API_BASE_URL}/pan/list`,
-  PAN_ADD: `${API_BASE_URL}/pan/add`,
-  PAN_UPDATE: `${API_BASE_URL}/pan/update`,
+  PAN_LIST: `${API_BASE_URL}/pan/getAllActivePan`,
+  PAN_ADD: `${API_BASE_URL}/pan/saveOrUpdate`,
+  PAN_UPDATE: `${API_BASE_URL}/pan/saveOrUpdate`,
   PAN_DELETE: `${API_BASE_URL}/pan/delete/`,
   
   // DDO Master Data Endpoints (already exists but adding for consistency)
-  DDO_LIST: `${API_BASE_URL}/ddo/list`,
-  DDO_ADD: `${API_BASE_URL}/ddo/add`,
-  DDO_UPDATE: `${API_BASE_URL}/ddo/update`,
-  DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
-  
+  DDO_LIST: `${API_BASE_URL}/gst/ddoList?gstId=`,
+  DDO_LIST_PER_GST: `${API_BASE_URL}/gst/ddoList?gstId=`,
+  DDO_ADD: `${API_BASE_URL}/user/addDDOByGSTIN`,
+  DDO_UPDATE: `${API_BASE_URL}/user/addDDOByGSTIN`,
+  DDO_DELETE: `${API_BASE_URL}/user/delete-ddo/`,
+  DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
+
   // HSN Master Data Endpoints
-  HSN_LIST: `${API_BASE_URL}/hsn/list`,
-  HSN_ADD: `${API_BASE_URL}/hsn/add`,
-  HSN_UPDATE: `${API_BASE_URL}/hsn/update`,
+  HSN_LIST: `${API_BASE_URL}/hsn/getAllHSN`,
+  HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
+  HSN_UPDATE: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
   HSN_DELETE: `${API_BASE_URL}/hsn/delete/`,
   
   // Bank Details Endpoints
-  BANK_LIST: `${API_BASE_URL}/bank/list`,
-  BANK_ADD: `${API_BASE_URL}/bank/add`,
-  BANK_UPDATE: `${API_BASE_URL}/bank/update`,
-  BANK_DELETE: `${API_BASE_URL}/bank/delete/`,
+  BANK_LIST: `${API_BASE_URL}/banks/activeBankDetails`,
+  BANK_ADD: `${API_BASE_URL}/banks/saveOrUpdateBank`,
+  BANK_UPDATE: `${API_BASE_URL}/banks/saveOrUpdateBank`,
+  BANK_DELETE: `${API_BASE_URL}/banks/deleteBank/`,
   
   // Customer Endpoints
   CUSTOMER_LIST: `${API_BASE_URL}/customer/list`,
@@ -86,9 +89,10 @@ export const API_ENDPOINTS = {
   // Profile Endpoints
   PROFILE_GET: `${API_BASE_URL}/profile/get`,
   PROFILE_UPDATE: `${API_BASE_URL}/profile/update`,
+  ADMIN_PROFILE_UPDATE: `${API_BASE_URL}/user/editAdmin`,
   
   // DDO Mapping Endpoints
-  DDO_MAPPING_UPDATE: `${API_BASE_URL}/ddo/mapping`,
+  DDO_MAPPING_UPDATE: `${API_BASE_URL}/gst/migrate-ddos`,
   
 };
 
