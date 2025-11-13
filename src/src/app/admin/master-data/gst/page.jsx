@@ -273,7 +273,36 @@ export default function GSTMasterPage() {
     const validation = validateForm(formData);
     console.log("validation is called ", validation);
     if (!validation.valid) {
+      // Show toast error
       toast.error(validation.message || t('validation.required'));
+      
+      // Set field error in UI for better visibility
+      // Check which field the error is related to
+      if (validation.message && validation.message.includes('GSTIN')) {
+        setFieldErrors((prev) => ({ ...prev, gstNumber: validation.message }));
+      } else if (validation.message && validation.message.includes('GST Holder Name')) {
+        setFieldErrors((prev) => ({ ...prev, gstHolderName: validation.message }));
+      } else if (validation.message && validation.message.includes('GST Name')) {
+        setFieldErrors((prev) => ({ ...prev, gstName: validation.message }));
+      } else if (validation.message && (validation.message.includes('Address') || validation.message.includes('address'))) {
+        setFieldErrors((prev) => ({ ...prev, address: validation.message }));
+      } else if (validation.message && validation.message.includes('City')) {
+        setFieldErrors((prev) => ({ ...prev, city: validation.message }));
+      } else if (validation.message && (validation.message.includes('PIN') || validation.message.includes('Pin'))) {
+        setFieldErrors((prev) => ({ ...prev, pinCode: validation.message }));
+      } else if (validation.message && validation.message.includes('Email')) {
+        setFieldErrors((prev) => ({ ...prev, email: validation.message }));
+      } else if (validation.message && (validation.message.includes('Mobile') || validation.message.includes('mobile'))) {
+        setFieldErrors((prev) => ({ ...prev, mobile: validation.message }));
+      } else if (validation.message && validation.message.includes('State Code')) {
+        setFieldErrors((prev) => ({ ...prev, stateCode: validation.message }));
+      } else if (validation.message && validation.message.includes('Password')) {
+        setFieldErrors((prev) => ({ ...prev, password: validation.message }));
+      } else if (validation.message && validation.message.includes('PAN')) {
+        // PAN validation error is related to GSTIN field
+        setFieldErrors((prev) => ({ ...prev, gstNumber: validation.message }));
+      }
+      
       return;
     }
 

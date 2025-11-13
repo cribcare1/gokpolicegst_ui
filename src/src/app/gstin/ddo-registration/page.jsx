@@ -10,7 +10,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateGSTIN, validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress } from '@/lib/gstUtils';
+import { validateGSTIN, validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
 
 export default function GstinDDORegistrationPage() {
   const [ddos, setDdos] = useState([]);
@@ -161,96 +161,156 @@ export default function GstinDDORegistrationPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('handleSubmit called', { formData, editingDDO });
 
     // Validate DDO Code
+    console.log('Validating DDO Code...');
     const ddoCodeValidation = validateDDOCode(formData.ddoCode);
     if (!ddoCodeValidation.valid) {
+      console.error('DDO Code validation failed:', ddoCodeValidation.message);
       toast.error(ddoCodeValidation.message);
       return;
     }
+    console.log('DDO Code validation passed');
 
     // Validate DDO Name
+    console.log('Validating DDO Name...');
     const ddoNameValidation = validateName(formData.ddoName, 'DDO Name');
     if (!ddoNameValidation.valid) {
+      console.error('DDO Name validation failed:', ddoNameValidation.message);
       toast.error(ddoNameValidation.message);
       return;
     }
+    console.log('DDO Name validation passed');
 
     // Validate Address (optional but if provided, validate)
     if (formData.address && formData.address.trim() !== '') {
+      console.log('Validating Address...', formData.address.length, 'characters');
       const addressValidation = validateAddress(formData.address);
       if (!addressValidation.valid) {
+        console.error('Address validation failed:', addressValidation.message);
         toast.error('Address: ' + addressValidation.message);
         return;
       }
+      console.log('Address validation passed');
+    } else {
+      console.log('Address is empty, skipping validation');
     }
 
     // Validate Area & City (optional but if provided, validate)
     if (formData.city && formData.city.trim() !== '') {
-      const addressValidation = validateAddress(formData.city);
-      if (!addressValidation.valid) {
-        toast.error('Area & City: ' + addressValidation.message);
+      console.log('Validating City...', formData.city.length, 'characters');
+      const cityValidation = validateCity(formData.city);
+      if (!cityValidation.valid) {
+        console.error('City validation failed:', cityValidation.message);
+        toast.error('Area & City: ' + cityValidation.message);
         return;
       }
+      console.log('City validation passed');
+    } else {
+      console.log('City is empty, skipping validation');
     }
 
     // Validate PIN (optional but if provided, validate)
     if (formData.pinCode && formData.pinCode.trim() !== '') {
+      console.log('Validating PIN...');
       const pinValidation = validatePIN(formData.pinCode);
       if (!pinValidation.valid) {
+        console.error('PIN validation failed:', pinValidation.message);
         toast.error(pinValidation.message);
         return;
       }
+      console.log('PIN validation passed');
+    } else {
+      console.log('PIN is empty, skipping validation');
     }
 
     // Validate Contact Number (optional but if provided, validate)
     if (formData.mobile && formData.mobile.trim() !== '') {
+      console.log('Validating Mobile...');
       const mobileValidation = validateMobile(formData.mobile);
       if (!mobileValidation.valid) {
+        console.error('Mobile validation failed:', mobileValidation.message);
         toast.error(mobileValidation.message);
         return;
       }
+      console.log('Mobile validation passed');
+    } else {
+      console.log('Mobile is empty, skipping validation');
     }
 
     // Validate Email (optional but if provided, validate)
     if (formData.email && formData.email.trim() !== '') {
+      console.log('Validating Email...');
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.valid) {
+        console.error('Email validation failed:', emailValidation.message);
         toast.error(emailValidation.message);
         return;
       }
+      console.log('Email validation passed');
+    } else {
+      console.log('Email is empty, skipping validation');
+    }
+
+    console.log('All validations passed, proceeding to API call...');
+
+    // Check if userId is required for update
+    if (editingDDO && !formData.id && !editingDDO.userId) {
+      toast.error('User ID is missing. Cannot update DDO.');
+      return;
     }
 
     setFormLoading(true);
     try {
       const gstinNumber = localStorage.getItem('gstinNumber');
       const payload = {
-        ...formData,
+        ddoCode: formData.ddoCode,
+        ddoName: formData.ddoName,
+        address: formData.address || '',
+        city: formData.city || '',
+        pinCode: formData.pinCode || '',
+        mobile: formData.mobile || '',
+        email: formData.email || '',
         gstId: gstId || '',
-        gstInUserId : userId || '',
-        mobile: formData.mobile,
+        gstInUserId: userId || '',
       };
+
+      // Include userId when editing - try multiple possible field names
+      if (editingDDO) {
+        const userIdValue = formData.id || editingDDO.userId || editingDDO.id;
+        if (userIdValue) {
+          payload.userId = userIdValue;
+          payload.id = userIdValue;
+        }
+      }
 
       // Only include password when editing (not when adding new DDO)
       if (editingDDO && formData.password) {
         payload.password = formData.password;
-      } else if (!editingDDO) {
-        // Remove password from payload when adding new DDO
-        delete payload.password;
       }
 
       const endpoint = editingDDO ? API_ENDPOINTS.DDO_UPDATE : API_ENDPOINTS.DDO_ADD;
+      
+      console.log('Submitting DDO update:', { endpoint, payload, editingDDO });
+      
       const response = await ApiService.handlePostRequest(endpoint, payload);
+
+      console.log('API Response:', response);
 
       if (response?.status === 'success') {
         toast.success(editingDDO ? 'DDO updated successfully' : 'DDO added successfully');
         setIsModalOpen(false);
         fetchDDOs(gstId);
       } else {
-        toast.error(response?.message || 'Failed to save DDO');
+        const errorMessage = response?.message || response?.error || 'Failed to save DDO';
+        console.error('Update failed:', errorMessage, response);
+        toast.error(errorMessage);
       }
     } catch (error) {
-      toast.error('Error saving DDO');
+      console.error('Error saving DDO:', error);
+      toast.error(error?.message || 'Error saving DDO. Please check console for details.');
     } finally {
       setFormLoading(false);
     }

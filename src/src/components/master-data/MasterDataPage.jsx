@@ -435,7 +435,9 @@ export default function MasterDataPage({
     if ((fieldLower.includes('gstin') || fieldLower.includes('gstnumber')) && gstinList.length === 0) {
       const validation = validateGSTIN(value);
       if (!validation.valid) error = validation.message;
-    } else if (fieldLower.includes('pan') || fieldLower.includes('pannumber')) {
+    } else if (fieldLower.includes('pan') && (fieldLower.includes('number') || fieldLower.includes('no') || fieldLower.includes('pannumber'))) {
+      // Only treat this as a PAN field when the key indicates a PAN number (e.g. 'panNumber', 'pan_no')
+      // Avoid matching keys like 'panName' which contain 'pan' but are actually a name field.
       const validation = validatePAN(value);
       if (!validation.valid) error = validation.message;
     } else if (fieldLower.includes('email')) {
