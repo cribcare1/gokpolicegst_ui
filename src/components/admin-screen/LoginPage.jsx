@@ -53,7 +53,7 @@ export default function AdminLogin() {
       return;
     }
     
-    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
   
     const requestBody = {
       userName: email,
