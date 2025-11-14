@@ -8,7 +8,7 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { validateGSTIN, validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN, validateStateCode, validatePassword } from '@/lib/gstUtils';
-import { Plus, Edit, Trash2, Search, ArrowLeft, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, ArrowLeft, Users, Download } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 
@@ -16,6 +16,13 @@ import { toast } from 'sonner';
 const extractPANFromGSTIN = (gstin) => {
   if (!gstin || gstin.length < 12) return null;
   return gstin.substring(2, 12).toUpperCase();
+};
+
+// Extract State Code from GSTIN (first 2 digits)
+const extractStateCodeFromGSTIN = (gstin) => {
+  if (!gstin || gstin.length < 2) return null;
+  const stateCode = parseInt(gstin.substring(0, 2));
+  return isNaN(stateCode) ? null : stateCode;
 };
 
 export default function GSTMasterPage() {
@@ -35,6 +42,7 @@ export default function GSTMasterPage() {
   const [ddoPasswordModal, setDdoPasswordModal] = useState(false);
   const [ddoPasswordData, setDdoPasswordData] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  const [ddoCounts, setDdoCounts] = useState({}); // Store DDO counts for each GSTIN
 
   useEffect(() => {
     fetchData();
@@ -75,44 +83,48 @@ export default function GSTMasterPage() {
     }
   };
 
+  const fetchDdoCountForGstin = async (gstinId, gstinNumber) => {
+    try {
+      const response = await ApiService.handleGetRequest(
+        `${API_ENDPOINTS.DDO_LIST_PER_GST}${gstinId}`,
+        2000
+      );
+      let count = 0;
+      if (response?.status === 'success') {
+        if (Array.isArray(response.data)) {
+          count = response.data.length;
+        } else if (Array.isArray(response.data?.ddos)) {
+          count = response.data.ddos.length;
+        } else if (response.data?.ddoCount) {
+          count = response.data.ddoCount;
+        }
+      }
+      setDdoCounts((prev) => ({ ...prev, [gstinId]: count }));
+      return count;
+    } catch (error) {
+      console.error(`Error fetching DDO count for GSTIN ${gstinNumber}:`, error);
+      setDdoCounts((prev) => ({ ...prev, [gstinId]: 0 }));
+      return 0;
+    }
+  };
+
   const fetchData = async () => {
-    // const demoData = [
-    //   { 
-    //     id: '1', 
-    //     gstNumber: '29AAAGO1111W1ZB', 
-    //     name: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
-    //     gstHolderName: 'Government of Karnataka',
-    //     address: 'No.1, Police Head Quarterz, Narpathuga Road, Opp: Martha\'s Hospital, K R Circle, Bengaluru-560001',
-    //     city: 'Bengaluru',
-    //     pin: '560001',
-    //     contactNumber: '9902991144', 
-    //     email: 'Copadmin@ksp.gov.in',
-    //     ddoCount: 5
-    //   },
-    //   { 
-    //     id: '2', 
-    //     gstNumber: '19ABCDE1234F1Z5', 
-    //     name: 'XYZ Corporation',
-    //     gstHolderName: 'XYZ Corporation',
-    //     address: '456 Brigade Road, Bangalore',
-    //     city: 'Bangalore',
-    //     pin: '560001',
-    //     contactNumber: '9876543211', 
-    //     email: 'xyz@example.com',
-    //     ddoCount: 2
-    //   },
-    // ];
-    // setData(demoData);
-    // setFilteredData(demoData);
-    // setLoading(false);
-    
     try {
       setLoading(true);
       
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}` );
       if (response  && response.status === 'success') {
-          setData(response.data);
-          setFilteredData(response.data);        
+          const gstData = response.data;
+          setData(gstData);
+          setFilteredData(gstData);
+          
+          // Fetch DDO counts for all GSTINs
+          if (Array.isArray(gstData)) {
+            const countPromises = gstData.map((item) => 
+              fetchDdoCountForGstin(item.id, item.gstNumber)
+            );
+            await Promise.all(countPromises);
+          }
       }
       
     } catch (error) {
@@ -158,12 +170,31 @@ export default function GSTMasterPage() {
 
   const handleEdit = (item) => {
     setEditingItem(item);
-    setFormData(item);
+    const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
+    
+    // Auto-populate state code from GSTIN if not already present
+    let stateCode = item.stateCode;
+    if (!stateCode && item.gstNumber) {
+      stateCode = extractStateCodeFromGSTIN(item.gstNumber);
+    }
+    
+    setFormData({
+      ...item,
+      ddoCount: ddoCount, // Store DDO count in form data for reference
+      stateCode: stateCode || item.stateCode || ''
+    });
     setFieldErrors({});
     setIsModalOpen(true);
   };
 
   const handleDelete = async (item) => {
+    const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
+    
+    if (ddoCount > 0) {
+      toast.error(`Cannot delete GSTIN. ${ddoCount} DDO(s) are mapped to this GSTIN.`);
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this record?')) return;
     
     try {
@@ -464,6 +495,72 @@ export default function GSTMasterPage() {
     }
   };
 
+  const handleDownloadCSV = () => {
+    try {
+      // Prepare CSV headers
+      const headers = [
+        'GSTIN Number',
+        'GST Holder Name',
+        'Name',
+        'Address',
+        'City',
+        'PIN',
+        'Mobile',
+        'Email',
+        'State Code',
+        'DDO Count'
+      ];
+
+      // Prepare CSV rows
+      const rows = filteredData.map((item) => {
+        const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
+        return [
+          item.gstNumber || '',
+          item.gstHolderName || '',
+          item.gstName || item.name || '',
+          item.address || '',
+          item.city || '',
+          item.pinCode || item.pin || '',
+          item.mobile || item.contactNumber || '',
+          item.email || '',
+          item.stateCode || '',
+          ddoCount.toString()
+        ];
+      });
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => 
+          row.map(cell => {
+            // Escape commas and quotes in cell values
+            const cellStr = String(cell || '');
+            if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+              return `"${cellStr.replace(/"/g, '""')}"`;
+            }
+            return cellStr;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `GSTIN_Master_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('CSV file downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      toast.error('Failed to download CSV file');
+    }
+  };
+
   const columns = [
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'gstHolderName', label: 'GST Holder Name' },
@@ -476,42 +573,56 @@ export default function GSTMasterPage() {
     { 
       key: 'ddoCount', 
       label: 'DDO Count',
-      render: (value, row) => (
-        <button
-          onClick={() => handleDDOCountClick(row)}
-          className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1"
-        >
-          <Users size={16} />
-          {value || 0}
-        </button>
-      )
+      render: (value, row) => {
+        const count = ddoCounts[row.id] || value || 0;
+        return (
+          <button
+            onClick={() => handleDDOCountClick(row)}
+            className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1"
+          >
+            <Users size={16} />
+            {count}
+          </button>
+        );
+      }
     },
   ];
 
-  const tableActions = (row) => (
-    <>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleEdit(row);
-        }}
-        className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
-        aria-label="Edit"
-      >
-        <Edit size={18} />
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleDelete(row);
-        }}
-        className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-red-600 dark:text-red-400"
-        aria-label="Delete"
-      >
-        <Trash2 size={18} />
-      </button>
-    </>
-  );
+  const tableActions = (row) => {
+    const ddoCount = ddoCounts[row.id] || row.ddoCount || 0;
+    const canDelete = ddoCount === 0;
+    
+    return (
+      <>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEdit(row);
+          }}
+          className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
+          aria-label="Edit"
+        >
+          <Edit size={18} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(row);
+          }}
+          disabled={!canDelete}
+          className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
+            canDelete
+              ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+          }`}
+          aria-label="Delete"
+          title={!canDelete ? `Cannot delete: ${ddoCount} DDO(s) mapped to this GSTIN` : 'Delete'}
+        >
+          <Trash2 size={18} />
+        </button>
+      </>
+    );
+  };
 
   const formFields = [
     { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
@@ -538,16 +649,26 @@ export default function GSTMasterPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
-                <span className="gradient-text">GST Master</span>
+                <span className="gradient-text">GSTIN Master</span>
               </h1>
               <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
-                Manage gst master efficiently
+                Manage gstin master efficiently
               </p>
             </div>
-            <Button onClick={handleAdd} variant="primary" className="group w-full sm:w-auto">
-              <Plus className="mr-2 group-hover:rotate-90 transition-transform duration-300" size={18} />
-              {t('btn.add')}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDownloadCSV} 
+                variant="secondary" 
+                className="group w-full sm:w-auto"
+              >
+                <Download className="mr-2 group-hover:scale-110 transition-transform duration-300" size={18} />
+                Download CSV
+              </Button>
+              <Button onClick={handleAdd} variant="primary" className="group w-full sm:w-auto">
+                <Plus className="mr-2 group-hover:rotate-90 transition-transform duration-300" size={18} />
+                {t('btn.add')}
+              </Button>
+            </div>
           </div>
 
           <div className="relative mb-4 sm:mb-6">
@@ -578,7 +699,7 @@ export default function GSTMasterPage() {
           <Modal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            title={editingItem ? `Edit GST Master` : `Add GST Master`}
+            title={editingItem ? `Edit GSTIN Master` : `Add GSTIN Master`}
             size="lg"
           >
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -586,6 +707,16 @@ export default function GSTMasterPage() {
                 <div key={field.key}>
                   <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
+                    {field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0 && (
+                      <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
+                        (Cannot edit: {formData.ddoCount} DDO(s) mapped)
+                      </span>
+                    )}
+                    {field.key === 'stateCode' && (
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        (Auto-populated from GSTIN)
+                      </span>
+                    )}
                   </label>
                   {field.type === 'textarea' ? (
                     <>
@@ -697,11 +828,19 @@ export default function GSTMasterPage() {
                             // Account number: only digits
                             value = value.replace(/\D/g, '');
                           } else if (fieldLower.includes('statecode') || fieldLower.includes('state code')) {
-                            // State Code: only digits, max 2
+                            // State Code: only digits, max 2 (read-only, but handle just in case)
                             value = value.replace(/\D/g, '').slice(0, 2);
                           } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
                             // ✅ Auto-uppercase for PAN or GST fields
                             value = value.toUpperCase();
+                            
+                            // Auto-populate state code from GSTIN (first 2 digits)
+                            if (fieldLower.includes('gst') && value.length >= 2) {
+                              const stateCode = extractStateCodeFromGSTIN(value);
+                              if (stateCode !== null) {
+                                updateFormData('stateCode', stateCode);
+                              }
+                            }
                           }
                           
                           if (field.type === 'number') {
@@ -765,12 +904,22 @@ export default function GSTMasterPage() {
                           fieldErrors[field.key] 
                             ? 'border-red-500 focus:ring-red-500' 
                             : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                        } ${
+                          (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
+                          (field.key === 'stateCode')
+                            ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-70'
+                            : ''
                         }`}
                         placeholder={field.placeholder}
                         required={field.required}
                         maxLength={field.maxLength}
                         min={field.min}
                         max={field.max}
+                        disabled={
+                          (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
+                          (field.key === 'stateCode')
+                        }
+                        readOnly={field.key === 'stateCode'}
                       />
                       {fieldErrors[field.key] && (
                         <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>

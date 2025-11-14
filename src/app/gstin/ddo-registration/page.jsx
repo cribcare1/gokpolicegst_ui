@@ -35,6 +35,7 @@ export default function GstinDDORegistrationPage() {
     
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
@@ -123,6 +124,7 @@ export default function GstinDDORegistrationPage() {
       password: '',
     });
     setShowPassword(false);
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
@@ -140,6 +142,7 @@ export default function GstinDDORegistrationPage() {
      // password: '', // Password field is empty by default, user can set new password
     });
     setShowPassword(false);
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
@@ -185,11 +188,13 @@ export default function GstinDDORegistrationPage() {
     console.log('DDO Name validation passed');
 
     // Validate Address (optional but if provided, validate)
+    setFieldErrors({}); // Clear previous errors
     if (formData.address && formData.address.trim() !== '') {
       console.log('Validating Address...', formData.address.length, 'characters');
       const addressValidation = validateAddress(formData.address);
       if (!addressValidation.valid) {
         console.error('Address validation failed:', addressValidation.message);
+        setFieldErrors({ address: addressValidation.message });
         toast.error('Address: ' + addressValidation.message);
         return;
       }
@@ -204,6 +209,7 @@ export default function GstinDDORegistrationPage() {
       const cityValidation = validateCity(formData.city);
       if (!cityValidation.valid) {
         console.error('City validation failed:', cityValidation.message);
+        setFieldErrors({ city: cityValidation.message });
         toast.error('Area & City: ' + cityValidation.message);
         return;
       }
@@ -433,9 +439,21 @@ export default function GstinDDORegistrationPage() {
                 <input
                   type="text"
                   value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="premium-input w-full"
+                  onChange={(e) => {
+                    setFormData({ ...formData, city: e.target.value });
+                    // Clear error when user starts typing
+                    if (fieldErrors.city) {
+                      setFieldErrors({ ...fieldErrors, city: '' });
+                    }
+                  }}
+                  className={`premium-input w-full ${fieldErrors.city ? 'border-red-500 focus:ring-red-500' : ''}`}
                 />
+                {fieldErrors.city && (
+                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>{fieldErrors.city}</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -510,11 +528,23 @@ export default function GstinDDORegistrationPage() {
               </label>
               <textarea
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="premium-input w-full"
+                onChange={(e) => {
+                  setFormData({ ...formData, address: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.address) {
+                    setFieldErrors({ ...fieldErrors, address: '' });
+                  }
+                }}
+                className={`premium-input w-full ${fieldErrors.address ? 'border-red-500 focus:ring-red-500' : ''}`}
                 rows={3}
-                placeholder="Enter full address"
+                placeholder="Enter full address (minimum 10 characters)"
               />
+              {fieldErrors.address && (
+                <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>{fieldErrors.address}</span>
+                </p>
+              )}
             </div>
 
             {/* Password field - only shown when editing */}
