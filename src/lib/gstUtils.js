@@ -232,6 +232,7 @@ export const validateEmail = (email) => {
 
 /**
  * Validates PAN format (10 characters: 5 letters, 4 digits, 1 letter)
+ * Last alphabet should not be 'O'
  */
 export const validatePAN = (pan) => {
   if (!pan) return { valid: false, message: 'PAN is required' };
@@ -242,6 +243,10 @@ export const validatePAN = (pan) => {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   if (!panRegex.test(cleaned)) {
     return { valid: false, message: 'Invalid PAN format' };
+  }
+  // Check if last alphabet is 'O'
+  if (cleaned[9] === 'O') {
+    return { valid: false, message: 'PAN last alphabet cannot be O' };
   }
   return { valid: true, cleaned: pan.trim() };
 };

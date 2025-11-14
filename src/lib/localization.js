@@ -9,7 +9,7 @@ export const translations = {
   // Navigation
   "nav.dashboard": { en: "Dashboard", kn: "ಡ್ಯಾಶ್ಬೋರ್ಡ್" },
   "nav.masterData": { en: "Master Data", kn: "ಮಾಸ್ಟರ್ ಡೇಟಾ" },
-  "nav.gst": { en: "GST Master", kn: "GST ಮಾಸ್ಟರ್" },
+  "nav.gst": { en: "GSTIN Master", kn: "GSTIN ಮಾಸ್ಟರ್" },
   "nav.pan": { en: "PAN Master", kn: "PAN ಮಾಸ್ಟರ್" },
   "nav.ddo": { en: "DDO Mapping", kn: "DDO ಮ್ಯಾಪಿಂಗ್" },
   "nav.hsn": { en: "HSN Master", kn: "HSN ಮಾಸ್ಟರ್" },
