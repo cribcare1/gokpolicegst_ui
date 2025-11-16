@@ -159,6 +159,7 @@ export default function GstinLoginPage() {
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
         localStorage.setItem('gstinNumber', response.login_response.gstinNumber || gstin);
         localStorage.setItem('userRole', 'gstin');
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
         
         showToast("🎉 Login successful! Welcome back.", "success");
         router.push("/gstin_dashboard");

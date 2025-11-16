@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/shared/Layout';
 import { API_ENDPOINTS } from '@/components/api/api_const';
+import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { Package, Users, Receipt, Clock } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
@@ -35,35 +36,30 @@ export default function AdminDashboard() {
     
     try {
       setLoading(true);
-      // Try to fetch real data with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
       
-      const response = await fetch(API_ENDPOINTS.ADMIN_DASHBOARD, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
+      // Get gstId from localStorage or use default value
+      const gstId = localStorage.getItem('gstId') || '4';
       
-      clearTimeout(timeoutId);
+      // Build API URL with gstId parameter
+      const apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === 'success') {
-          setStats({
-            gstInCount: data.gstInCount || data.gstCount || 0,
-            ddoCount: data.ddoCount || 0,
-            totalBillingCount: data.totalBillingCount || data.billingCount || 0,
-            pendingPaymentSubmission: data.pendingPaymentSubmission || data.pendingPayment || 0,
-          });
-        }
+      // Use ApiService to fetch data
+      const result = await ApiService.handleGetRequest(apiUrl, 5000);
+      
+      if (result && result.status === 'success' && result.data && !result.error) {
+        const data = result.data;
+        setStats({
+          gstInCount: data.totalGst || 0,
+          ddoCount: data.totalDdo || 0,
+          totalBillingCount: (data.completeInvoice || 0) + (data.pendingInvoice || 0),
+          pendingPaymentSubmission: data.pendingInvoice || 0,
+        });
+      } else {
+        console.log('API response not successful, using demo data');
       }
     } catch (error) {
       // Keep demo data, API failed or timed out
-      console.log('Using demo data');
+      console.log('API error, using demo data:', error.message);
     } finally {
       setLoading(false);
     }

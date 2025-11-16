@@ -189,6 +189,7 @@ export default function AdminProfilePage() {
 
       if (response?.status === 'success') {
         toast.success('Profile updated successfully');
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
         setIsEditing(false);
       } else {
         toast.error(response?.message || 'Failed to update profile');

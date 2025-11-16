@@ -77,36 +77,51 @@ export default function DDODashboard() {
     
     try {
       setLoading(true);
-      const ddoCode = localStorage.getItem('ddoCode') || '';
       
-      // Try to fetch real data with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+      // Get gstId from localStorage (DDO might be associated with a GSTIN)
+      // If not available, try to get from DDO code or use default
+      const gstId = typeof window !== 'undefined' ? localStorage.getItem('gstId') : null;
+      const ddoCode = typeof window !== 'undefined' ? localStorage.getItem('ddoCode') : '';
       
-      const response = await fetch(`${API_ENDPOINTS.DDO_DASHBOARD}?ddoCode=${ddoCode}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
+      // Build API URL - try with gstId first, fallback to ddoCode if needed
+      let apiUrl;
+      if (gstId) {
+        apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
+      } else if (ddoCode) {
+        // If no gstId, try the DDO dashboard endpoint
+        apiUrl = `${API_ENDPOINTS.DDO_DASHBOARD}?ddoCode=${ddoCode}`;
+      } else {
+        console.log('No gstId or ddoCode found, using demo data');
+        return;
+      }
       
-      clearTimeout(timeoutId);
+      // Use ApiService to fetch data
+      const result = await ApiService.handleGetRequest(apiUrl, 5000);
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === 'success') {
+      if (result && result.status === 'success' && result.data && !result.error) {
+        const data = result.data;
+        
+        // If using getDashboardStats endpoint (with gstId)
+        if (gstId) {
+          setStats({
+            pendingBills: data.pendingInvoice || 0,
+            submittedBills: data.completeInvoice || 0,
+            recentBills: demoStats.recentBills, // Keep demo recent bills as API doesn't provide this
+          });
+        } else {
+          // If using DDO dashboard endpoint
           setStats({
             pendingBills: data.pendingBills || 0,
             submittedBills: data.submittedBills || 0,
-            recentBills: data.recentBills || [],
+            recentBills: data.recentBills || demoStats.recentBills,
           });
         }
+      } else {
+        console.log('API response not successful, using demo data');
       }
     } catch (error) {
       // Keep demo data, API failed or timed out
-      console.log('Using demo data');
+      console.log('API error, using demo data:', error.message);
     } finally {
       setLoading(false);
     }

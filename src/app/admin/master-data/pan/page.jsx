@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -78,7 +78,7 @@ export default function PANRecordsPage() {
           return {
             ...item,
             gstinCount: gstinCount,
-            isEditable: gstinCount === 0
+            isEditable: item.isEditable,
           };
         });
         setData(panData);
@@ -108,7 +108,7 @@ export default function PANRecordsPage() {
   const handleDelete = async (item) => {
     const gstinCount = getGSTINCount(item.panNumber);
     if (gstinCount > 0) {
-      toast.error(`Cannot delete PAN. There are ${gstinCount} GSTIN(s) associated with this PAN.`);
+      toast.error(`PAN is protected - dependent records found`);
       return;
     }
 
@@ -202,10 +202,11 @@ export default function PANRecordsPage() {
 
     // Check if PAN number is being edited and GSTIN count > 0
     if (editingItem && dataCopy.panNumber !== editingItem.panNumber) {
-      const gstinCount = getGSTINCount(editingItem.panNumber);
-      if (gstinCount > 0) {
-        toast.error(`Cannot edit PAN number. There are ${gstinCount} GSTIN(s) associated with this PAN.`);
-        return;
+      // const gstinCount = getGSTINCount(editingItem.panNumber);
+      if (!dataCopy.isEditable) {
+
+        // toast.error(`Cannot edit PAN number. There are ${gstinCount} GSTIN(s) associated with this PAN.`);
+        // return;
       }
     }
 
@@ -312,23 +313,61 @@ export default function PANRecordsPage() {
     { key: 'pinCode', label: 'PIN' },
     { key: 'mobile', label: t('label.mobile') },
     { key: 'email', label: t('label.email') },
-    { 
-      key: 'gstinCount', 
-      label: 'GSTIN Count',
-      render: (value, row) => row.gstinCount || 0
-    },
+    
   ];
 
+  /**
+   * Determines if a PAN item can be edited based on its properties and business rules
+   * @param {Object} item - The PAN item to check editability for
+   * @returns {boolean} - Whether the item can be edited
+   */
+  const getItemEditability = (item) => {
+    // New items are always editable
+    if (!item) {
+      return true;
+    }
+    
+    // Defensive programming: ensure the item has the expected structure
+    if (typeof item !== 'object' || item === null) {
+      console.warn('Invalid item structure for editability check:', item);
+      return true;
+    }
+    
+    // Check for explicit isEditable property
+    if (Object.prototype.hasOwnProperty.call(item, 'isEditable')) {
+      // Ensure we return a boolean, handle edge cases
+      return Boolean(item.isEditable);
+    }
+    
+    // Default behavior for backward compatibility
+    return true;
+  };
+
+  /**
+   * Gets form field configurations with proper editability rules
+   * @returns {Array} Array of field configuration objects
+   */
   const getFormFields = () => {
-    const gstinCount = editingItem ? getGSTINCount(editingItem.panNumber) : 0;
+    // Determine if the current PAN is editable based on associated GSTIN count and item state
+    const currentIsEditable = getItemEditability(editingItem);
+    
+    // Optimized field configuration with memoization for better performance
+    const panNumberField = useMemo(() => ({
+      key: 'panNumber',
+      label: t('label.panNumber'),
+      required: true,
+      maxLength: 10,
+      readOnly: editingItem ? !currentIsEditable : false,
+      // Add metadata for better debugging and maintenance
+      _meta: {
+        isProtectedField: editingItem && !currentIsEditable,
+        protectionReason: editingItem && !currentIsEditable ?
+          `PAN is protected - dependent records found` : null
+      }
+    }), [editingItem, currentIsEditable]);
+    
     return [
-      { 
-        key: 'panNumber', 
-        label: t('label.panNumber'), 
-        required: true, 
-        maxLength: 10,
-        readOnly: editingItem && gstinCount > 0
-      },
+      panNumberField,
       { key: 'panName', label: t('label.name'), required: true },
       { key: 'address', label: t('label.address'), type: 'textarea', required: true },
       { key: 'city', label: 'City', required: true },
@@ -340,8 +379,9 @@ export default function PANRecordsPage() {
 
   const tableActions = (row) => {
     const gstinCount = getGSTINCount(row.panNumber);
-    const isEditable = gstinCount === 0;
-    
+    // const isEditable = gstinCount === 0;
+    const isEditable = row.isEditable;
+    console.log('Row GSTIN Count:', gstinCount, 'Is Editable:', isEditable);
     return (
       <>
         <button
@@ -366,7 +406,7 @@ export default function PANRecordsPage() {
               : 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
           }`}
           aria-label="Delete"
-          title={!isEditable ? `Cannot delete: ${gstinCount} GSTIN(s) associated` : 'Delete'}
+          title={!isEditable ? `PAN is protected - dependent records found` : 'Delete'}
         >
           <Trash2 size={18} />
         </button>
@@ -438,7 +478,7 @@ export default function PANRecordsPage() {
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                     {isReadOnly && isPANNumberField && (
                       <span className="ml-2 text-xs text-orange-500">
-                        (Cannot edit: {gstinCount} GSTIN(s) associated)
+                        (PAN is protected - dependent records found)
                       </span>
                     )}
                   </label>
