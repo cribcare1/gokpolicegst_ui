@@ -191,7 +191,7 @@ export default function GSTMasterPage() {
     const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
     
     if (ddoCount > 0) {
-      toast.error(`Cannot delete GSTIN. ${ddoCount} DDO(s) are mapped to this GSTIN.`);
+      toast.error(`GSTIN is protected - dependent records found`);
       return;
     }
     
@@ -345,37 +345,10 @@ export default function GSTMasterPage() {
       if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
         delete submitData.password;
       }
-      
-      const hasFiles = Object.values(submitData).some(value => value instanceof File);
-      
-      let response;
-      if (hasFiles) {
-        const multipartFormData = new FormData();
-        const jsonData = {};
-        
-        Object.keys(submitData).forEach(key => {
-          if (submitData[key] instanceof File) {
-            multipartFormData.append(key, submitData[key]);
-          } else {
-            jsonData[key] = submitData[key];
-          }
-        });
-        
-        multipartFormData.append('formData', JSON.stringify(jsonData));
-        
-        const token = localStorage.getItem('token') || '';
-        const fetchResponse = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: multipartFormData,
-        });
-        
-        response = await fetchResponse.json();
-      } else {
-        response = await ApiService.handlePostRequest(url, submitData);
-      }
+       delete submitData.userId;
+       delete submitData.ddoCount;
+       delete submitData.logo;
+      response = await ApiService.handlePostMultiPartFileRequest(url, submitData, formData.logo);
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
@@ -616,7 +589,7 @@ export default function GSTMasterPage() {
               : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
           }`}
           aria-label="Delete"
-          title={!canDelete ? `Cannot delete: ${ddoCount} DDO(s) mapped to this GSTIN` : 'Delete'}
+          title={!canDelete ? `GSTIN is protected - dependent records found` : 'Delete'}
         >
           <Trash2 size={18} />
         </button>
@@ -709,7 +682,7 @@ export default function GSTMasterPage() {
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                     {field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0 && (
                       <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
-                        (Cannot edit: {formData.ddoCount} DDO(s) mapped)
+                        (GSTIN is protected - dependent records found)
                       </span>
                     )}
                     {field.key === 'stateCode' && (

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -12,6 +12,103 @@ import { Plus, Edit, Trash2, Search, History } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+
+// Constants for better maintainability and performance
+const DELETE_BUTTON_CONFIG = {
+  MESSAGES: {
+    DISABLED: 'Cannot delete: Invoices exist for this HSN/SSC',
+    ENABLED: 'Delete HSN record',
+    CONFIRMATION: 'Are you sure you want to delete this HSN record? This action cannot be undone.'
+  },
+  STYLES: {
+    ENABLED: 'p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-red-600 dark:text-red-400 cursor-pointer',
+    DISABLED: 'p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+  }
+};
+
+// Utility functions for date and data formatting
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  
+  try {
+    // Handle different date formats
+    let date;
+    if (typeof dateString === 'string') {
+      // Check if it's already in ISO format or needs parsing
+      if (dateString.includes('T')) {
+        date = new Date(dateString);
+      } else {
+        // Handle date-only strings
+        date = new Date(dateString + 'T00:00:00');
+      }
+    } else {
+      date = new Date(dateString);
+    }
+    
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error, dateString);
+    return 'N/A';
+  }
+};
+
+const formatDateForInput = (dateString) => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.error('Error formatting date for input:', error);
+    return '';
+  }
+};
+
+const formatTaxRate = (rate) => {
+  if (rate === null || rate === undefined || rate === '') return 'N/A';
+  return `${rate}%`;
+};
+
+// Reusable history row component for better separation of concerns
+const HistoryRow = React.memo(({ history }) => {
+  const { id, totalGst, igst, cgst, sgst, effectiveFrom, effectiveTo } = history;
+  
+  return (
+    <tr className="hover:bg-[var(--color-surface)] transition-colors duration-200">
+      <td className="border border-[var(--color-border)] p-2 text-sm font-medium">
+        {formatTaxRate(totalGst)}
+      </td>
+      <td className="border border-[var(--color-border)] p-2 text-sm">
+        {formatTaxRate(igst)}
+      </td>
+      <td className="border border-[var(--color-border)] p-2 text-sm">
+        {formatTaxRate(cgst)}
+      </td>
+      <td className="border border-[var(--color-border)] p-2 text-sm">
+        {formatTaxRate(sgst)}
+      </td>
+      <td className="border border-[var(--color-border)] p-2 text-sm">
+        {effectiveFrom ? formatDate(effectiveFrom) : 'N/A'}
+      </td>
+      <td className="border border-[var(--color-border)] p-2 text-sm">
+        {effectiveTo ? formatDate(effectiveTo) : 'Current'}
+      </td>
+    </tr>
+  );
+});
+
+HistoryRow.displayName = 'HistoryRow';
 
 export default function HSNRecordsPage() {
   const [data, setData] = useState([]);
@@ -27,7 +124,72 @@ export default function HSNRecordsPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [historyData, setHistoryData] = useState([]);
   const [selectedHsnForHistory, setSelectedHsnForHistory] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const { gstinList: gstinListHook } = useGstinList();
+
+  // Check if invoices exist for this HSN
+  const hasInvoicesForHSN = useCallback((hsnId, gstinNumber, hsnCode) => {
+    if (!bills || bills.length === 0) return false;
+    
+    return bills.some(bill => {
+      // Normalize GSTIN for comparison
+      const billGstin = bill.gstinNumber || bill.gstNumber || '';
+      const normalizedGstin = gstinNumber?.toUpperCase() || '';
+      const normalizedBillGstin = billGstin.toUpperCase();
+      
+      // Check if GSTIN matches
+      if (normalizedBillGstin !== normalizedGstin) {
+        return false;
+      }
+      
+      // Check if bill has line items with this HSN
+      if (bill.lineItems && Array.isArray(bill.lineItems)) {
+        return bill.lineItems.some(item => {
+          const itemHsn = String(item.hsnNumber || item.hsnCode || '').trim();
+          const normalizedHsn = String(hsnCode || '').trim();
+          return itemHsn === normalizedHsn;
+        });
+      }
+      
+      // Fallback: check if bill has hsnNumber field directly
+      const billHsn = String(bill.hsnNumber || bill.hsnCode || '').trim();
+      const normalizedHsn = String(hsnCode || '').trim();
+      return billHsn === normalizedHsn;
+    });
+  }, [bills]);
+
+  // Helper function to determine button state - similar to GSTIN Master logic
+  const getDeleteButtonState = useCallback((row) => {
+    if (!row) {
+      return {
+        isDisabled: true,
+        message: DELETE_BUTTON_CONFIG.MESSAGES.DISABLED,
+        className: DELETE_BUTTON_CONFIG.STYLES.DISABLED,
+        hasInvoices: false
+      };
+    }
+    
+    // Check if invoices exist for this HSN (similar to ddoCount check in GSTIN Master)
+    const hasInvoices = hasInvoicesForHSN(
+      row.id || row.hsnId,
+      row.gstinNumber,
+      row.hsnCode
+    );
+    const isDeletable = !hasInvoices;
+    
+    return {
+      isDisabled: !isDeletable,
+      message: isDeletable
+        ? DELETE_BUTTON_CONFIG.MESSAGES.ENABLED
+        : DELETE_BUTTON_CONFIG.MESSAGES.DISABLED,
+      className: isDeletable
+        ? DELETE_BUTTON_CONFIG.STYLES.ENABLED
+        : DELETE_BUTTON_CONFIG.STYLES.DISABLED,
+      hasInvoices,
+      originalData: row
+    };
+  }, [hasInvoicesForHSN]);
 
   useEffect(() => {
     fetchData();
@@ -76,37 +238,6 @@ export default function HSNRecordsPage() {
     }
   };
 
-  // Check if invoices exist for this HSN
-  const hasInvoicesForHSN = (hsnId, gstinNumber, hsnCode) => {
-    if (!bills || bills.length === 0) return false;
-    
-    return bills.some(bill => {
-      // Normalize GSTIN for comparison
-      const billGstin = bill.gstinNumber || bill.gstNumber || '';
-      const normalizedGstin = gstinNumber?.toUpperCase() || '';
-      const normalizedBillGstin = billGstin.toUpperCase();
-      
-      // Check if GSTIN matches
-      if (normalizedBillGstin !== normalizedGstin) {
-        return false;
-      }
-      
-      // Check if bill has line items with this HSN
-      if (bill.lineItems && Array.isArray(bill.lineItems)) {
-        return bill.lineItems.some(item => {
-          const itemHsn = String(item.hsnNumber || item.hsnCode || '').trim();
-          const normalizedHsn = String(hsnCode || '').trim();
-          return itemHsn === normalizedHsn;
-        });
-      }
-      
-      // Fallback: check if bill has hsnNumber field directly
-      const billHsn = String(bill.hsnNumber || bill.hsnCode || '').trim();
-      const normalizedHsn = String(hsnCode || '').trim();
-      return billHsn === normalizedHsn;
-    });
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -140,15 +271,11 @@ export default function HSNRecordsPage() {
           if (!transformed.totalGst && transformed.gstTaxRate !== undefined) {
             transformed.totalGst = transformed.gstTaxRate;
           }
-
-          // Check if invoices exist for this HSN
-          const hasInvoices = hasInvoicesForHSN(
-            transformed.id || transformed.hsnId,
-            transformed.gstinNumber,
-            transformed.hsnCode
-          );
-          transformed.hasInvoices = hasInvoices;
-          transformed.isEditable = !hasInvoices;
+          
+          // Handle effectiveFrom and effectiveTo mapping
+          if (!transformed.effectiveFrom && transformed.effectiveDate) {
+            transformed.effectiveFrom = transformed.effectiveDate;
+          }
           
           return transformed;
         });
@@ -165,9 +292,9 @@ export default function HSNRecordsPage() {
 
   const handleAdd = () => {
     setEditingItem(null);
-    // Set default effectiveDate to today
+    // Set default effectiveFrom to today
     setFormData({
-      effectiveDate: new Date().toISOString().split('T')[0]
+      effectiveFrom: new Date().toISOString().split('T')[0]
     });
     setFieldErrors({});
     setIsModalOpen(true);
@@ -184,6 +311,8 @@ export default function HSNRecordsPage() {
     const updatedItem = {
       ...item,
       gstId: selectedGST?.gstId || selectedGST?.id || "",
+      effectiveFrom: formatDateForInput(item.effectiveFrom),
+      effectiveTo: formatDateForInput(item.effectiveTo),
     };
     setFormData(updatedItem);
     setIsModalOpen(true);
@@ -192,33 +321,95 @@ export default function HSNRecordsPage() {
   const handleViewHistory = async (item) => {
     setSelectedHsnForHistory(item);
     setIsHistoryModalOpen(true);
+    setIsHistoryLoading(true);
+    setHistoryData([]);
     
-    // Fetch history - for now, we'll create a mock history based on current data
-    // In production, this should call an API endpoint
     try {
-      // TODO: Replace with actual API endpoint when available
-      // const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.HSN_HISTORY}/${item.id}`);
-      // For now, create mock history
-      const mockHistory = [
-        {
-          id: 1,
-          effectiveDate: item.effectiveDate || new Date().toISOString().split('T')[0],
-          totalGst: item.totalGst,
-          igst: item.igst,
-          cgst: item.cgst,
-          sgst: item.sgst,
-          changedBy: 'Admin',
-          changedAt: new Date().toISOString(),
+      // Get the HSN ID from the item
+      const hsnId = item.id || item.hsnId;
+      if (!hsnId) {
+        toast.error('HSN ID not found');
+        setIsHistoryLoading(false);
+        return;
+      }
+
+      // Fetch history from API
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.HSN_HISTORY}${hsnId}`);
+      
+      console.log('History API Response:', response); // Debug log
+      
+      if (response && response.status === 'success') {
+        // Log the first item to see actual field names
+        if (response.data && response.data.length > 0) {
+          console.log('First history item keys:', Object.keys(response.data[0]));
+          console.log('First history item:', response.data[0]);
         }
-      ];
-      setHistoryData(mockHistory);
+        
+        // Transform the API response to match the expected format
+        const transformedHistory = (response.data || []).map(historyItem => {
+          // Extract all possible date fields for debugging
+          const allDateFields = {};
+          Object.keys(historyItem).forEach(key => {
+            if (key.toLowerCase().includes('date') || key.toLowerCase().includes('effective')) {
+              allDateFields[key] = historyItem[key];
+            }
+          });
+          
+          console.log('Date fields found:', allDateFields);
+          
+          // Comprehensive field mapping for dates
+          const effectiveFrom = 
+            historyItem.effectiveFrom || 
+            historyItem.effective_from || 
+            historyItem.startDate ||
+            historyItem.start_date ||
+            historyItem.fromDate ||
+            historyItem.from_date ||
+            historyItem.effectiveDate ||
+            historyItem.effective_date ||
+            historyItem.validFrom ||
+            historyItem.valid_from;
+            
+          const effectiveTo = 
+            historyItem.effectiveTo || 
+            historyItem.effective_to || 
+            historyItem.endDate ||
+            historyItem.end_date ||
+            historyItem.toDate ||
+            historyItem.to_date ||
+            historyItem.validTo ||
+            historyItem.valid_to;
+            
+          return {
+            id: historyItem.id || historyItem.historyId || historyItem.hsnHistoryId,
+            totalGst: historyItem.totalGst || historyItem.gstTaxRate || historyItem.total_gst || historyItem.gst_tax_rate || historyItem.taxRate,
+            igst: historyItem.igst || historyItem.igst_rate || historyItem.igstRate,
+            cgst: historyItem.cgst || historyItem.cgst_rate || historyItem.cgstRate,
+            sgst: historyItem.sgst || historyItem.sgst_rate || historyItem.sgstRate,
+            effectiveFrom: effectiveFrom,
+            effectiveTo: effectiveTo,
+          };
+        });
+        
+        console.log('Transformed History:', transformedHistory);
+        setHistoryData(transformedHistory);
+      } else {
+        toast.error(response?.message || 'Failed to fetch history');
+        setHistoryData([]);
+      }
     } catch (error) {
       console.error('Error fetching history:', error);
+      toast.error('Error loading history data');
       setHistoryData([]);
+    } finally {
+      setIsHistoryLoading(false);
     }
   };
 
   const handleDelete = async (item) => {
+    if (!item) return;
+    
+    // Check if invoices exist (similar to ddoCount check in GSTIN Master)
     const hasInvoices = hasInvoicesForHSN(
       item.id || item.hsnId,
       item.gstinNumber,
@@ -226,11 +417,15 @@ export default function HSNRecordsPage() {
     );
     
     if (hasInvoices) {
-      toast.error('Cannot delete HSN/SSC. Invoices have been generated for this HSN/SSC.');
+      toast.error('HSN is protected - dependent records found');
       return;
     }
-
-    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    const confirmationMessage = `${DELETE_BUTTON_CONFIG.MESSAGES.CONFIRMATION}\n\nHSN Code: ${item.hsnCode}\nGSTIN: ${item.gstinNumber}`;
+    
+    if (!confirm(confirmationMessage)) return;
+    
+    setIsDeleting(true);
     
     try {
       const response = await ApiService.handlePostRequest(
@@ -239,13 +434,23 @@ export default function HSNRecordsPage() {
       );
       
       if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
+        toast.success('HSN record deleted successfully');
         fetchData();
+        fetchBills(); // Refresh bills to update invoice status
       } else {
-        toast.error(response?.message || t('alert.error'));
+        const errorMessage = response?.message || 'Failed to delete record';
+        toast.error(errorMessage);
+        console.error('Delete operation failed:', response);
       }
     } catch (error) {
-      toast.error(t('alert.error'));
+      const errorMessage = error.name === 'AbortError'
+        ? 'Request timeout. Please try again.'
+        : 'Network error occurred. Please check your connection.';
+      
+      toast.error(errorMessage);
+      console.error('Delete operation error:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -452,9 +657,14 @@ export default function HSNRecordsPage() {
     { key: 'hsnCode', label: 'HSN/SSC Code' },
     { key: 'serviceName', label: 'HSN/SSC Description' },
     { 
-      key: 'effectiveDate', 
-      label: 'Effective Date',
-      render: (date) => date ? new Date(date).toLocaleDateString('en-IN') : 'N/A'
+      key: 'effectiveFrom', 
+      label: 'Effective From',
+      render: (value) => formatDate(value)
+    },
+    { 
+      key: 'effectiveTo', 
+      label: 'Effective To',
+      render: (value) => value ? formatDate(value) : 'Current'
     },
     { key: 'totalGst', label: 'GST Tax Rate (%)' },
     { key: 'igst', label: 'IGST (%)' },
@@ -489,12 +699,7 @@ export default function HSNRecordsPage() {
         required: true,
         readOnly: editingItem && hasInvoices
       },
-      { 
-        key: 'effectiveDate', 
-        label: 'Effective Date', 
-        type: 'date',
-        required: true
-      },
+     
       { 
         key: 'totalGst', 
         label: 'GST Tax Rate (%)', 
@@ -522,15 +727,23 @@ export default function HSNRecordsPage() {
         required: true, 
         readOnly: true 
       },
+       { 
+        key: 'effectiveFrom', 
+        label: 'Effective From', 
+        type: 'date',
+        required: true
+      },
+      { 
+        key: 'effectiveTo', 
+        label: 'Effective To', 
+        type: 'date',
+        required: false
+      },
     ];
   };
 
-  const tableActions = (row) => {
-    const hasInvoices = hasInvoicesForHSN(
-      row.id || row.hsnId,
-      row.gstinNumber,
-      row.hsnCode
-    );
+  const tableActions = useMemo(() => (row) => {
+    const buttonState = getDeleteButtonState(row);
     
     return (
       <>
@@ -540,7 +753,7 @@ export default function HSNRecordsPage() {
             handleViewHistory(row);
           }}
           className="p-2.5 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-purple-600 dark:text-purple-400"
-          aria-label="View History"
+          aria-label="View Tax Change History"
           title="View Tax Change History"
         >
           <History size={18} />
@@ -551,7 +764,8 @@ export default function HSNRecordsPage() {
             handleEdit(row);
           }}
           className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
-          aria-label="Edit"
+          aria-label="Edit HSN Record"
+          title="Edit HSN Record"
         >
           <Edit size={18} />
         </button>
@@ -560,20 +774,41 @@ export default function HSNRecordsPage() {
             e.stopPropagation();
             handleDelete(row);
           }}
-          disabled={hasInvoices}
-          className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
-            hasInvoices 
-              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50' 
-              : 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
-          }`}
-          aria-label="Delete"
-          title={hasInvoices ? 'Cannot delete: Invoices exist for this HSN/SSC' : 'Delete'}
+          disabled={buttonState.isDisabled || isDeleting}
+          className={buttonState.className}
+          aria-label={`${isDeleting ? 'Deleting...' : buttonState.hasInvoices ? 'Delete disabled: ' : 'Delete '}HSN record`}
+          title={buttonState.message}
+          type="button"
+          role="button"
+          data-testid="hsn-delete-button"
+          data-hsn-code={row.hsnCode}
+          data-gstin={row.gstinNumber}
+          aria-describedby={buttonState.hasInvoices ? 'hsn-delete-disabled-reason' : undefined}
         >
-          <Trash2 size={18} />
+          {isDeleting ? (
+            <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+          ) : (
+            <Trash2 size={18} />
+          )}
+          <span className="sr-only">
+            {isDeleting ? 'Deleting record' : buttonState.hasInvoices ? 'Delete disabled: Invoices exist' : 'Delete record'}
+          </span>
         </button>
+        
+        {/* Hidden element for screen readers to explain why delete is disabled */}
+        {buttonState.hasInvoices && (
+          <div
+            id="hsn-delete-disabled-reason"
+            className="sr-only"
+            role="status"
+            aria-live="polite"
+          >
+            Cannot delete this HSN record because invoices already exist for it.
+          </div>
+        )}
       </>
     );
-  };
+  }, [isDeleting, getDeleteButtonState]);
 
   return (
     <Layout role="admin">
@@ -661,6 +896,7 @@ export default function HSNRecordsPage() {
                           fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
                         } bg-[var(--color-background)]`}
                         required={field.required}
+                        readOnly={isReadOnly}
                       />
                       {fieldErrors[field.key] && (
                         <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
@@ -780,35 +1016,26 @@ export default function HSNRecordsPage() {
                 </p>
               </div>
               
-              {historyData.length > 0 ? (
+              {isHistoryLoading ? (
+                <div className="text-center py-8">
+                  <LoadingProgressBar message="Loading history..." variant="primary" />
+                </div>
+              ) : historyData.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-[var(--color-surface)]">
-                        <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">Effective Date</th>
                         <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">GST Tax Rate (%)</th>
                         <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">IGST (%)</th>
                         <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">CGST (%)</th>
                         <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">SGST (%)</th>
-                        <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">Changed By</th>
-                        <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">Changed At</th>
+                        <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">Effective From</th>
+                        <th className="border border-[var(--color-border)] p-2 text-left text-sm font-semibold">Effective To</th>
                       </tr>
                     </thead>
                     <tbody>
                       {historyData.map((history, index) => (
-                        <tr key={index} className="hover:bg-[var(--color-surface)]">
-                          <td className="border border-[var(--color-border)] p-2 text-sm">
-                            {new Date(history.effectiveDate).toLocaleDateString()}
-                          </td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">{history.totalGst}</td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">{history.igst}</td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">{history.cgst}</td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">{history.sgst}</td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">{history.changedBy || 'N/A'}</td>
-                          <td className="border border-[var(--color-border)] p-2 text-sm">
-                            {history.changedAt ? new Date(history.changedAt).toLocaleString() : 'N/A'}
-                          </td>
-                        </tr>
+                        <HistoryRow key={history.id || `history-${index}`} history={history} />
                       ))}
                     </tbody>
                   </table>

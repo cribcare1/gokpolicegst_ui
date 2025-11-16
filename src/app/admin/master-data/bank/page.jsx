@@ -44,10 +44,7 @@ export default function BankDetailsPage() {
 
     // Apply status filter
     if (statusFilter !== 'All') {
-      filtered = filtered.filter((item) => {
-        const statusValue = item.status || (item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : 'Active');
-        return statusValue === statusFilter;
-      });
+      filtered = filtered.filter((item) => item.status === statusFilter);
     }
 
     // Apply search term filter
@@ -141,11 +138,18 @@ export default function BankDetailsPage() {
             }
           }
 
-          // Map status field - default to 'Active' if not present
-          if (!transformed.status) {
-            transformed.status = transformed.isActive !== undefined 
-              ? (transformed.isActive ? 'Active' : 'Inactive')
-              : 'Active';
+          // Map status field - normalize to 'Active' or 'Inactive'
+          // Handle various status formats from API
+          if (transformed.status) {
+            // Normalize existing status to capitalized format
+            const statusLower = String(transformed.status).toLowerCase();
+            transformed.status = statusLower === 'active' ? 'Active' : 'Inactive';
+          } else if (transformed.isActive !== undefined) {
+            // Derive from isActive boolean
+            transformed.status = transformed.isActive ? 'Active' : 'Inactive';
+          } else {
+            // Default to Active
+            transformed.status = 'Active';
           }
 
           // Check if invoices exist for this bank
@@ -198,13 +202,14 @@ export default function BankDetailsPage() {
   };
 
   const handleDelete = async (item) => {
+    // Check if invoices exist (similar to ddoCount check in GSTIN Master)
     const hasInvoices = hasInvoicesForBank(
       item.id || item.bankId,
       item.gstinNumber
     );
     
     if (hasInvoices) {
-      toast.error('Cannot delete bank details. Invoices have been generated for this GSTIN.');
+      toast.error('Bank details is protected - dependent records found');
       return;
     }
 
@@ -521,10 +526,12 @@ export default function BankDetailsPage() {
   };
 
   const tableActions = (row) => {
+    // Check if invoices exist (similar to ddoCount check in GSTIN Master)
     const hasInvoices = hasInvoicesForBank(
       row.id || row.bankId,
       row.gstinNumber
     );
+    const canDelete = !hasInvoices;
     
     return (
       <>
@@ -543,14 +550,14 @@ export default function BankDetailsPage() {
             e.stopPropagation();
             handleDelete(row);
           }}
-          disabled={hasInvoices}
+          disabled={!canDelete}
           className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
-            hasInvoices 
-              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50' 
-              : 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+            canDelete
+              ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
           }`}
           aria-label="Delete"
-          title={hasInvoices ? 'Cannot delete: Invoices exist for this GSTIN' : 'Delete'}
+          title={!canDelete ? 'Bank details is protected - dependent records found' : 'Delete'}
         >
           <Trash2 size={18} />
         </button>

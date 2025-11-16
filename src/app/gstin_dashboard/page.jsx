@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/shared/Layout';
 import { API_ENDPOINTS } from '@/components/api/api_const';
+import ApiService from '@/components/api/api_service';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 import { FileText, Users, AlertCircle, Activity, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 
@@ -42,39 +44,50 @@ export default function GstinDashboard() {
     
     // Fetch real data in background (non-blocking)
     try {
-      // Try to fetch real data with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      setLoading(true);
       
-      const userToken = typeof window !== 'undefined' ? localStorage.getItem('userToken') : '';
-      const response = await fetch(API_ENDPOINTS.GSTIN_DASHBOARD || API_ENDPOINTS.DDO_DASHBOARD, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken || ''}`
-        },
-        signal: controller.signal
-      });
+      // Get gstId from localStorage
+      const gstId = typeof window !== 'undefined' ? localStorage.getItem(LOGIN_CONSTANT.GSTID) : null;
       
-      clearTimeout(timeoutId);
+      if (!gstId) {
+        console.log('gstId not found, using demo data');
+        return;
+      }
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === 'success') {
-          // Update with real data silently
-          setStats({
-            totalInvoices: data.totalInvoices || 0,
-            totalAmount: data.totalAmount || 0,
-            pendingBills: data.pendingBills || 0,
-            approvedBills: data.approvedBills || 0,
-            totalDDOs: data.totalDDOs || 0,
-          });
-          setAlerts(data.alerts || []);
+      // Build API URL with gstId parameter
+      const apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
+      
+      // Use ApiService to fetch data
+      const result = await ApiService.handleGetRequest(apiUrl, 5000);
+      
+      if (result && result.status === 'success' && result.data && !result.error) {
+        const data = result.data;
+        // Map API response to GSTIN dashboard stats
+        setStats({
+          totalInvoices: (data.completeInvoice || 0) + (data.pendingInvoice || 0),
+          totalAmount: 0, // API doesn't provide amount, keeping 0
+          pendingBills: data.pendingInvoice || 0,
+          approvedBills: data.completeInvoice || 0,
+          totalDDOs: data.totalDdo || 0,
+        });
+        
+        // Generate alerts based on data
+        const newAlerts = [];
+        if (data.pendingInvoice > 0) {
+          newAlerts.push(`${data.pendingInvoice} bills pending approval`);
         }
+        if (data.pendingInvoice > 5) {
+          newAlerts.push('Multiple invoices need GSTIN verification');
+        }
+        setAlerts(newAlerts.length > 0 ? newAlerts : demoAlerts);
+      } else {
+        console.log('API response not successful, using demo data');
       }
     } catch (error) {
       // Keep demo data, API failed or timed out - no UI change needed
-      console.log('Using demo data');
+      console.log('API error, using demo data:', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 

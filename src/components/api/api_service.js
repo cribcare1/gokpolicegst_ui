@@ -123,15 +123,12 @@ static async handlePostMultiPartFileRequest(url, req, file) {
     console.error("Please provide a URL!");
     return;
   }
-  if (!file || !(file instanceof File || file instanceof Blob)) {
-    console.error("Invalid file! Please select a valid file.");
-    return;
-  }
+  
   if (typeof window === "undefined") {
     throw new Error("Cannot access localStorage on the server");
   }
 
-  const token = localStorage.getItem("userToken");
+  const token = localStorage.getItem("token");
   console.log("User Token:", token);
 
   // Set headers but DO NOT include 'Content-Type' (browser will set it)
@@ -142,8 +139,11 @@ static async handlePostMultiPartFileRequest(url, req, file) {
 
   // Create FormData
   const formData = new FormData();
-  formData.append("formData", JSON.stringify(req)); // 🔥 Backend expects raw JSON string
-  formData.append("zipFile", file); // Append file (PDF)
+  formData.append("request", JSON.stringify(req)); // 🔥 Backend expects raw JSON string
+ if (!file || !(file instanceof File || file instanceof Blob)) {
+    console.error("No file added.");
+    formData.append("file", file); 
+  }
 
   // Debug FormData content
   for (let pair of formData.entries()) {

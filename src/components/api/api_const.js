@@ -21,8 +21,8 @@ export const API_ENDPOINTS = {
   
   // GST Master Data Endpoints
   GST_LIST: `${API_BASE_URL}/gst/activeGSTDetails`,
-  GST_ADD: `${API_BASE_URL}/gst/saveOrUpdate`,
-  GST_UPDATE: `${API_BASE_URL}/gst/saveOrUpdate`,
+  GST_ADD: `${API_BASE_URL}/gst/saveOrUpdateGST`,
+  GST_UPDATE: `${API_BASE_URL}/gst/saveOrUpdateGST`,
   GST_DELETE: `${API_BASE_URL}/gst/delete/`,
   GST_GET: `${API_BASE_URL}/gst/get/`,
   
@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
   HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
   HSN_UPDATE: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
   HSN_DELETE: `${API_BASE_URL}/hsn/delete/`,
+  HSN_HISTORY: `${API_BASE_URL}/hsn/getAllHSNHistory/`,
   
   // Bank Details Endpoints
   BANK_LIST: `${API_BASE_URL}/banks/activeBankDetails`,
@@ -74,7 +75,7 @@ export const API_ENDPOINTS = {
   CREDIT_NOTE_LIST: `${API_BASE_URL}/creditnote/list`,
   
   // Dashboard Endpoints
-  ADMIN_DASHBOARD: `${API_BASE_URL}/dashboard/admin`,
+  ADMIN_DASHBOARD: `${API_BASE_URL}/user/getDashboardStats`,
   DDO_DASHBOARD: `${API_BASE_URL}/dashboard/ddo`,
   GSTIN_DASHBOARD: `${API_BASE_URL}/dashboard/gstin`,
   

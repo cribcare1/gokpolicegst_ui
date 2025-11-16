@@ -9,6 +9,7 @@ import { Edit, Save, X, MapPin, Building2, Mail, Phone, FileText } from 'lucide-
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateEmail, validateMobile, validateName, validateAddress, validateCity, validatePIN } from '@/lib/gstUtils';
 import { useGstinList } from '@/hooks/useGstinList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Helper function to parse address and extract city and pin code
 const parseAddress = (fullAddress) => {
@@ -44,66 +45,38 @@ const parseAddress = (fullAddress) => {
 };
 
 export default function GstinProfilePage() {
-  const [formData, setFormData] = useState({
-    gstinNumber: '29AAAGO1111W1ZB',
-    gstName: 'Government of Karnataka- Office of the Director General & Inspector General of Police, Karnataka',
-    address: 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle',
-    city: 'Bengaluru',
-    pinCode: '560001',
-    mobile: '9902991144',
-    email: 'Copadmin@ksp.gov.in',
-  });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const { gstinList } = useGstinList();
+  const [formData, setFormData] = useState(false);
 
   useEffect(() => {
-    fetchProfileData();
-  }, []);
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+    console.log("Stored Profile Data:", storedProfile);
 
-  const fetchProfileData = async () => {
-    // Show default data immediately - UI ready instantly
-    setFetching(false);
-    
-    // Fetch real data in background (non-blocking)
-    try {
-      const gstinNumber = localStorage.getItem('gstinNumber') || '29AAAGO1111W1ZB';
-      
-      // Try to fetch from API with timeout
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}?gstin=${gstinNumber}`, 1500);
-      if (response?.status === 'success' && response?.data && response.data.length > 0 && !response.timeout) {
-        const gstinData = response.data[0];
-        // If API returns separate city and pinCode, use them directly
-        if (gstinData.city && gstinData.pinCode) {
-          setFormData({
-            gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstName: gstinData.gstName || '',
-            address: gstinData.address || '',
-            city: gstinData.city || '',
-            pinCode: gstinData.pinCode || '',
-            mobile: gstinData.contactNumber || '',
-            email: gstinData.email || '',
-          });
-        } else {
-          // Parse the old format address string
-          const parsed = parseAddress(gstinData.address || 'No.1, Police Head Quarterz, Narpathuga Road Opp: Martha\'s Hospital, K R Circle Bengaluru-560001');
-          setFormData({
-            gstinNumber: gstinData.gstNumber || gstinNumber,
-            gstName: gstinData.gstName || '',
-            address: parsed.address || '',
-            city: parsed.city || 'Bengaluru',
-            pinCode: parsed.pinCode || '560001',
-            mobile: gstinData.contactNumber || '',
-            email: gstinData.email || '',
-          });
+    if (storedProfile) {
+      try {
+        // Check if the value looks like JSON (starts with { or [)
+        const trimmedValue = storedProfile.trim();
+        if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+          const userProfile = JSON.parse(storedProfile);
+          // If data exists and not empty
+          if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+            setFormData(userProfile);
+            setLoading(false);
+            setFetching(false);
+            return;
+          }
         }
+     
+      } catch (error) {
+        // If JSON parsing fails, fetch from API
+        console.error('Error parsing stored profile data:', error);
+        
       }
-    } catch (error) {
-      console.log('Using default GSTIN profile data');
-      // Keep default data on error
     }
-  };
+  }, []);
 
   const handleSave = async () => {
     // Validate GSTIN Name
@@ -156,17 +129,21 @@ export default function GstinProfilePage() {
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
-        contactNumber: formData.mobile,
+        mobile: formData.mobile,
         email: formData.email,
-      };
+        gstId: formData.gstId,
+        gstHolderName: formData.gstHolderName,
+        createdBy: formData.userId,
+}
 
-      const response = await ApiService.handlePostRequest(
+      const response = await ApiService.handlePostMultiPartFileRequest(
         API_ENDPOINTS.GST_UPDATE || API_ENDPOINTS.GST_ADD,
-        updateData
+        updateData, null
       );
 
       if (response?.status === 'success') {
         toast.success('GSTIN profile updated successfully');
+        localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
         setIsEditing(false);
         localStorage.setItem('gstinNumber', formData.gstinNumber);
       } else {
@@ -180,7 +157,6 @@ export default function GstinProfilePage() {
   };
 
   const handleCancel = () => {
-    fetchProfileData();
     setIsEditing(false);
   };
 
