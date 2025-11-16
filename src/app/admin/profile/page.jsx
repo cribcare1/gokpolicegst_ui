@@ -173,7 +173,7 @@ export default function AdminProfilePage() {
     setLoading(true);
     try {
       const updateData = {
-        id: formData.id,
+        id: formData.userId,
         fullName: formData.fullName,
         address: formData.address,
         city: formData.city,

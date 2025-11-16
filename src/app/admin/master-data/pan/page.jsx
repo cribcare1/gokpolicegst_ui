@@ -49,7 +49,7 @@ export default function PANRecordsPage() {
 
   const fetchGSTINList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 2000);
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
       if (response?.status === 'success' && response?.data) {
         setGstinList(response.data);
       }
@@ -469,7 +469,7 @@ export default function PANRecordsPage() {
 
                           if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
                             value = value.replace(/\D/g, '').slice(0, 10);
-                          } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
+                          } else if (fieldLower.includes('pin') || fieldLower.includes('pinCode')) {
                             value = value.replace(/\D/g, '').slice(0, 6);
                           } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
                             value = value.toUpperCase();
