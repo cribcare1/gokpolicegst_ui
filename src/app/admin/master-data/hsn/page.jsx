@@ -970,7 +970,7 @@ export default function HSNRecordsPage() {
     { key: 'sgst', label: 'SGST (%)' },
   ];
 
-  const getFormFields = () => {
+  const getFormFields = useCallback(() => {
     const hasInvoices = editingItem ? hasInvoicesForHSN(
       editingItem.id || editingItem.hsnId,
       editingItem.gstinNumber,
@@ -1038,7 +1038,7 @@ export default function HSNRecordsPage() {
         required: false
       },
     ];
-  };
+  }, [editingItem, bills]);
 
   const tableActions = useMemo(() => (row) => {
     const buttonState = getDeleteButtonState(row);
