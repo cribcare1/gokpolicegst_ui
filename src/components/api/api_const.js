@@ -58,6 +58,9 @@ export const API_ENDPOINTS = {
   CUSTOMER_ADD: `${API_BASE_URL}/customer/add`,
   CUSTOMER_UPDATE: `${API_BASE_URL}/customer/update`,
   CUSTOMER_DELETE: `${API_BASE_URL}/customer/delete/`,
+  CUSTOMER_ACTIVE_LIST: `${API_BASE_URL}/customer/activeCustomers/`, // GET with ddoId
+  CUSTOMER_ADD_OR_EDIT: `${API_BASE_URL}/customer/addOrEditCustomer`, // POST for add/edit
+  CUSTOMER_DELETE_BY_ID: `${API_BASE_URL}/customer/deleteCustomer/`, // DELETE with customerId
   
   // Bill/Invoice Endpoints
   BILL_LIST: `${API_BASE_URL}/bill/list`,

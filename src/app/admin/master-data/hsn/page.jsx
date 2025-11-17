@@ -33,27 +33,48 @@ const formatDate = (dateString) => {
   try {
     // Handle different date formats
     let date;
-    if (typeof dateString === 'string') {
-      // Check if it's already in ISO format or needs parsing
-      if (dateString.includes('T')) {
-        date = new Date(dateString);
+    if (typeof dateString === 'number') {
+      // Handle timestamp (milliseconds or seconds)
+      date = new Date(dateString > 1000000000000 ? dateString : dateString * 1000);
+    } else if (typeof dateString === 'string') {
+      const trimmed = dateString.trim();
+      
+      // Check if it's already in ISO format
+      if (trimmed.includes('T')) {
+        date = new Date(trimmed);
+      } else if (trimmed.match(/^\d+$/)) {
+        // Handle string numbers (timestamps)
+        const num = parseInt(trimmed, 10);
+        date = new Date(num > 1000000000000 ? num : num * 1000);
+      } else if (trimmed.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        // Handle DD-MM-YYYY format (e.g., "16-11-2025")
+        const [day, month, year] = trimmed.split('-');
+        date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+      } else if (trimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        // Handle DD/MM/YYYY format
+        const [day, month, year] = trimmed.split('/');
+        date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+      } else if (trimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Handle YYYY-MM-DD format
+        date = new Date(trimmed + 'T00:00:00');
       } else {
-        // Handle date-only strings
-        date = new Date(dateString + 'T00:00:00');
+        // Try to parse as-is
+        date = new Date(trimmed);
       }
     } else {
       date = new Date(dateString);
     }
     
-    if (isNaN(date.getTime())) return 'N/A';
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString);
+      return 'N/A';
+    }
     
-    return date.toLocaleString('en-GB', {
+    // Format as date only (DD/MM/YYYY) for history table
+    return date.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      year: 'numeric'
     });
   } catch (error) {
     console.error('Error formatting date:', error, dateString);
@@ -159,7 +180,7 @@ export default function HSNRecordsPage() {
     });
   }, [bills]);
 
-  // Helper function to determine button state - similar to GSTIN Master logic
+  // Helper function to determine button state - similar to PAN Master logic
   const getDeleteButtonState = useCallback((row) => {
     if (!row) {
       return {
@@ -167,6 +188,20 @@ export default function HSNRecordsPage() {
         message: DELETE_BUTTON_CONFIG.MESSAGES.DISABLED,
         className: DELETE_BUTTON_CONFIG.STYLES.DISABLED,
         hasInvoices: false
+      };
+    }
+    
+    // Check isEditable from API response first (like PAN Master)
+    const isEditable = row.isEditable;
+    
+    // If not editable, disable delete immediately
+    if (!isEditable) {
+      return {
+        isDisabled: true,
+        message: 'HSN is protected - dependent records found',
+        className: DELETE_BUTTON_CONFIG.STYLES.DISABLED,
+        hasInvoices: false,
+        isEditable: false
       };
     }
     
@@ -187,14 +222,16 @@ export default function HSNRecordsPage() {
         ? DELETE_BUTTON_CONFIG.STYLES.ENABLED
         : DELETE_BUTTON_CONFIG.STYLES.DISABLED,
       hasInvoices,
+      isEditable: true,
       originalData: row
     };
   }, [hasInvoicesForHSN]);
 
   useEffect(() => {
-    fetchData();
     fetchGSTINList();
     fetchBills();
+    // Fetch data initially even if gstinList is empty (will be re-transformed when gstinList loads)
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -202,6 +239,106 @@ export default function HSNRecordsPage() {
       setGstinList(gstinListHook);
     }
   }, [gstinListHook]);
+
+  // Fetch HSN data after GSTIN list is loaded (if not already fetched)
+  useEffect(() => {
+    if ((gstinList.length > 0 || gstinListHook?.length > 0) && data.length === 0) {
+      fetchData();
+    }
+  }, [gstinList.length, gstinListHook?.length]);
+
+  // Re-transform data when gstinList is updated (in case data was fetched before gstinList was ready)
+  useEffect(() => {
+    if (data.length > 0 && (gstinList.length > 0 || gstinListHook?.length > 0)) {
+      const currentGstinList = gstinList.length > 0 ? gstinList : (gstinListHook || []);
+      let hasChanges = false;
+      
+      const transformedData = data.map(item => {
+        const transformed = { ...item };
+        
+        // First, try to get GSTIN number from various possible field names
+        const currentGstin = transformed.gstinNumber || 
+                           transformed.gstNumber || 
+                           transformed.gstin || 
+                           transformed.gstIN ||
+                           transformed.gstin_number ||
+                           transformed.gst_number;
+        
+        // Map gstId to gstinNumber if gstinNumber is missing
+        if (!currentGstin && transformed.gstId && currentGstinList.length > 0) {
+          const gst = currentGstinList.find(g => {
+            const itemGstId = transformed.gstId;
+            return (
+              g.gstId === itemGstId || 
+              g.id === itemGstId ||
+              String(g.gstId) === String(itemGstId) ||
+              String(g.id) === String(itemGstId) ||
+              Number(g.gstId) === Number(itemGstId) ||
+              Number(g.id) === Number(itemGstId)
+            );
+          });
+          if (gst) {
+            const newGstinNumber = gst.value || gst.gstNumber || gst.gstinNumber || gst.label || gst.gstIN;
+            if (newGstinNumber && newGstinNumber !== transformed.gstinNumber) {
+              transformed.gstinNumber = newGstinNumber;
+              hasChanges = true;
+              console.log(`Re-transformed: Mapped gstId ${transformed.gstId} to gstinNumber: ${newGstinNumber}`);
+            }
+          }
+        }
+        
+        // If still no GSTIN, try matching by value
+        if (!transformed.gstinNumber && currentGstinList.length > 0) {
+          const possibleGstinFields = [
+            transformed.gstNumber,
+            transformed.gstin,
+            transformed.gstIN,
+            transformed.gstin_number,
+            transformed.gst_number
+          ].filter(Boolean);
+          
+          for (const possibleGstin of possibleGstinFields) {
+            const gst = currentGstinList.find(g => {
+              const gstValue = g.value || g.gstNumber || g.gstinNumber || g.label || g.gstIN;
+              return gstValue && String(gstValue).toUpperCase() === String(possibleGstin).toUpperCase();
+            });
+            if (gst) {
+              const newGstinNumber = gst.value || gst.gstNumber || gst.gstinNumber || gst.label || gst.gstIN;
+              if (newGstinNumber && newGstinNumber !== transformed.gstinNumber) {
+                transformed.gstinNumber = newGstinNumber;
+                hasChanges = true;
+                console.log(`Re-transformed: Found GSTIN by matching value: ${newGstinNumber}`);
+                break;
+              }
+            }
+          }
+        }
+        
+        return transformed;
+      });
+      
+      // Only update if there are actual changes to avoid infinite loops
+      if (hasChanges) {
+        console.log('Re-transforming data with GSTIN numbers');
+        setData(transformedData);
+        setFilteredData(transformedData);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gstinList.length, gstinListHook?.length]);
+
+  useEffect(() => {
+    console.log('Data state changed:', data);
+    console.log('Data length:', data.length);
+    if (data.length > 0) {
+      console.log('First data item:', data[0]);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    console.log('Filtered data changed:', filteredData);
+    console.log('Filtered data length:', filteredData.length);
+  }, [filteredData]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -220,7 +357,17 @@ export default function HSNRecordsPage() {
     try {
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 2000);
       if (response?.status === 'success' && response?.data) {
-        setGstinList(response.data);
+        // Ensure gstId is preserved in the GSTIN list
+        const processedGstinList = response.data.map(item => ({
+          ...item,
+          gstId: item.gstId || item.id,
+          value: item.gstNumber || item.gstinNumber || item.value,
+          label: item.gstName ? `${item.gstNumber || item.gstinNumber} - ${item.gstName}` : (item.gstNumber || item.gstinNumber || item.label),
+          gstNumber: item.gstNumber || item.gstinNumber || item.value,
+          gstinNumber: item.gstNumber || item.gstinNumber || item.value
+        }));
+        console.log('Processed GSTIN List:', processedGstinList);
+        setGstinList(processedGstinList);
       }
     } catch (error) {
       console.error('Error fetching GSTIN list:', error);
@@ -242,19 +389,109 @@ export default function HSNRecordsPage() {
     try {
       setLoading(true);
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.HSN_LIST);
+      
+      console.log('HSN API Response:', response);
+      console.log('Response data:', response?.data);
+      console.log('Response data type:', Array.isArray(response?.data) ? 'Array' : typeof response?.data);
+      console.log('Response data length:', Array.isArray(response?.data) ? response.data.length : 'Not an array');
+      
       if (response && response.status === 'success') {
-        const transformedData = (response.data || []).map(item => {
+        // Ensure response.data is an array
+        let rawData = response.data;
+        if (!Array.isArray(rawData)) {
+          console.warn('Response data is not an array, converting...', rawData);
+          if (rawData && typeof rawData === 'object') {
+            // If it's an object, try to extract array from common keys
+            rawData = rawData.list || rawData.items || rawData.data || [rawData];
+          } else {
+            rawData = [];
+          }
+        }
+        
+        if (!Array.isArray(rawData)) {
+          console.error('Could not convert response.data to array');
+          rawData = [];
+        }
+        
+        console.log('Processed raw data (array):', rawData);
+        console.log('Raw data length:', rawData.length);
+        
+        // Use current gstinList state or fallback to hook
+        const currentGstinList = gstinList.length > 0 ? gstinList : (gstinListHook || []);
+        
+        console.log('Current GSTIN List:', currentGstinList);
+        console.log('Current GSTIN List length:', currentGstinList.length);
+        
+        const transformedData = rawData.map((item, index) => {
+          console.log(`Processing item ${index}:`, item);
           const transformed = { ...item };
           
-          // Map gstId to gstinNumber if gstinNumber is missing
-          if (!transformed.gstinNumber && transformed.gstId && gstinList.length > 0) {
-            const gst = gstinList.find(g => g.gstId === transformed.gstId || g.id === transformed.gstId);
+          // First, try to get GSTIN number from various possible field names in the item itself
+          transformed.gstinNumber = transformed.gstinNumber || 
+                                    transformed.gstNumber || 
+                                    transformed.gstin || 
+                                    transformed.gstIN ||
+                                    transformed.gstin_number ||
+                                    transformed.gst_number;
+          
+          // Map gstId to gstinNumber if gstinNumber is still missing
+          if (!transformed.gstinNumber && transformed.gstId && currentGstinList.length > 0) {
+            const gst = currentGstinList.find(g => {
+              const itemGstId = transformed.gstId;
+              return (
+                g.gstId === itemGstId || 
+                g.id === itemGstId ||
+                String(g.gstId) === String(itemGstId) ||
+                String(g.id) === String(itemGstId) ||
+                Number(g.gstId) === Number(itemGstId) ||
+                Number(g.id) === Number(itemGstId)
+              );
+            });
             if (gst) {
-              transformed.gstinNumber = gst.value || gst.gstNumber || gst.gstinNumber;
+              transformed.gstinNumber = gst.gstNumber || gst.gstinNumber || gst.value || gst.label || gst.gstIN;
+              console.log(`Mapped gstId ${transformed.gstId} to gstinNumber: ${transformed.gstinNumber}`);
+              console.log('Matched GSTIN object:', gst);
+            } else {
+              console.log(`Could not find GSTIN for gstId: ${transformed.gstId} in list of ${currentGstinList.length} items`);
+              console.log('Available GSTIN IDs:', currentGstinList.map(g => ({ gstId: g.gstId, id: g.id, gstNumber: g.gstNumber })));
+              console.log('HSN item gstId type:', typeof transformed.gstId, 'value:', transformed.gstId);
             }
           }
+          
+          // If still no GSTIN number, try to find it from GSTIN list using other matching fields
+          if (!transformed.gstinNumber && currentGstinList.length > 0) {
+            // Try matching by any GSTIN-related field in the item
+            const possibleGstinFields = [
+              transformed.gstNumber,
+              transformed.gstin,
+              transformed.gstIN,
+              transformed.gstin_number,
+              transformed.gst_number
+            ].filter(Boolean);
+            
+            for (const possibleGstin of possibleGstinFields) {
+              const gst = currentGstinList.find(g => {
+                const gstValue = g.value || g.gstNumber || g.gstinNumber || g.label || g.gstIN;
+                return gstValue && String(gstValue).toUpperCase() === String(possibleGstin).toUpperCase();
+              });
+              if (gst) {
+                transformed.gstinNumber = gst.value || gst.gstNumber || gst.gstinNumber || gst.label || gst.gstIN;
+                console.log(`Found GSTIN by matching value: ${transformed.gstinNumber}`);
+                break;
+              }
+            }
+          }
+          
+          // Final fallback: use gstNumber if available (even if it's the same field)
           if (!transformed.gstinNumber && transformed.gstNumber) {
             transformed.gstinNumber = transformed.gstNumber;
+          }
+          
+          // Log final GSTIN number
+          if (transformed.gstinNumber) {
+            console.log(`Final GSTIN Number for item ${index}: ${transformed.gstinNumber}`);
+          } else {
+            console.warn(`No GSTIN Number found for item ${index}:`, transformed);
           }
           
           // Map hsnNumber to hsnCode if needed
@@ -268,7 +505,7 @@ export default function HSNRecordsPage() {
           }
           
           // Map gstTaxRate to totalGst if needed
-          if (!transformed.totalGst && transformed.gstTaxRate !== undefined) {
+          if (!transformed.totalGst && transformed.gstTaxRate !== undefined && transformed.gstTaxRate !== null) {
             transformed.totalGst = transformed.gstTaxRate;
           }
           
@@ -277,14 +514,36 @@ export default function HSNRecordsPage() {
             transformed.effectiveFrom = transformed.effectiveDate;
           }
           
+          // Preserve isEditable field from API response
+          transformed.isEditable = item.isEditable;
+          
+          console.log(`Transformed item ${index}:`, transformed);
           return transformed;
         });
         
+        console.log('Final transformed data:', transformedData);
+        console.log('Setting data with', transformedData.length, 'items');
+        
+        if (transformedData.length > 0) {
+          console.log('Sample transformed item:', transformedData[0]);
+        }
+        
         setData(transformedData);
         setFilteredData(transformedData);
+        
+        // Force a re-render check
+        setTimeout(() => {
+          console.log('After setState - data should be updated');
+        }, 100);
+      } else {
+        console.error('Failed to fetch HSN data - Invalid response:', response);
+        setData([]);
+        setFilteredData([]);
       }
     } catch (error) {
-      console.log('Error fetching HSN data:', error);
+      console.error('Error fetching HSN data:', error);
+      setData([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -347,39 +606,72 @@ export default function HSNRecordsPage() {
         
         // Transform the API response to match the expected format
         const transformedHistory = (response.data || []).map(historyItem => {
-          // Extract all possible date fields for debugging
-          const allDateFields = {};
-          Object.keys(historyItem).forEach(key => {
-            if (key.toLowerCase().includes('date') || key.toLowerCase().includes('effective')) {
-              allDateFields[key] = historyItem[key];
+          // Helper function to extract date value from various formats
+          const extractDateValue = (value) => {
+            if (value === null || value === undefined) return null;
+            
+            // Handle timestamp (number)
+            if (typeof value === 'number') {
+              return new Date(value).toISOString();
             }
-          });
-          
-          console.log('Date fields found:', allDateFields);
-          
-          // Comprehensive field mapping for dates
-          const effectiveFrom = 
-            historyItem.effectiveFrom || 
-            historyItem.effective_from || 
-            historyItem.startDate ||
-            historyItem.start_date ||
-            historyItem.fromDate ||
-            historyItem.from_date ||
-            historyItem.effectiveDate ||
-            historyItem.effective_date ||
-            historyItem.validFrom ||
-            historyItem.valid_from;
             
-          const effectiveTo = 
-            historyItem.effectiveTo || 
-            historyItem.effective_to || 
-            historyItem.endDate ||
-            historyItem.end_date ||
-            historyItem.toDate ||
-            historyItem.to_date ||
-            historyItem.validTo ||
-            historyItem.valid_to;
+            // Handle string dates
+            if (typeof value === 'string') {
+              const trimmed = value.trim();
+              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                return null;
+              }
+              return trimmed; // Return the trimmed string for date parsing
+            }
             
+            return null;
+          };
+          
+          // Helper function to find date field with multiple variations
+          const findDateField = (variations) => {
+            for (const variation of variations) {
+              if (historyItem.hasOwnProperty(variation)) {
+                const value = historyItem[variation];
+                const extracted = extractDateValue(value);
+                if (extracted) {
+                  console.log(`Found date field "${variation}":`, extracted);
+                  return extracted;
+                }
+              }
+            }
+            return null;
+          };
+          
+          // Comprehensive field mapping for effectiveFrom with all possible variations
+          const effectiveFromVariations = [
+            'effectiveFrom', 'effective_from', 'effectiveFromDate', 'effective_from_date',
+            'startDate', 'start_date', 'startDateValue', 'start_date_value',
+            'fromDate', 'from_date', 'fromDateValue', 'from_date_value',
+            'effectiveDate', 'effective_date', 'effectiveDateValue', 'effective_date_value',
+            'validFrom', 'valid_from', 'validFromDate', 'valid_from_date',
+            'createdDate', 'created_date', 'createdAt', 'created_at',
+            'dateFrom', 'date_from', 'dateEffective', 'date_effective',
+            'effectiveFromDate', 'effective_from_date', 'effectiveFromTime', 'effective_from_time'
+          ];
+          
+          // Comprehensive field mapping for effectiveTo with all possible variations
+          const effectiveToVariations = [
+            'effectiveTo', 'effective_to', 'effectiveToDate', 'effective_to_date',
+            'endDate', 'end_date', 'endDateValue', 'end_date_value',
+            'toDate', 'to_date', 'toDateValue', 'to_date_value',
+            'validTo', 'valid_to', 'validToDate', 'valid_to_date',
+            'expiryDate', 'expiry_date', 'expiresAt', 'expires_at',
+            'dateTo', 'date_to', 'dateExpiry', 'date_expiry',
+            'effectiveToDate', 'effective_to_date', 'effectiveToTime', 'effective_to_time'
+          ];
+          
+          const effectiveFrom = findDateField(effectiveFromVariations);
+          const effectiveTo = findDateField(effectiveToVariations);
+          
+          // Debug logging
+          console.log('Extracted dates - effectiveFrom:', effectiveFrom, 'effectiveTo:', effectiveTo);
+          console.log('Raw historyItem:', historyItem);
+          
           return {
             id: historyItem.id || historyItem.historyId || historyItem.hsnHistoryId,
             totalGst: historyItem.totalGst || historyItem.gstTaxRate || historyItem.total_gst || historyItem.gst_tax_rate || historyItem.taxRate,
@@ -408,6 +700,12 @@ export default function HSNRecordsPage() {
 
   const handleDelete = async (item) => {
     if (!item) return;
+    
+    // Check isEditable first (like PAN Master)
+    if (!item.isEditable) {
+      toast.error('HSN is protected - dependent records found');
+      return;
+    }
     
     // Check if invoices exist (similar to ddoCount check in GSTIN Master)
     const hasInvoices = hasInvoicesForHSN(
@@ -744,6 +1042,12 @@ export default function HSNRecordsPage() {
 
   const tableActions = useMemo(() => (row) => {
     const buttonState = getDeleteButtonState(row);
+    // Check isEditable from API response (exactly like PAN Master)
+    const isEditable = row.isEditable;
+    
+    // Edit button is always enabled (like PAN Master)
+    // Delete button is disabled if isEditable is false (checked in getDeleteButtonState) or if invoices exist
+    const canDelete = !buttonState.isDisabled;
     
     return (
       <>
@@ -772,18 +1076,24 @@ export default function HSNRecordsPage() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleDelete(row);
+            if (canDelete) {
+              handleDelete(row);
+            }
           }}
-          disabled={buttonState.isDisabled || isDeleting}
-          className={buttonState.className}
-          aria-label={`${isDeleting ? 'Deleting...' : buttonState.hasInvoices ? 'Delete disabled: ' : 'Delete '}HSN record`}
-          title={buttonState.message}
+          disabled={!canDelete || isDeleting}
+          className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
+            canDelete && !isDeleting
+              ? DELETE_BUTTON_CONFIG.STYLES.ENABLED
+              : DELETE_BUTTON_CONFIG.STYLES.DISABLED
+          }`}
+          aria-label={`${isDeleting ? 'Deleting...' : !canDelete ? 'Delete disabled' : 'Delete '}HSN record`}
+          title={!canDelete ? buttonState.message : 'Delete HSN record'}
           type="button"
           role="button"
           data-testid="hsn-delete-button"
           data-hsn-code={row.hsnCode}
           data-gstin={row.gstinNumber}
-          aria-describedby={buttonState.hasInvoices ? 'hsn-delete-disabled-reason' : undefined}
+          aria-describedby={!canDelete ? 'hsn-delete-disabled-reason' : undefined}
         >
           {isDeleting ? (
             <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
@@ -791,19 +1101,19 @@ export default function HSNRecordsPage() {
             <Trash2 size={18} />
           )}
           <span className="sr-only">
-            {isDeleting ? 'Deleting record' : buttonState.hasInvoices ? 'Delete disabled: Invoices exist' : 'Delete record'}
+            {isDeleting ? 'Deleting record' : !canDelete ? buttonState.message : 'Delete record'}
           </span>
         </button>
         
         {/* Hidden element for screen readers to explain why delete is disabled */}
-        {buttonState.hasInvoices && (
+        {!canDelete && (
           <div
             id="hsn-delete-disabled-reason"
             className="sr-only"
             role="status"
             aria-live="polite"
           >
-            Cannot delete this HSN record because invoices already exist for it.
+            {buttonState.message}
           </div>
         )}
       </>
@@ -845,6 +1155,13 @@ export default function HSNRecordsPage() {
           {loading ? (
             <div className="p-8 sm:p-16">
               <LoadingProgressBar message="Loading data..." variant="primary" />
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="p-8 sm:p-16 text-center">
+              <p className="text-[var(--color-text-secondary)]">No HSN records found</p>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-2">
+                {data.length === 0 ? 'No data available' : 'No data matches your search'}
+              </p>
             </div>
           ) : (
             <Table

@@ -159,6 +159,9 @@ export default function BankDetailsPage() {
           );
           transformed.hasInvoices = hasInvoices;
           
+          // Preserve isEditable field from API response
+          transformed.isEditable = item.isEditable;
+          
           return transformed;
         });
         
@@ -531,7 +534,12 @@ export default function BankDetailsPage() {
       row.id || row.bankId,
       row.gstinNumber
     );
-    const canDelete = !hasInvoices;
+    // Check isEditable from API response (exactly like PAN Master)
+    const isEditable = row.isEditable;
+    
+    // Edit button is always enabled (like PAN Master)
+    // Delete button is disabled if isEditable is false or if invoices exist
+    const canDelete = isEditable && !hasInvoices;
     
     return (
       <>
@@ -548,7 +556,9 @@ export default function BankDetailsPage() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleDelete(row);
+            if (canDelete) {
+              handleDelete(row);
+            }
           }}
           disabled={!canDelete}
           className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
@@ -557,7 +567,7 @@ export default function BankDetailsPage() {
               : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
           }`}
           aria-label="Delete"
-          title={!canDelete ? 'Bank details is protected - dependent records found' : 'Delete'}
+          title={!canDelete ? (!isEditable ? 'Bank details is protected - dependent records found' : 'Bank details is protected - dependent records found') : 'Delete'}
         >
           <Trash2 size={18} />
         </button>
