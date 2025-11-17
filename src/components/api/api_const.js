@@ -95,7 +95,7 @@ export const API_ENDPOINTS = {
   ADMIN_PROFILE_UPDATE: `${API_BASE_URL}/user/editAdmin`,
   
   // DDO Mapping Endpoints
-  DDO_MAPPING_UPDATE: `${API_BASE_URL}/ddo/mapping`,
+  DDO_MAPPING_UPDATE: `${API_BASE_URL}/gst/migrate-ddos`,
   
 };
 

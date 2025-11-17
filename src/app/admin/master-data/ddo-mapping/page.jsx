@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
 import { useDdoList } from '@/hooks/useDdoList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function DDOMappingPage() {
   const { gstinList } = useGstinList();
@@ -24,7 +25,7 @@ export default function DDOMappingPage() {
 
   useEffect(() => {
     if (gstinList && gstinList.length > 0 && !currentGSTIN) {
-      const firstGSTIN = gstinList[0].gstNumber || gstinList[0].value || '';
+      const firstGSTIN = gstinList[0].gstId || gstinList[0].value || '';
       const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
       
       if (firstGSTIN) {
@@ -90,10 +91,13 @@ export default function DDOMappingPage() {
   const confirmMove = async () => {
     try {
       setLoading(true);
+      const fromGstId = gstinList.find(item => item.gstNumber === currentGSTIN)?.gstId || null;
+      const toGstId = gstinList.find(item => item.gstNumber === targetGSTIN)?.gstId || null;
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
-        sourceGSTIN: currentGSTIN,
-        targetGSTIN: targetGSTIN,
+        fromGstId: fromGstId,
+        toGstId: toGstId,
         ddoIds: Array.from(selectedDDOs),
+        updatedBy: localStorage.getItem(LOGIN_CONSTANT.USER_ID),
       });
 
       if (response?.status === 'success') {

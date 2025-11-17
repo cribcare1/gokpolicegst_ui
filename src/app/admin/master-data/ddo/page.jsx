@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, ArrowRight, ChevronRight, ChevronLeft } from 'luc
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
 import { useDdoList } from '@/hooks/useDdoList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function DDOMappingPage() {
   const { gstinList } = useGstinList();
@@ -24,10 +25,10 @@ export default function DDOMappingPage() {
 
   // Use hooks for DDO lists
   const { ddoList: sourceDDOsFromAPI, loading: sourceLoading, refetch: refetchSource } = useDdoList(sourceGSTIN);
-  const { ddoList: targetDDOsFromAPI, loading: targetLoading, refetch: refetchTarget } = useDdoList(targetGSTIN);
+  // const { ddoList: targetDDOsFromAPI, loading: targetLoading, refetch: refetchTarget } = useDdoList(targetGSTIN);
 
   // Filter out moved DDOs from source list
-  const sourceDDOs = sourceDDOsFromAPI.filter(ddo => !movedDDOIds.has(ddo.id));
+  const sourceDDOs = sourceDDOsFromAPI.filter(ddo => !movedDDOIds.has(ddo.userId));
 
   useEffect(() => {
     if (gstinList && gstinList.length > 0 && !sourceGSTIN) {
@@ -67,7 +68,7 @@ export default function DDOMappingPage() {
     if (selectedSourceDDOs.size === sourceDDOs.length) {
       setSelectedSourceDDOs(new Set());
     } else {
-      setSelectedSourceDDOs(new Set(sourceDDOs.map(ddo => ddo.id)));
+      setSelectedSourceDDOs(new Set(sourceDDOs.map(ddo => ddo.userId)));
     }
   };
 
@@ -75,7 +76,7 @@ export default function DDOMappingPage() {
     if (selectedTargetDDOs.size === targetDDOs.length) {
       setSelectedTargetDDOs(new Set());
     } else {
-      setSelectedTargetDDOs(new Set(targetDDOs.map(ddo => ddo.id)));
+      setSelectedTargetDDOs(new Set(targetDDOs.map(ddo => ddo.userId)));
     }
   };
 
@@ -110,11 +111,11 @@ export default function DDOMappingPage() {
       return;
     }
 
-    const selectedDDOs = sourceDDOs.filter(ddo => selectedSourceDDOs.has(ddo.id));
+    const selectedDDOs = sourceDDOs.filter(ddo => selectedSourceDDOs.has(ddo.userId));
     
     // Add to target list and mark as moved
     setTargetDDOs([...targetDDOs, ...selectedDDOs]);
-    setMovedDDOIds(new Set([...movedDDOIds, ...selectedDDOs.map(ddo => ddo.id)]));
+    setMovedDDOIds(new Set([...movedDDOIds, ...selectedDDOs.map(ddo => ddo.userId)]));
     setSelectedSourceDDOs(new Set());
   };
 
@@ -124,13 +125,13 @@ export default function DDOMappingPage() {
       return;
     }
 
-    const selectedDDOs = targetDDOs.filter(ddo => selectedTargetDDOs.has(ddo.id));
-    const remainingDDOs = targetDDOs.filter(ddo => !selectedTargetDDOs.has(ddo.id));
+    const selectedDDOs = targetDDOs.filter(ddo => selectedTargetDDOs.has(ddo.userId));
+    const remainingDDOs = targetDDOs.filter(ddo => !selectedTargetDDOs.has(ddo.userId));
     
     // Remove from target and unmark as moved
     setTargetDDOs(remainingDDOs);
     const newMovedIds = new Set(movedDDOIds);
-    selectedDDOs.forEach(ddo => newMovedIds.delete(ddo.id));
+    selectedDDOs.forEach(ddo => newMovedIds.delete(ddo.userId));
     setMovedDDOIds(newMovedIds);
     setSelectedTargetDDOs(new Set());
   };
@@ -162,11 +163,27 @@ export default function DDOMappingPage() {
   const confirmSave = async () => {
     try {
       setLoading(true);
+      console.log("sourceGSTIN ", sourceGSTIN);
+      console.log("targetGSTIN ", targetGSTIN);
+      console.log("gstinList ", gstinList);
+
+      const fromGstId = gstinList.find(item => item.gstNumber.trim().toUpperCase() === sourceGSTIN.trim().toUpperCase())?.gstId || null;
+      const toGstId = gstinList.find(item => item.gstNumber.trim().toUpperCase() === targetGSTIN.trim().toUpperCase())?.gstId || null;
+
+      console.log("fromGstId ", fromGstId);
+      console.log("toGstId ", toGstId);
+
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
-        sourceGSTIN: sourceGSTIN,
-        targetGSTIN: targetGSTIN,
-        ddoIds: targetDDOs.map(ddo => ddo.id),
+        fromGstId: fromGstId,
+        toGstId: toGstId,
+        ddoIds: targetDDOs.map(ddo => Number(ddo.userId)),
+        updatedBy: Number(localStorage.getItem(LOGIN_CONSTANT.USER_ID)),
       });
+      // const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
+      //   sourceGSTIN: sourceGSTIN,
+      //   targetGSTIN: targetGSTIN,
+      //   ddoIds: targetDDOs.map(ddo => ddo.id),
+      // });
 
       if (response?.status === 'success') {
         toast.success('DDOs mapped successfully');
@@ -176,9 +193,9 @@ export default function DDOMappingPage() {
         setMovedDDOIds(new Set()); // Clear moved DDOs after successful mapping
         // Refresh DDOs after successful mapping
         refetchSource();
-        if (targetGSTIN) {
-          refetchTarget();
-        }
+        // if (targetGSTIN) {
+        //   refetchTarget();
+        // }
       } else {
         toast.error(response?.message || 'Failed to map DDOs');
       }
@@ -334,16 +351,16 @@ export default function DDOMappingPage() {
                     <div className="space-y-2 p-2">
                       {sourceDDOs.map((ddo) => (
                         <div
-                          key={ddo.id}
-                          onClick={() => handleSourceDDOSelect(ddo.id)}
+                          key={ddo.userId}
+                          onClick={() => handleSourceDDOSelect(ddo.userId)}
                           className={`p-3 rounded-lg cursor-pointer transition-all border ${
-                            selectedSourceDDOs.has(ddo.id) 
+                            selectedSourceDDOs.has(ddo.userId) 
                               ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30' 
                               : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-muted)]'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            {selectedSourceDDOs.has(ddo.id) ? (
+                            {selectedSourceDDOs.has(ddo.userId) ? (
                               <CheckCircle size={18} className="text-[var(--color-success)] flex-shrink-0" />
                             ) : (
                               <XCircle size={18} className="text-[var(--color-text-secondary)] flex-shrink-0" />
@@ -387,16 +404,16 @@ export default function DDOMappingPage() {
                       <tbody className="divide-y divide-[var(--color-border)]">
                         {sourceDDOs.map((ddo) => (
                           <tr
-                            key={ddo.id}
-                            onClick={() => handleSourceDDOSelect(ddo.id)}
+                            key={ddo.userId}
+                            onClick={() => handleSourceDDOSelect(ddo.userId)}
                             className={`cursor-pointer transition-colors ${
-                              selectedSourceDDOs.has(ddo.id) 
+                              selectedSourceDDOs.has(ddo.userId) 
                                 ? 'bg-[var(--color-primary)]/10' 
                                 : 'hover:bg-[var(--color-muted)]'
                             }`}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
-                              {selectedSourceDDOs.has(ddo.id) ? (
+                              {selectedSourceDDOs.has(ddo.userId) ? (
                                 <CheckCircle size={18} className="text-[var(--color-success)]" />
                               ) : (
                                 <XCircle size={18} className="text-[var(--color-text-secondary)]" />
@@ -479,16 +496,16 @@ export default function DDOMappingPage() {
                     <div className="space-y-2 p-2">
                       {targetDDOs.map((ddo) => (
                         <div
-                          key={ddo.id}
-                          onClick={() => handleTargetDDOSelect(ddo.id)}
+                          key={ddo.userId}
+                          onClick={() => handleTargetDDOSelect(ddo.userId)}
                           className={`p-3 rounded-lg cursor-pointer transition-all border ${
-                            selectedTargetDDOs.has(ddo.id) 
+                            selectedTargetDDOs.has(ddo.userId) 
                               ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30' 
                               : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:bg-[var(--color-muted)]'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            {selectedTargetDDOs.has(ddo.id) ? (
+                            {selectedTargetDDOs.has(ddo.userId) ? (
                               <CheckCircle size={18} className="text-[var(--color-success)] flex-shrink-0" />
                             ) : (
                               <XCircle size={18} className="text-[var(--color-text-secondary)] flex-shrink-0" />
@@ -532,16 +549,16 @@ export default function DDOMappingPage() {
                       <tbody className="divide-y divide-[var(--color-border)]">
                         {targetDDOs.map((ddo) => (
                           <tr
-                            key={ddo.id}
-                            onClick={() => handleTargetDDOSelect(ddo.id)}
+                            key={ddo.userId}
+                            onClick={() => handleTargetDDOSelect(ddo.userId)}
                             className={`cursor-pointer transition-colors ${
-                              selectedTargetDDOs.has(ddo.id) 
+                              selectedTargetDDOs.has(ddo.userId) 
                                 ? 'bg-[var(--color-primary)]/10' 
                                 : 'hover:bg-[var(--color-muted)]'
                             }`}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
-                              {selectedTargetDDOs.has(ddo.id) ? (
+                              {selectedTargetDDOs.has(ddo.userId) ? (
                                 <CheckCircle size={18} className="text-[var(--color-success)]" />
                               ) : (
                                 <XCircle size={18} className="text-[var(--color-text-secondary)]" />
