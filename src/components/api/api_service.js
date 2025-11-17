@@ -100,7 +100,7 @@ static  async  handlePostRequest(url, req, res) {
   }
   
 
-// **3️⃣ DELETE Request Handler**
+// **3️⃣ DELETE Request Handler (Server-side)**
 static  async  handleDeleteRequest(req, res) {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL parameter is required" });
@@ -111,6 +111,44 @@ static  async  handleDeleteRequest(req, res) {
   } catch (error) {
     console.error("DELETE Request Failed:", error);
     return res.status(500).json({ error: "DELETE Request Failed" });
+  }
+}
+
+// **3️⃣ DELETE Request Handler (Client-side)**
+static async handleDeleteRequestClient(url) {
+  console.log("DELETE Call URL:", url);
+  
+  try {
+    if (typeof window === "undefined") {
+      throw new Error("Cannot access localStorage on the server");
+    }
+
+    const token = localStorage.getItem("token");
+    console.log("User Token:", token);
+
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+
+    console.log("Response Data:", data);
+    return data;
+  } catch (error) {
+    console.error("DELETE Request Failed:", error);
+    return { error: "DELETE Request Failed" };
   }
 }
 

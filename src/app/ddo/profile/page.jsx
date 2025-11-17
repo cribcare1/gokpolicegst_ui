@@ -7,16 +7,18 @@ import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
 import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress } from '@/lib/gstUtils';
+import { validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
 
 export default function DDOProfilePage() {
   const [formData, setFormData] = useState({
-    ddoCode: '0200PO0032',
-    ddoName: 'DCP CAR HQ',
-    ddoAreaCity: 'Mysore Road, Bengaluru',
-    ddoPin: '560018',
-    contactNo: '9902991313',
-    email: 'Dcpadmin@ksp.gov.in',
+    ddoCode: '',
+    ddoName: '',
+    area: '',
+    address: '',
+    city: '',
+    pinCode: '',
+    mobile: '',
+    email: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,23 +31,94 @@ export default function DDOProfilePage() {
   const fetchProfileData = async () => {
     setFetching(true);
     try {
-      const ddoCode = localStorage.getItem('ddoCode') || '0200PO0032';
+      const ddoCode = localStorage.getItem('ddoCode');
+      const ddoId = localStorage.getItem('ddoId');
       
-      // Try to fetch from API
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}?ddoCode=${ddoCode}`);
-      if (response?.status === 'success' && response?.data && response.data.length > 0) {
-        const ddoData = response.data[0];
-        setFormData({
-          ddoCode: ddoData.ddoCode || ddoCode,
-          ddoName: ddoData.ddoName || '',
-          ddoAreaCity: ddoData.ddoAreaCity || ddoData.areaCity || '',
-          ddoPin: ddoData.ddoPin || ddoData.pin || '',
-          contactNo: ddoData.contactNo || ddoData.mobile || '',
-          email: ddoData.email || '',
-        });
+      if (!ddoCode && !ddoId) {
+        toast.error('DDO information not found. Please login again.');
+        setFetching(false);
+        return;
       }
+
+      let response;
+      
+      // Try to fetch using DDO ID first (if available)
+      if (ddoId) {
+        try {
+          response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GET_DDO_DETAILS}${ddoId}`);
+          if (response?.status === 'success' && response?.data) {
+            const ddoData = response.data;
+            setFormData({
+              ddoCode: ddoData.ddoCode || ddoData.code || '',
+              ddoName: ddoData.ddoName || ddoData.name || '',
+              area: ddoData.area || '',
+              address: ddoData.address || '',
+              city: ddoData.city || '',
+              pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
+              mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+              email: ddoData.email || '',
+            });
+            setFetching(false);
+            return;
+          }
+        } catch (error) {
+          console.log('Failed to fetch using DDO ID, trying alternative method');
+        }
+      }
+
+      // Fallback: Try to fetch using DDO Code
+      if (ddoCode) {
+        // Try with gstId parameter if available
+        const gstId = localStorage.getItem('gstId');
+        if (gstId) {
+          response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}${gstId}`);
+          if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
+            const ddoData = response.data.find(ddo => ddo.ddoCode === ddoCode || ddo.code === ddoCode);
+            if (ddoData) {
+              setFormData({
+                ddoCode: ddoData.ddoCode || ddoData.code || ddoCode,
+                ddoName: ddoData.ddoName || ddoData.name || '',
+                area: ddoData.area || '',
+                address: ddoData.address || '',
+                city: ddoData.city || '',
+                pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
+                mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+                email: ddoData.email || '',
+              });
+              setFetching(false);
+              return;
+            }
+          }
+        }
+        
+        // Try direct DDO profile endpoint if available
+        try {
+          response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFILE_GET}?ddoCode=${ddoCode}`);
+          if (response?.status === 'success' && response?.data) {
+            const ddoData = response.data;
+            setFormData({
+              ddoCode: ddoData.ddoCode || ddoData.code || ddoCode,
+              ddoName: ddoData.ddoName || ddoData.name || '',
+              area: ddoData.area || '',
+              address: ddoData.address || '',
+              city: ddoData.city || '',
+              pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
+              mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+              email: ddoData.email || '',
+            });
+            setFetching(false);
+            return;
+          }
+        } catch (error) {
+          console.log('Failed to fetch using profile endpoint');
+        }
+      }
+
+      // If all methods fail, show error
+      toast.error('Failed to load DDO profile data. Please try again.');
     } catch (error) {
-      console.log('Using default DDO profile data');
+      console.error('Error fetching DDO profile:', error);
+      toast.error('An error occurred while loading profile data');
     } finally {
       setFetching(false);
     }
@@ -66,18 +139,36 @@ export default function DDOProfilePage() {
       return;
     }
     
-    // Validate Area & City (if provided)
-    if (formData.ddoAreaCity && formData.ddoAreaCity.trim() !== '') {
-      const addressValidation = validateAddress(formData.ddoAreaCity);
+    // Validate Area (if provided)
+    if (formData.area && formData.area.trim() !== '') {
+      const areaValidation = validateName(formData.area, 'Area');
+      if (!areaValidation.valid) {
+        toast.error('Area: ' + areaValidation.message);
+        return;
+      }
+    }
+    
+    // Validate Address (if provided)
+    if (formData.address && formData.address.trim() !== '') {
+      const addressValidation = validateAddress(formData.address);
       if (!addressValidation.valid) {
-        toast.error('Area & City: ' + addressValidation.message);
+        toast.error('Address: ' + addressValidation.message);
+        return;
+      }
+    }
+    
+    // Validate City (if provided)
+    if (formData.city && formData.city.trim() !== '') {
+      const cityValidation = validateCity(formData.city);
+      if (!cityValidation.valid) {
+        toast.error('City: ' + cityValidation.message);
         return;
       }
     }
     
     // Validate PIN (if provided)
-    if (formData.ddoPin && formData.ddoPin.trim() !== '') {
-      const pinValidation = validatePIN(formData.ddoPin);
+    if (formData.pinCode && formData.pinCode.trim() !== '') {
+      const pinValidation = validatePIN(formData.pinCode);
       if (!pinValidation.valid) {
         toast.error(pinValidation.message);
         return;
@@ -94,8 +185,8 @@ export default function DDOProfilePage() {
     }
 
     // Validate Mobile
-    if (formData.contactNo && formData.contactNo.trim() !== '') {
-      const mobileValidation = validateMobile(formData.contactNo);
+    if (formData.mobile && formData.mobile.trim() !== '') {
+      const mobileValidation = validateMobile(formData.mobile);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
@@ -105,8 +196,14 @@ export default function DDOProfilePage() {
     setLoading(true);
     try {
       const payload = {
-        ...formData,
-        mobile: formData.contactNo,
+        ddoCode: formData.ddoCode,
+        ddoName: formData.ddoName,
+        area: formData.area || '',
+        address: formData.address || '',
+        city: formData.city || '',
+        pinCode: formData.pinCode || '',
+        mobile: formData.mobile || '',
+        email: formData.email || '',
       };
 
       const response = await ApiService.handlePostRequest(
@@ -249,7 +346,7 @@ export default function DDOProfilePage() {
                 </div>
               </div>
 
-              {/* Area & City */}
+              {/* Area */}
               <div>
                 <div className="flex items-start gap-3 mb-3">
                   <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
@@ -257,20 +354,76 @@ export default function DDOProfilePage() {
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
-                      Area & City
+                      Area
                     </label>
                     {isEditing ? (
                       <input
                         type="text"
-                        name="ddoAreaCity"
-                        value={formData.ddoAreaCity}
+                        name="area"
+                        value={formData.area}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
-                        placeholder="Enter area and city"
+                        placeholder="Enter area"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoAreaCity}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.area || '-'}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* City */}
+              <div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      City
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter city"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.city || '-'}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Address - Full Width */}
+              <div className="lg:col-span-2">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                    <MapPin className="text-green-600 dark:text-green-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Address
+                    </label>
+                    {isEditing ? (
+                      <textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="premium-input w-full px-4 py-3 text-base"
+                        placeholder="Enter full address"
+                        rows={3}
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.address || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -290,11 +443,11 @@ export default function DDOProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="ddoPin"
-                        value={formData.ddoPin}
+                        name="pinCode"
+                        value={formData.pinCode}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                          handleChange({ target: { name: 'ddoPin', value } });
+                          handleChange({ target: { name: 'pinCode', value } });
                         }}
                         onKeyPress={(e) => {
                           if (!/[0-9]/.test(e.key)) {
@@ -304,7 +457,7 @@ export default function DDOProfilePage() {
                         onPaste={(e) => {
                           e.preventDefault();
                           const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-                          handleChange({ target: { name: 'ddoPin', value: pastedText } });
+                          handleChange({ target: { name: 'pinCode', value: pastedText } });
                         }}
                         maxLength={6}
                         className="premium-input w-full px-4 py-3 text-base"
@@ -312,7 +465,7 @@ export default function DDOProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoPin}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.pinCode || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -332,11 +485,11 @@ export default function DDOProfilePage() {
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="contactNo"
-                        value={formData.contactNo}
+                        name="mobile"
+                        value={formData.mobile}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'contactNo', value } });
+                          handleChange({ target: { name: 'mobile', value } });
                         }}
                         onKeyPress={(e) => {
                           if (!/[0-9]/.test(e.key)) {
@@ -346,7 +499,7 @@ export default function DDOProfilePage() {
                         onPaste={(e) => {
                           e.preventDefault();
                           const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'contactNo', value: pastedText } });
+                          handleChange({ target: { name: 'mobile', value: pastedText } });
                         }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
@@ -354,7 +507,7 @@ export default function DDOProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.contactNo}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile || '-'}</p>
                       </div>
                     )}
                   </div>

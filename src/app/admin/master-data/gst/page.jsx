@@ -348,16 +348,20 @@ export default function GSTMasterPage() {
        delete submitData.userId;
        delete submitData.ddoCount;
        delete submitData.logo;
-      response = await ApiService.handlePostMultiPartFileRequest(url, submitData, formData.logo);
+      const response = await ApiService.handlePostMultiPartFileRequest(url, submitData, formData.logo);
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
         setIsModalOpen(false);
+        setEditingItem(null);
+        setFormData({});
+        setFieldErrors({});
         fetchData();
       } else {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
+      console.error('Error submitting form:', error);
       toast.error(t('alert.error'));
     }
   };
@@ -535,6 +539,37 @@ export default function GSTMasterPage() {
   };
 
   const columns = [
+    { 
+      key: 'logo', 
+      label: 'Logo',
+      render: (value, row) => {
+        const logoUrl = row.logo || row.logoUrl || value;
+        if (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') {
+          return (
+            <div className="flex items-center justify-center">
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                className="w-12 h-12 object-contain rounded-lg border border-[var(--color-border)] bg-white dark:bg-gray-800"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const fallback = e.target.parentElement.querySelector('.logo-fallback');
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div className="logo-fallback w-12 h-12 hidden items-center justify-center text-xs text-[var(--color-text-secondary)] border border-[var(--color-border)] rounded-lg bg-gray-50 dark:bg-gray-800">
+                No Logo
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center justify-center w-12 h-12 text-xs text-[var(--color-text-secondary)] border border-[var(--color-border)] rounded-lg bg-gray-50 dark:bg-gray-800">
+            No Logo
+          </div>
+        );
+      }
+    },
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'gstHolderName', label: 'GST Holder Name' },
     { key: 'gstName', label: t('label.name') },

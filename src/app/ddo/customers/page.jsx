@@ -54,49 +54,50 @@ export default function CustomersPage() {
   }, [searchTerm, customers]);
 
   const fetchCustomers = async () => {
-    // Load demo data immediately for instant UI
-    const demoCustomers = [
-      { id: '1', name: 'ABC Enterprises', gstNumber: '29AABCU9603R1ZX', address: '123 MG Road', city: 'Bangalore', stateCode: '29', pin: '560001', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543210', email: 'abc@example.com' },
-      { id: '2', name: 'XYZ Corporation', gstNumber: '19ABCDE1234F1Z5', address: '456 Brigade Road', city: 'Bangalore', stateCode: '29', pin: '560025', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543211', email: 'xyz@example.com' },
-      { id: '3', name: 'Tech Solutions Pvt Ltd', gstNumber: '27AACCB1234D1Z2', address: '789 Indira Nagar', city: 'Bangalore', stateCode: '29', pin: '560038', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543212', email: 'tech@example.com' },
-      { id: '4', name: 'Global Industries', gstNumber: '09AABCT1234E1Z3', address: '321 Koramangala', city: 'Bangalore', stateCode: '29', pin: '560095', customerType: 'Govt', exemptionCertNumber: 'EXEMPT001', mobile: '9876543213', email: 'global@example.com' },
-      { id: '5', name: 'Prime Services', gstNumber: '07AACCF1234G1Z4', address: '654 Whitefield', city: 'Bangalore', stateCode: '29', pin: '560066', customerType: 'Non Govt', exemptionCertNumber: '', mobile: '9876543214', email: 'prime@example.com' },
-      { id: '6', name: 'Metro Constructions', gstNumber: '29METRO1234H1Z5', address: '987 Hebbal', city: 'Bangalore', stateCode: '29', pin: '560024', customerType: 'Govt', exemptionCertNumber: 'EXEMPT002', mobile: '9876543215', email: 'metro@example.com' },
-    ];
-    
-    // Show demo data immediately
-    setCustomers(demoCustomers);
-    setFilteredCustomers(demoCustomers);
-    setLoading(false);
-    
+    setLoading(true);
     try {
-      setLoading(true);
+      const ddoId = localStorage.getItem('ddoId');
       
-      // Try to fetch real data with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      
-      const response = await fetch(API_ENDPOINTS.CUSTOMER_LIST, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === 'success' && data.data && data.data.length > 0) {
-          setCustomers(data.data);
-          setFilteredCustomers(data.data);
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(
+        `${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`
+      );
+
+      if (response && response.status === 'success' && response.data) {
+        // Map API response to table format
+        const mappedCustomers = response.data.map((customer) => ({
+          id: customer.id,
+          name: customer.customerName || '',
+          gstNumber: customer.gstNumber || '',
+          address: customer.address || '',
+          city: '', // Not in API response, keeping for compatibility
+          stateCode: customer.stateCode || '',
+          pin: customer.pinCode || '',
+          customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
+          exemptionCertNumber: customer.exemptionNumber || '',
+          mobile: '', // Not in API response, keeping for compatibility
+          email: customer.customerEmail || '',
+        }));
+        
+        setCustomers(mappedCustomers);
+        setFilteredCustomers(mappedCustomers);
+      } else {
+        setCustomers([]);
+        setFilteredCustomers([]);
+        if (response?.message) {
+          toast.error(response.message);
         }
       }
     } catch (error) {
-      // Keep demo data
-      console.log('Using demo data');
+      console.error('Error fetching customers:', error);
+      toast.error('Failed to load customers. Please try again.');
+      setCustomers([]);
+      setFilteredCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -121,7 +122,19 @@ export default function CustomersPage() {
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
-    setFormData(customer);
+    // Map customer data back to form format
+    setFormData({
+      name: customer.name || '',
+      gstNumber: customer.gstNumber || '',
+      address: customer.address || '',
+      city: customer.city || '',
+      stateCode: customer.stateCode || '',
+      pin: customer.pin || '',
+      customerType: customer.customerType || '',
+      exemptionCertNumber: customer.exemptionCertNumber || '',
+      mobile: customer.mobile || '',
+      email: customer.email || '',
+    });
     setIsModalOpen(true);
   };
 
@@ -129,18 +142,18 @@ export default function CustomersPage() {
     if (!confirm('Are you sure you want to delete this customer?')) return;
     
     try {
-      const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.CUSTOMER_DELETE}${customer.id}`,
-        {}
+      const response = await ApiService.handleDeleteRequestClient(
+        `${API_ENDPOINTS.CUSTOMER_DELETE_BY_ID}${customer.id}`
       );
       
       if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
+        toast.success(response.message || t('alert.success'));
         fetchCustomers();
       } else {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
+      console.error('Error deleting customer:', error);
       toast.error(t('alert.error'));
     }
   };
@@ -214,17 +227,41 @@ export default function CustomersPage() {
     }
 
     try {
-      const url = editingCustomer ? API_ENDPOINTS.CUSTOMER_UPDATE : API_ENDPOINTS.CUSTOMER_ADD;
-      const response = await ApiService.handlePostRequest(url, formData);
+      const ddoId = localStorage.getItem('ddoId');
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        return;
+      }
+
+      // Map form data to API payload format
+      const payload = {
+        ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
+        customerName: formData.name,
+        customerType: formData.customerType === 'Govt' ? 'gov' : 'non-gov',
+        customerEmail: formData.email,
+        address: formData.address,
+        pinCode: formData.pin,
+        stateCode: formData.stateCode,
+        gstNumber: formData.gstNumber,
+        exemptionNumber: formData.exemptionCertNumber || '',
+        ddoId: parseInt(ddoId, 10),
+      };
+
+      const response = await ApiService.handlePostRequest(
+        API_ENDPOINTS.CUSTOMER_ADD_OR_EDIT,
+        payload
+      );
       
       if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
+        toast.success(response.message || t('alert.success'));
         setIsModalOpen(false);
         fetchCustomers();
       } else {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
+      console.error('Error saving customer:', error);
       toast.error(t('alert.error'));
     }
   };

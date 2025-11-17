@@ -47,36 +47,122 @@ const parseAddress = (fullAddress) => {
 export default function GstinProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const { gstinList } = useGstinList();
-  const [formData, setFormData] = useState(false);
+  const [formData, setFormData] = useState({
+    gstinNumber: '',
+    gstName: '',
+    address: '',
+    city: '',
+    pinCode: '',
+    mobile: '',
+    email: '',
+    gstId: null,
+    gstHolderName: '',
+    userId: null,
+  });
 
   useEffect(() => {
-    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
-    console.log("Stored Profile Data:", storedProfile);
+    fetchProfileData();
+  }, []);
 
-    if (storedProfile) {
-      try {
-        // Check if the value looks like JSON (starts with { or [)
-        const trimmedValue = storedProfile.trim();
-        if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
-          const userProfile = JSON.parse(storedProfile);
-          // If data exists and not empty
-          if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
-            setFormData(userProfile);
-            setLoading(false);
-            setFetching(false);
-            return;
+  const fetchProfileData = async () => {
+    setFetching(true);
+    try {
+      // First, try to get data from localStorage
+      const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+      const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
+      
+      if (storedProfile) {
+        try {
+          const trimmedValue = storedProfile.trim();
+          if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+            const userProfile = JSON.parse(storedProfile);
+            if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+              // If it's an array, find the matching record
+              if (Array.isArray(userProfile)) {
+                const matchedProfile = gstId 
+                  ? userProfile.find(p => p.gstId === parseInt(gstId) || p.gstId === gstId)
+                  : userProfile[0];
+                if (matchedProfile) {
+                  setFormDataFromApi(matchedProfile);
+                  setFetching(false);
+                  return;
+                }
+              } else {
+                // Single object
+                setFormDataFromApi(userProfile);
+                setFetching(false);
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing stored profile data:', error);
+        }
+      }
+
+      // Fetch from API
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
+      
+      if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
+        // Find the current user's GST record
+        let matchedProfile = null;
+        
+        if (gstId) {
+          // Try to match by gstId
+          matchedProfile = response.data.find(
+            item => item.gstId === parseInt(gstId) || item.gstId === gstId || String(item.gstId) === String(gstId)
+          );
+        }
+        
+        // If no match by gstId, try to match by userId
+        if (!matchedProfile) {
+          const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+          if (userId) {
+            matchedProfile = response.data.find(
+              item => item.userId === parseInt(userId) || item.userId === userId || String(item.userId) === String(userId)
+            );
           }
         }
-     
-      } catch (error) {
-        // If JSON parsing fails, fetch from API
-        console.error('Error parsing stored profile data:', error);
         
+        // If still no match, use the first record
+        if (!matchedProfile && response.data.length > 0) {
+          matchedProfile = response.data[0];
+        }
+        
+        if (matchedProfile) {
+          setFormDataFromApi(matchedProfile);
+          // Store in localStorage for future use
+          localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.data));
+        } else {
+          toast.error('No GST profile found');
+        }
+      } else {
+        toast.error('Failed to load GST profile data');
       }
+    } catch (error) {
+      console.error('Error fetching GST profile:', error);
+      toast.error('An error occurred while loading profile data');
+    } finally {
+      setFetching(false);
     }
-  }, []);
+  };
+
+  const setFormDataFromApi = (apiData) => {
+    setFormData({
+      gstinNumber: apiData.gstNumber || apiData.gstinNumber || '',
+      gstName: apiData.gstName || '',
+      address: apiData.address || '',
+      city: apiData.city || '',
+      pinCode: apiData.pinCode || apiData.pin || '',
+      mobile: apiData.mobile || apiData.mobileNumber || '',
+      email: apiData.email || '',
+      gstId: apiData.gstId || apiData.id || null,
+      gstHolderName: apiData.gstHolderName || '',
+      userId: apiData.userId || null,
+    });
+  };
 
   const handleSave = async () => {
     // Validate GSTIN Name
@@ -157,6 +243,7 @@ export default function GstinProfilePage() {
   };
 
   const handleCancel = () => {
+    fetchProfileData();
     setIsEditing(false);
   };
 
@@ -233,7 +320,7 @@ export default function GstinProfilePage() {
                     {isEditing && gstinList.length > 0 ? (
                       <select
                         name="gstinNumber"
-                        value={formData.gstinNumber}
+                        value={formData.gstinNumber || ''}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base uppercase"
                       >
@@ -249,7 +336,7 @@ export default function GstinProfilePage() {
                         <input
                           type="text"
                           name="gstinNumber"
-                          value={formData.gstinNumber}
+                          value={formData.gstinNumber || ''}
                           onChange={handleChange}
                           maxLength={15}
                           className="premium-input w-full px-4 py-3 text-base uppercase"
@@ -257,7 +344,7 @@ export default function GstinProfilePage() {
                         />
                       ) : (
                         <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                          <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.gstinNumber}</p>
+                          <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.gstinNumber || '-'}</p>
                         </div>
                       )
                     )}
@@ -279,14 +366,14 @@ export default function GstinProfilePage() {
                       <input
                         type="text"
                         name="gstName"
-                        value={formData.gstName}
+                        value={formData.gstName || ''}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter GSTIN name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.gstName || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -306,7 +393,7 @@ export default function GstinProfilePage() {
                     {isEditing ? (
                       <textarea
                         name="address"
-                        value={formData.address}
+                        value={formData.address || ''}
                         onChange={handleChange}
                         rows={3}
                         className="premium-input w-full px-4 py-3 text-base resize-none"
@@ -314,7 +401,7 @@ export default function GstinProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{formData.address}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{formData.address || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -335,14 +422,14 @@ export default function GstinProfilePage() {
                       <input
                         type="text"
                         name="city"
-                        value={formData.city}
+                        value={formData.city || ''}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter city"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.city}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.city || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -363,7 +450,7 @@ export default function GstinProfilePage() {
                       <input
                         type="text"
                         name="pinCode"
-                        value={formData.pinCode}
+                        value={formData.pinCode || ''}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                           handleChange({ target: { name: 'pinCode', value } });
@@ -384,7 +471,7 @@ export default function GstinProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.pinCode}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.pinCode || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -405,7 +492,7 @@ export default function GstinProfilePage() {
                       <input
                         type="tel"
                         name="mobile"
-                        value={formData.mobile}
+                        value={formData.mobile || ''}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                           handleChange({ target: { name: 'mobile', value } });
@@ -426,7 +513,7 @@ export default function GstinProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile || '-'}</p>
                       </div>
                     )}
                   </div>
@@ -447,14 +534,14 @@ export default function GstinProfilePage() {
                       <input
                         type="email"
                         name="email"
-                        value={formData.email}
+                        value={formData.email || ''}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter email address"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.email}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.email || '-'}</p>
                       </div>
                     )}
                   </div>
