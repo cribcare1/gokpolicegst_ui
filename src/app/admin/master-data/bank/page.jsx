@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -487,7 +487,7 @@ export default function BankDetailsPage() {
     },
   ];
 
-  const getFormFields = () => {
+  const getFormFields = useCallback(() => {
     return [
       { 
         key: 'gstinNumber', 
@@ -526,7 +526,7 @@ export default function BankDetailsPage() {
         readOnly: editingItem ? true : false // Status is read-only when editing (auto-set to Active for new record)
       },
     ];
-  };
+  }, [editingItem, gstinList]);
 
   const tableActions = (row) => {
     // Check if invoices exist (similar to ddoCount check in GSTIN Master)

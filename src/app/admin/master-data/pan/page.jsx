@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -347,12 +347,12 @@ export default function PANRecordsPage() {
    * Gets form field configurations with proper editability rules
    * @returns {Array} Array of field configuration objects
    */
-  const getFormFields = () => {
+  const getFormFields = useCallback(() => {
     // Determine if the current PAN is editable based on associated GSTIN count and item state
     const currentIsEditable = getItemEditability(editingItem);
     
-    // Optimized field configuration with memoization for better performance
-    const panNumberField = useMemo(() => ({
+    // Optimized field configuration without nested useMemo
+    const panNumberField = {
       key: 'panNumber',
       label: t('label.panNumber'),
       required: true,
@@ -364,7 +364,7 @@ export default function PANRecordsPage() {
         protectionReason: editingItem && !currentIsEditable ?
           `PAN is protected - dependent records found` : null
       }
-    }), [editingItem, currentIsEditable]);
+    };
     
     return [
       panNumberField,
@@ -375,7 +375,7 @@ export default function PANRecordsPage() {
       { key: 'mobile', label: t('label.mobile'), required: true, maxLength: 10 },
       { key: 'email', label: t('label.email'), type: 'email', required: true },
     ];
-  };
+  }, [editingItem, gstinList]);
 
   const tableActions = (row) => {
     const gstinCount = getGSTINCount(row.panNumber);
