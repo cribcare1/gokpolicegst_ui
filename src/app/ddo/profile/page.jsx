@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function DDOProfilePage() {
   const [formData, setFormData] = useState({
@@ -17,16 +18,41 @@ export default function DDOProfilePage() {
     address: '',
     city: '',
     pinCode: '',
-    mobile: '',
+    mobileNumber: '',
     email: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
-    fetchProfileData();
-  }, []);
+   useEffect(() => {
+      const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+      console.log("storedprfole", storedProfile);
+      if (storedProfile) {
+        try {
+          // Check if the value looks like JSON (starts with { or [)
+          const trimmedValue = storedProfile.trim();
+          if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+            const userProfile = JSON.parse(storedProfile);
+            console.log("userProfile", userProfile);
+            // If data exists and not empty
+            if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+              console.log("userProfile=====called");
+              setFormData(userProfile);
+              setLoading(false);
+              setFetching(false);
+              return;
+            }
+          }
+          // If not valid JSON or empty, fetch from API
+          // fetchProfileData();
+        } catch (error) {
+          // If JSON parsing fails, fetch from API
+          console.error('Error parsing stored profile data:', error);
+          // fetchProfileData();
+        }
+      } 
+    }, []);
 
   const fetchProfileData = async () => {
     setFetching(true);
@@ -55,7 +81,7 @@ export default function DDOProfilePage() {
               address: ddoData.address || '',
               city: ddoData.city || '',
               pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
-              mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+              mobileNumber: ddoData.mobileNumber || ddoData.contactNo || ddoData.mobileNumberNumber || '',
               email: ddoData.email || '',
             });
             setFetching(false);
@@ -82,7 +108,7 @@ export default function DDOProfilePage() {
                 address: ddoData.address || '',
                 city: ddoData.city || '',
                 pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
-                mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+                mobileNumber: ddoData.mobileNumber || ddoData.contactNo || ddoData.mobileNumber || '',
                 email: ddoData.email || '',
               });
               setFetching(false);
@@ -103,7 +129,7 @@ export default function DDOProfilePage() {
               address: ddoData.address || '',
               city: ddoData.city || '',
               pinCode: ddoData.pinCode || ddoData.ddoPin || ddoData.pin || '',
-              mobile: ddoData.mobile || ddoData.contactNo || ddoData.mobileNumber || '',
+              mobileNumber: ddoData.mobileNumber || ddoData.contactNo || ddoData.mobileNumber || '',
               email: ddoData.email || '',
             });
             setFetching(false);
@@ -185,8 +211,8 @@ export default function DDOProfilePage() {
     }
 
     // Validate Mobile
-    if (formData.mobile && formData.mobile.trim() !== '') {
-      const mobileValidation = validateMobile(formData.mobile);
+    if (formData.mobileNumber && formData.mobileNumber.trim() !== '') {
+      const mobileValidation = validateMobile(formData.mobileNumber);
       if (!mobileValidation.valid) {
         toast.error(mobileValidation.message);
         return;
@@ -202,7 +228,7 @@ export default function DDOProfilePage() {
         address: formData.address || '',
         city: formData.city || '',
         pinCode: formData.pinCode || '',
-        mobile: formData.mobile || '',
+        mobileNumber: formData.mobileNumber || '',
         email: formData.email || '',
       };
 
@@ -485,11 +511,11 @@ export default function DDOProfilePage() {
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="mobile"
-                        value={formData.mobile}
+                        name="mobileNumber"
+                        value={formData.mobileNumber}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'mobile', value } });
+                          handleChange({ target: { name: 'mobileNumber', value } });
                         }}
                         onKeyPress={(e) => {
                           if (!/[0-9]/.test(e.key)) {
@@ -499,7 +525,7 @@ export default function DDOProfilePage() {
                         onPaste={(e) => {
                           e.preventDefault();
                           const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'mobile', value: pastedText } });
+                          handleChange({ target: { name: 'mobileNumber', value: pastedText } });
                         }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
@@ -507,7 +533,7 @@ export default function DDOProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile || '-'}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobileNumber || '-'}</p>
                       </div>
                     )}
                   </div>
