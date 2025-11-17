@@ -908,15 +908,15 @@ export default function GSTMasterPage() {
                             validateField(field.key, valueToValidate);
                           }
                         }}
-                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
                           fieldErrors[field.key] 
                             ? 'border-red-500 focus:ring-red-500' 
                             : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
                         } ${
                           (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
                           (field.key === 'stateCode')
-                            ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-70'
-                            : ''
+                            ? 'bg-[var(--color-surface)] cursor-not-allowed opacity-75'
+                            : 'bg-[var(--color-background)]'
                         }`}
                         placeholder={field.placeholder}
                         required={field.required}
