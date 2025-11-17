@@ -12,6 +12,7 @@ import { getAllStates } from '@/lib/stateCodes';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
@@ -56,7 +57,7 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const ddoId = localStorage.getItem('ddoId');
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
@@ -75,12 +76,12 @@ export default function CustomersPage() {
           name: customer.customerName || '',
           gstNumber: customer.gstNumber || '',
           address: customer.address || '',
-          city: '', // Not in API response, keeping for compatibility
+          city: customer.city||'', // Not in API response, keeping for compatibility
           stateCode: customer.stateCode || '',
           pin: customer.pinCode || '',
           customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
           exemptionCertNumber: customer.exemptionNumber || '',
-          mobile: '', // Not in API response, keeping for compatibility
+          mobile: customer.mobile||'', // Not in API response, keeping for compatibility
           email: customer.customerEmail || '',
         }));
         
@@ -160,7 +161,7 @@ export default function CustomersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("submit called");
     // Validate Name
     const nameValidation = validateName(formData.name, 'Customer Name');
     if (!nameValidation.valid) {
@@ -218,16 +219,16 @@ export default function CustomersPage() {
     }
     
     // Validate Exemption Certificate (optional)
-    if (formData.exemptionCertNumber && formData.exemptionCertNumber.trim() !== '') {
-      const exemptionValidation = validateExemptionCert(formData.exemptionCertNumber);
-      if (!exemptionValidation.valid) {
-        toast.error(exemptionValidation.message);
-        return;
-      }
-    }
+    // if (formData.exemptionCertNumber && formData.exemptionCertNumber.trim() !== '') {
+    //   const exemptionValidation = validateExemptionCert(formData.exemptionCertNumber);
+    //   if (!exemptionValidation.valid) {
+    //     toast.error(exemptionValidation.message);
+    //     return;
+    //   }
+    // }
 
     try {
-      const ddoId = localStorage.getItem('ddoId');
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
@@ -244,6 +245,8 @@ export default function CustomersPage() {
         pinCode: formData.pin,
         stateCode: formData.stateCode,
         gstNumber: formData.gstNumber,
+        city: formData.city,
+        mobile: formData.mobile,
         exemptionNumber: formData.exemptionCertNumber || '',
         ddoId: parseInt(ddoId, 10),
       };
