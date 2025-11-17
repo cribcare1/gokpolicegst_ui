@@ -71,6 +71,7 @@ export default function GstinProfilePage() {
     try {
       // First, try to get data from localStorage
       const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+    
       const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID);
       
       if (storedProfile) {
@@ -78,6 +79,7 @@ export default function GstinProfilePage() {
           const trimmedValue = storedProfile.trim();
           if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
             const userProfile = JSON.parse(storedProfile);
+            console.log("userprofile gstin data", userProfile);
             if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
               // If it's an array, find the matching record
               if (Array.isArray(userProfile)) {
@@ -102,45 +104,45 @@ export default function GstinProfilePage() {
         }
       }
 
-      // Fetch from API
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
+    //   // Fetch from API
+    //   const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
       
-      if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
-        // Find the current user's GST record
-        let matchedProfile = null;
+    //   if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
+    //     // Find the current user's GST record
+    //     let matchedProfile = null;
         
-        if (gstId) {
-          // Try to match by gstId
-          matchedProfile = response.data.find(
-            item => item.gstId === parseInt(gstId) || item.gstId === gstId || String(item.gstId) === String(gstId)
-          );
-        }
+    //     if (gstId) {
+    //       // Try to match by gstId
+    //       matchedProfile = response.data.find(
+    //         item => item.gstId === parseInt(gstId) || item.gstId === gstId || String(item.gstId) === String(gstId)
+    //       );
+    //     }
         
-        // If no match by gstId, try to match by userId
-        if (!matchedProfile) {
-          const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-          if (userId) {
-            matchedProfile = response.data.find(
-              item => item.userId === parseInt(userId) || item.userId === userId || String(item.userId) === String(userId)
-            );
-          }
-        }
+    //     // If no match by gstId, try to match by userId
+    //     if (!matchedProfile) {
+    //       const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+    //       if (userId) {
+    //         matchedProfile = response.data.find(
+    //           item => item.userId === parseInt(userId) || item.userId === userId || String(item.userId) === String(userId)
+    //         );
+    //       }
+    //     }
         
-        // If still no match, use the first record
-        if (!matchedProfile && response.data.length > 0) {
-          matchedProfile = response.data[0];
-        }
+    //     // If still no match, use the first record
+    //     if (!matchedProfile && response.data.length > 0) {
+    //       matchedProfile = response.data[0];
+    //     }
         
-        if (matchedProfile) {
-          setFormDataFromApi(matchedProfile);
-          // Store in localStorage for future use
-          localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.data));
-        } else {
-          toast.error('No GST profile found');
-        }
-      } else {
-        toast.error('Failed to load GST profile data');
-      }
+    //     if (matchedProfile) {
+    //       setFormDataFromApi(matchedProfile);
+    //       // Store in localStorage for future use
+    //       localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.data));
+    //     } else {
+    //       toast.error('No GST profile found');
+    //     }
+    //   } else {
+    //     toast.error('Failed to load GST profile data');
+    //   }
     } catch (error) {
       console.error('Error fetching GST profile:', error);
       toast.error('An error occurred while loading profile data');
@@ -156,7 +158,7 @@ export default function GstinProfilePage() {
       address: apiData.address || '',
       city: apiData.city || '',
       pinCode: apiData.pinCode || apiData.pin || '',
-      mobile: apiData.mobile || apiData.mobileNumber || '',
+      mobileNumber: apiData.mobileNumber || apiData.mobileNumberNumber || '',
       email: apiData.email || '',
       gstId: apiData.gstId || apiData.id || null,
       gstHolderName: apiData.gstHolderName || '',
@@ -200,8 +202,8 @@ export default function GstinProfilePage() {
       return;
     }
 
-    // Validate Mobile
-    const mobileValidation = validateMobile(formData.mobile);
+    // Validate mobileNumber
+    const mobileValidation = validateMobile(formData.mobileNumber);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
       return;
@@ -215,7 +217,7 @@ export default function GstinProfilePage() {
         address: formData.address,
         city: formData.city,
         pinCode: formData.pinCode,
-        mobile: formData.mobile,
+        mobileNumber: formData.mobileNumber,
         email: formData.email,
         gstId: formData.gstId,
         gstHolderName: formData.gstHolderName,
@@ -478,7 +480,7 @@ export default function GstinProfilePage() {
                 </div>
               </div>
 
-              {/* Mobile */}
+              {/* mobileNumber */}
               <div>
                 <div className="flex items-start gap-3 mb-3">
                   <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg mt-1">
@@ -491,11 +493,11 @@ export default function GstinProfilePage() {
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="mobile"
-                        value={formData.mobile || ''}
+                        name="mobileNumber"
+                        value={formData.mobileNumber || ''}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'mobile', value } });
+                          handleChange({ target: { name: 'mobileNumber', value } });
                         }}
                         onKeyPress={(e) => {
                           if (!/[0-9]/.test(e.key)) {
@@ -505,7 +507,7 @@ export default function GstinProfilePage() {
                         onPaste={(e) => {
                           e.preventDefault();
                           const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                          handleChange({ target: { name: 'mobile', value: pastedText } });
+                          handleChange({ target: { name: 'mobileNumber', value: pastedText } });
                         }}
                         maxLength={10}
                         className="premium-input w-full px-4 py-3 text-base"
@@ -513,7 +515,7 @@ export default function GstinProfilePage() {
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobile || '-'}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.mobileNumber || '-'}</p>
                       </div>
                     )}
                   </div>

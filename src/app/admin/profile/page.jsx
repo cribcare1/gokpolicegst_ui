@@ -59,15 +59,17 @@ export default function AdminProfilePage() {
 
  useEffect(() => {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
-
+    console.log("storedprfole", storedProfile);
     if (storedProfile) {
       try {
         // Check if the value looks like JSON (starts with { or [)
         const trimmedValue = storedProfile.trim();
         if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
           const userProfile = JSON.parse(storedProfile);
+          console.log("userProfile", userProfile);
           // If data exists and not empty
           if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+            console.log("userProfile=====called");
             setFormData(userProfile);
             setLoading(false);
             setFetching(false);
@@ -75,15 +77,13 @@ export default function AdminProfilePage() {
           }
         }
         // If not valid JSON or empty, fetch from API
-        fetchProfileData();
+        // fetchProfileData();
       } catch (error) {
         // If JSON parsing fails, fetch from API
         console.error('Error parsing stored profile data:', error);
-        fetchProfileData();
+        // fetchProfileData();
       }
-    } else {
-      fetchProfileData();
-    }
+    } 
   }, []);
 
   const fetchProfileData = async () => {
@@ -203,7 +203,7 @@ export default function AdminProfilePage() {
   };
 
   const handleCancel = () => {
-    fetchProfileData();
+    // fetchProfileData();
     setIsEditing(false);
   };
 
