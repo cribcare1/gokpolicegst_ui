@@ -131,40 +131,68 @@ export default function PANRecordsPage() {
     }
   };
 
-  const validateForm = (data) => {
-    const panValidation = validatePAN(data.panNumber);
+  const validateForm = (formDataToValidate) => {
+    const panValidation = validatePAN(formDataToValidate.panNumber);
     if (!panValidation.valid) {
       return { valid: false, message: panValidation.message };
     }
     
-    const panNameValidation = validateName(data.panName, 'PAN Name');
+    // Check for duplicate PAN number when adding new PAN (not editing)
+    if (!editingItem) {
+      const panNumberUpper = formDataToValidate.panNumber?.toUpperCase();
+      const duplicatePAN = data.find(item => 
+        item.panNumber?.toUpperCase() === panNumberUpper
+      );
+      if (duplicatePAN) {
+        return { 
+          valid: false, 
+          message: `PAN number "${formDataToValidate.panNumber}" already exists. Please use a different PAN number.` 
+        };
+      }
+    }
+    
+    const panNameValidation = validateName(formDataToValidate.panName, 'PAN Name');
     if (!panNameValidation.valid) {
       return { valid: false, message: panNameValidation.message };
     }
     
-    const addressValidation = validateAddress(data.address);
+    const addressValidation = validateAddress(formDataToValidate.address);
     if (!addressValidation.valid) {
       return { valid: false, message: addressValidation.message };
     }
     
-    const cityValidation = validateCity(data.city);
+    const cityValidation = validateCity(formDataToValidate.city);
     if (!cityValidation.valid) {
       return { valid: false, message: cityValidation.message };
     }
     
-    const pinValidation = validatePIN(data.pinCode);
+    const pinValidation = validatePIN(formDataToValidate.pinCode);
     if (!pinValidation.valid) {
       return { valid: false, message: pinValidation.message };
     }
     
-    const emailValidation = validateEmail(data.email);
+    const emailValidation = validateEmail(formDataToValidate.email);
     if (!emailValidation.valid) {
       return { valid: false, message: emailValidation.message };
     }
     
-    const mobileValidation = validateMobile(data.mobile);
+    const mobileValidation = validateMobile(formDataToValidate.mobile);
     if (!mobileValidation.valid) {
       return { valid: false, message: mobileValidation.message };
+    }
+    
+    // Check for duplicate mobile number when adding new PAN (not editing)
+    if (!editingItem) {
+      const mobileNumber = String(formDataToValidate.mobile || '').trim();
+      const duplicateMobile = data.find(item => 
+        String(item.mobile || '').trim() === mobileNumber
+      );
+      if (duplicateMobile) {
+        return { 
+          valid: false, 
+          message: `Mobile number "${formDataToValidate.mobile}" already exists. Please use a different mobile number.` 
+        };
+      }
     }
     
     return { valid: true };
@@ -196,6 +224,14 @@ export default function PANRecordsPage() {
       const validation = validateForm(dataCopy);
       if (!validation.valid) {
         toast.error(validation.message || t('validation.required'));
+        // Set field error for PAN number or mobile number if duplicate is detected
+        if (validation.message && validation.message.includes('already exists')) {
+          if (validation.message.includes('PAN number')) {
+            setFieldErrors((prev) => ({ ...prev, panNumber: validation.message }));
+          } else if (validation.message.includes('Mobile number')) {
+            setFieldErrors((prev) => ({ ...prev, mobile: validation.message }));
+          }
+        }
         return;
       }
     }
@@ -269,13 +305,39 @@ export default function PANRecordsPage() {
     // Field-specific validation
     if (fieldLower.includes('pan') && (fieldLower.includes('number') || fieldLower.includes('no') || fieldLower.includes('pannumber'))) {
       const validation = validatePAN(value);
-      if (!validation.valid) error = validation.message;
+      if (!validation.valid) {
+        error = validation.message;
+      } else {
+        // Check for duplicate PAN number when adding new PAN (not editing)
+        if (!editingItem) {
+          const panNumberUpper = value?.toUpperCase();
+          const duplicatePAN = data.find(item => 
+            item.panNumber?.toUpperCase() === panNumberUpper
+          );
+          if (duplicatePAN) {
+            error = `PAN number "${value}" already exists. Please use a different PAN number.`;
+          }
+        }
+      }
     } else if (fieldLower.includes('email')) {
       const validation = validateEmail(value);
       if (!validation.valid) error = validation.message;
     } else if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
       const validation = validateMobile(String(value));
-      if (!validation.valid) error = validation.message;
+      if (!validation.valid) {
+        error = validation.message;
+      } else {
+        // Check for duplicate mobile number when adding new PAN (not editing)
+        if (!editingItem) {
+          const mobileNumber = String(value || '').trim();
+          const duplicateMobile = data.find(item => 
+            String(item.mobile || '').trim() === mobileNumber
+          );
+          if (duplicateMobile) {
+            error = `Mobile number "${value}" already exists. Please use a different mobile number.`;
+          }
+        }
+      }
     } else if (fieldLower.includes('pin') || fieldLower.includes('pincode')) {
       const validation = validatePIN(value);
       if (!validation.valid) error = validation.message;
