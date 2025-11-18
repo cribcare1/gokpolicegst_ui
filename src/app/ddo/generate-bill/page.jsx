@@ -42,14 +42,13 @@ export default function GenerateBillPage() {
     name: '',
     gstNumber: '',
     address: '',
+    city: '',
     stateCode: '',
     pin: '',
-    mobile: '',
-    email: '',
-    customerType: 'Non Govt',
     customerType: '',
     exemptionCertNumber: '',
-    city: '',
+    mobile: '',
+    email: '',
   });
   
   // Line Items
@@ -317,7 +316,8 @@ export default function GenerateBillPage() {
 
   const handleAddCustomer = async (e) => {
     e.preventDefault();
-    console.log("handleAddCustomer called");
+    
+    // Validate Name
     const nameValidation = validateName(newCustomer.name, 'Customer Name');
     if (!nameValidation.valid) {
       toast.error(nameValidation.message);
@@ -359,6 +359,12 @@ export default function GenerateBillPage() {
       return;
     }
     
+    // Validate Customer Type
+    if (!newCustomer.customerType || newCustomer.customerType.trim() === '') {
+      toast.error('Customer Type is required');
+      return;
+    }
+    
     // Validate Email
     const emailValidation = validateEmail(newCustomer.email);
     if (!emailValidation.valid) {
@@ -383,7 +389,6 @@ export default function GenerateBillPage() {
 
       // Map form data to API payload format
       const payload = {
-        ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
         customerName: newCustomer.name,
         customerType: newCustomer.customerType === 'Govt' ? 'gov' : 'non-gov',
         customerEmail: newCustomer.email,
@@ -404,8 +409,46 @@ export default function GenerateBillPage() {
       
       if (response && response.status === 'success') {
         toast.success(response.message || t('alert.success'));
-        setIsModalOpen(false);
-        fetchCustomers();
+        setShowCustomerModal(false);
+        setNewCustomer({
+          name: '',
+          gstNumber: '',
+          address: '',
+          city: '',
+          stateCode: '',
+          pin: '',
+          customerType: '',
+          exemptionCertNumber: '',
+          mobile: '',
+          email: '',
+        });
+        // Refresh customers list and select the newly added customer
+        const updatedResponse = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
+        if (updatedResponse && updatedResponse.status === 'success') {
+          const mappedCustomers = updatedResponse.data.map((customer) => ({
+            id: customer.id,
+            name: customer.customerName || '',
+            gstNumber: customer.gstNumber || '',
+            address: customer.address || '',
+            city: customer.city || '',
+            stateCode: customer.stateCode || '',
+            pin: customer.pinCode || '',
+            customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
+            exemptionCertNumber: customer.exemptionNumber || '',
+            mobile: customer.mobile || '',
+            email: customer.customerEmail || '',
+          }));
+          setCustomers(mappedCustomers);
+          // Select the newly added customer (it should be the last one or match by GSTIN)
+          if (mappedCustomers && mappedCustomers.length > 0) {
+            const newCustomerData = mappedCustomers.find(c => c.gstNumber === newCustomer.gstNumber) || mappedCustomers[mappedCustomers.length - 1];
+            if (newCustomerData) {
+              setSelectedCustomer(newCustomerData);
+            }
+          }
+        } else {
+          fetchCustomers();
+        }
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -413,7 +456,6 @@ export default function GenerateBillPage() {
       console.error('Error saving customer:', error);
       toast.error(t('alert.error'));
     }
-  
   };
 
   const handleAddLineItem = () => {
@@ -1600,176 +1642,194 @@ export default function GenerateBillPage() {
         </div>
 
         {/* Add Customer Modal */}
-         <Modal
-                  isOpen={showPreviewModal}
-                  onClose={() => setShowPreviewModal(false)}
-                   title={t('bill.billPreview')}
-                  size="lg"
-                >
-                  <form onSubmit={handleAddCustomer} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Customer Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomer.name}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        {t('label.gstin')} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomer.gstNumber}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase().slice(0, 15) })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        maxLength={15}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        {t('label.address')} <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={newCustomer.address}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        rows={3}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        City <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomer.city}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        State Code <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={newCustomer.stateCode}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, stateCode: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        required
-                      >
-                        <option value="">Select State Code</option>
-                        {getAllStates().map((state) => (
-                          <option key={state.code} value={state.code}>
-                            {state.code} - {state.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        PIN Code <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomer.pin}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-                        onKeyPress={(e) => {
-                          if (!/[0-9]/.test(e.key)) {
-                            e.preventDefault();
-                          }
-                        }}
-                        onPaste={(e) => {
-                          e.preventDefault();
-                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-                          setNewCustomer({ ...newCustomer, pin: pastedText });
-                        }}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        maxLength={6}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Type of Customer <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={newCustomer.customerType}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, customerType: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        required
-                      >
-                        <option value="">Select Type</option>
-                        <option value="Govt">Govt</option>
-                        <option value="Non Govt">Non Govt</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Exemption Certificate Number
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomer.exemptionCertNumber}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, exemptionCertNumber: e.target.value.toUpperCase() })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        placeholder="Enter alphanumeric certificate number"
-                        pattern="[A-Za-z0-9]*"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        {t('label.mobile')} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={newCustomer.mobile}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                        onKeyPress={(e) => {
-                          if (!/[0-9]/.test(e.key)) {
-                            e.preventDefault();
-                          }
-                        }}
-                        onPaste={(e) => {
-                          e.preventDefault();
-                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                          setNewCustomer({ ...newCustomer, mobile: pastedText });
-                        }}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        maxLength={10}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        {t('label.email')} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        value={newCustomer.email}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-3 pt-4">
-                      <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
-                        {t('btn.cancel')}
-                      </Button>
-                      <Button type="submit" variant="primary">
-                        {t('btn.save')}
-                      </Button>
-                    </div>
-                  </form>
-                </Modal>
+        <Modal
+          isOpen={showCustomerModal}
+          onClose={() => setShowCustomerModal(false)}
+          title={t('bill.addNewCustomer')}
+          size="lg"
+        >
+          <form onSubmit={handleAddCustomer} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Customer Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newCustomer.name}
+                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {t('label.gstin')} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newCustomer.gstNumber}
+                onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase().slice(0, 15) })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                maxLength={15}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {t('label.address')} <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={newCustomer.address}
+                onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                rows={3}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newCustomer.city}
+                onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                State Code <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newCustomer.stateCode}
+                onChange={(e) => setNewCustomer({ ...newCustomer, stateCode: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              >
+                <option value="">Select State Code</option>
+                {getAllStates().map((state) => (
+                  <option key={state.code} value={state.code}>
+                    {state.code} - {state.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                PIN Code <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newCustomer.pin}
+                onChange={(e) => setNewCustomer({ ...newCustomer, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                onKeyPress={(e) => {
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                  setNewCustomer({ ...newCustomer, pin: pastedText });
+                }}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                maxLength={6}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Type of Customer <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newCustomer.customerType}
+                onChange={(e) => setNewCustomer({ ...newCustomer, customerType: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              >
+                <option value="">Select Type</option>
+                <option value="Govt">Govt</option>
+                <option value="Non Govt">Non Govt</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Exemption Certificate Number
+              </label>
+              <input
+                type="text"
+                value={newCustomer.exemptionCertNumber}
+                onChange={(e) => setNewCustomer({ ...newCustomer, exemptionCertNumber: e.target.value.toUpperCase() })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                placeholder="Enter alphanumeric certificate number"
+                pattern="[A-Za-z0-9]*"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {t('label.mobile')} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={newCustomer.mobile}
+                onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                onKeyPress={(e) => {
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                  setNewCustomer({ ...newCustomer, mobile: pastedText });
+                }}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                maxLength={10}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {t('label.email')} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={newCustomer.email}
+                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => {
+                  setShowCustomerModal(false);
+                  setNewCustomer({
+                    name: '',
+                    gstNumber: '',
+                    address: '',
+                    city: '',
+                    stateCode: '',
+                    pin: '',
+                    customerType: '',
+                    exemptionCertNumber: '',
+                    mobile: '',
+                    email: '',
+                  });
+                }}
+              >
+                {t('btn.cancel')}
+              </Button>
+              <Button type="submit" variant="primary">
+                {t('btn.save')}
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         {/* Bill Preview Modal */}
         <Modal
