@@ -104,6 +104,9 @@ export default function GenerateBillPage() {
       }
     };
   }, []);
+  function Ddo(){
+    
+  }
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -947,13 +950,6 @@ export default function GenerateBillPage() {
 
           {/* Section Divider */}
           <div className="border-t-2 border-[var(--color-border)] my-8"></div>
-          
-          {/* Section Header */}
-          <div className="text-center mb-6">
-            <h3 className="text-lg font-bold text-[var(--color-text-primary)] bg-[var(--color-muted)] px-4 py-2 rounded-lg inline-block">
-              {t('bill.billAndInvoiceDetails')}
-            </h3>
-          </div>
 
           {/* Bill To and Invoice Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

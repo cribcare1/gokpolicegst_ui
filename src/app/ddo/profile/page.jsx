@@ -13,7 +13,7 @@ import { LOGIN_CONSTANT } from '@/components/utils/constant';
 export default function DDOProfilePage() {
   const [formData, setFormData] = useState({
     ddoCode: '',
-    ddoName: '',
+    fullName: '',
     area: '',
     address: '',
     city: '',
@@ -76,7 +76,7 @@ export default function DDOProfilePage() {
             const ddoData = response.data;
             setFormData({
               ddoCode: ddoData.ddoCode || ddoData.code || '',
-              ddoName: ddoData.ddoName || ddoData.name || '',
+              fullName: ddoData.fullName || ddoData.name || '',
               area: ddoData.area || '',
               address: ddoData.address || '',
               city: ddoData.city || '',
@@ -103,7 +103,7 @@ export default function DDOProfilePage() {
             if (ddoData) {
               setFormData({
                 ddoCode: ddoData.ddoCode || ddoData.code || ddoCode,
-                ddoName: ddoData.ddoName || ddoData.name || '',
+                fullName: ddoData.fullName || ddoData.name || '',
                 area: ddoData.area || '',
                 address: ddoData.address || '',
                 city: ddoData.city || '',
@@ -124,7 +124,7 @@ export default function DDOProfilePage() {
             const ddoData = response.data;
             setFormData({
               ddoCode: ddoData.ddoCode || ddoData.code || ddoCode,
-              ddoName: ddoData.ddoName || ddoData.name || '',
+              fullName: ddoData.fullName || ddoData.name || '',
               area: ddoData.area || '',
               address: ddoData.address || '',
               city: ddoData.city || '',
@@ -158,10 +158,10 @@ export default function DDOProfilePage() {
       return;
     }
     
-    // Validate DDO Name
-    const ddoNameValidation = validateName(formData.ddoName, 'DDO Name');
-    if (!ddoNameValidation.valid) {
-      toast.error(ddoNameValidation.message);
+    // Validate Full Name
+    const fullNameValidation = validateName(formData.fullName, 'Full Name');
+    if (!fullNameValidation.valid) {
+      toast.error(fullNameValidation.message);
       return;
     }
     
@@ -223,7 +223,7 @@ export default function DDOProfilePage() {
     try {
       const payload = {
         ddoCode: formData.ddoCode,
-        ddoName: formData.ddoName,
+        fullName: formData.fullName,
         area: formData.area || '',
         address: formData.address || '',
         city: formData.city || '',
@@ -357,15 +357,15 @@ export default function DDOProfilePage() {
                     {isEditing ? (
                       <input
                         type="text"
-                        name="ddoName"
-                        value={formData.ddoName}
+                        name="fullName"
+                        value={formData.fullName}
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter DDO name"
                       />
                     ) : (
                       <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium">{formData.ddoName}</p>
+                        <p className="text-[var(--color-text-primary)] font-medium">{formData.fullName}</p>
                       </div>
                     )}
                   </div>

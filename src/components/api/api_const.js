@@ -70,8 +70,14 @@ export const API_ENDPOINTS = {
   BILL_DETAIL: `${API_BASE_URL}/bill/detail/`,
   BILL_SUBMIT: `${API_BASE_URL}/bill/submit`,
   BILL_APPROVE: `${API_BASE_URL}/bill/approve/`,
-  BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
+BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
   BILL_DELETE: `${API_BASE_URL}/bill/delete/`,
+  
+  // Invoice Number Generation
+  GENERATE_INVOICE_NUMBER: `${API_BASE_URL}/invoices/generate-number`,
+  
+  // Get Current GST Details of DDO
+  GET_CURRENT_GST_OF_DDO: `${API_BASE_URL}/user/getCurrentGstOfDdo`,
   
   // Credit Note Endpoints
   CREDIT_NOTE_ADD: `${API_BASE_URL}/creditnote/add`,
