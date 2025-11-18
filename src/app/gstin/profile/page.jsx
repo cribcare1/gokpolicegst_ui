@@ -319,36 +319,20 @@ export default function GstinProfilePage() {
                     <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
                       GSTIN Number
                     </label>
-                    {isEditing && gstinList.length > 0 ? (
-                      <select
+                    {isEditing ? (
+                      <input
+                        type="text"
                         name="gstinNumber"
                         value={formData.gstinNumber || ''}
                         onChange={handleChange}
+                        maxLength={15}
                         className="premium-input w-full px-4 py-3 text-base uppercase"
-                      >
-                        <option value="">Select GSTIN Number</option>
-                        {gstinList.map((gstin) => (
-                          <option key={gstin.value} value={gstin.value}>
-                            {gstin.label}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Enter GSTIN number"
+                      />
                     ) : (
-                      isEditing ? (
-                        <input
-                          type="text"
-                          name="gstinNumber"
-                          value={formData.gstinNumber || ''}
-                          onChange={handleChange}
-                          maxLength={15}
-                          className="premium-input w-full px-4 py-3 text-base uppercase"
-                          placeholder="Enter GSTIN number"
-                        />
-                      ) : (
-                        <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                          <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.gstinNumber || '-'}</p>
-                        </div>
-                      )
+                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                        <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.gstinNumber || '-'}</p>
+                      </div>
                     )}
                   </div>
                 </div>

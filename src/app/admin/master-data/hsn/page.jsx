@@ -1126,7 +1126,7 @@ export default function HSNRecordsPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
-              <span className="gradient-text">HSN Master</span>
+              <span className="gradient-text">HSN/SSC</span>
             </h1>
             <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
               Manage hsn master efficiently
