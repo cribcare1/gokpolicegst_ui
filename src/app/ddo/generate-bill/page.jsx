@@ -13,13 +13,14 @@ import { Plus, Trash2, X, Download, Printer, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function GenerateBillPage() {
   const [customers, setCustomers] = useState([]);
   const [hsnList, setHsnList] = useState([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   // Bill Details
   const [billDetails, setBillDetails] = useState({
     gstinNumber: '29AAAG01111W1ZB',
@@ -32,6 +33,7 @@ export default function GenerateBillPage() {
   
   // Customer
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [gstDetails, setGstDetails] = useState(null);
   const [customerType, setCustomerType] = useState('Govt'); // Govt or Non Govt
   const [invoiceType, setInvoiceType] = useState('FCM'); // RCM, FCM, or EXEMPTED
   const [taxPayableReverseCharge, setTaxPayableReverseCharge] = useState('YES'); // YES, NO, NA
@@ -45,6 +47,9 @@ export default function GenerateBillPage() {
     mobile: '',
     email: '',
     customerType: 'Non Govt',
+    customerType: '',
+    exemptionCertNumber: '',
+    city: '',
   });
   
   // Line Items
@@ -70,15 +75,17 @@ export default function GenerateBillPage() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [note, setNote] = useState('');
   const [notificationDetails, setNotificationDetails] = useState('');
-  
-  const [loading, setLoading] = useState(false);
+  const [ddoDetails, setDdoDetails] = useState('');
+  const [loading, setLoading] = useState(true);
   const [currentLang, setCurrentLang] = useState('en');
   const { gstinList } = useGstinList();
 
   useEffect(() => {
+    fetchGSTDetails();
+    getDdoDetails();
     fetchCustomers();
     fetchHSNList();
-    loadDDOInfo();
+    // loadDDOInfo();
     setCurrentLang(getLanguage());
     
     // Listen for language changes
@@ -138,27 +145,99 @@ export default function GenerateBillPage() {
     }
   }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList]);
 
-  const loadDDOInfo = () => {
-    const ddoCode = localStorage.getItem('ddoCode') || '0200PO0032';
-    const ddoName = localStorage.getItem('ddoUserName') || 'DCP CAR HQ';
-    setBillDetails(prev => ({
-      ...prev,
-      ddoCode,
-    }));
-  };
 
+  function  getDdoDetails() {
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+          console.log("storedprfole", storedProfile);
+          if (storedProfile) {
+            try {
+              // Check if the value looks like JSON (starts with { or [)
+              const trimmedValue = storedProfile.trim();
+              if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+                const userProfile = JSON.parse(storedProfile);
+                console.log("userProfile", userProfile);
+                // If data exists and not empty
+                if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+                  console.log("userProfile=====called");
+                  setDdoDetails(userProfile);
+                  return;
+                }
+              }
+              // If not valid JSON or empty, fetch from API
+              // fetchProfileData();
+            } catch (error) {
+              // If JSON parsing fails, fetch from API
+              console.error('Error parsing stored profile data:', error);
+              // fetchProfileData();
+            }
+          }
+  }
   const fetchCustomers = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.CUSTOMER_LIST);
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
       if (response && response.status === 'success') {
         setCustomers(response.data || []);
         // Auto-select first customer for demo
         if (response.data && response.data.length > 0) {
           setSelectedCustomer(response.data[0]);
         }
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchGSTDetails = async () => {
+    try {
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GET_CURRENT_GST_OF_DDO}?ddoId=${ddoId}`);
+      if (response) {
+          setGstDetails(response || []);
+       setLoading(false);
+       fetchInvoiceNumber(response.gstId);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setLoading(false);
+    }
+  };
+
+    const fetchInvoiceNumber = async (gstId) => {
+    try {
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`); //invoices/generate-number?ddoId=16&gstId=5
+      if (response && response.status === 'success') {
+        setInvoiceNumber(response?.invoiceNumber || '');
+        // Auto-select first customer for demo
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setLoading(false);
     }
   };
 
@@ -172,6 +251,8 @@ export default function GenerateBillPage() {
       console.error('Error fetching HSN list:', error);
     }
   };
+
+
 
   const calculateGSTAmount = () => {
     if (!selectedCustomer) {
@@ -236,63 +317,103 @@ export default function GenerateBillPage() {
 
   const handleAddCustomer = async (e) => {
     e.preventDefault();
+    console.log("handleAddCustomer called");
+    const nameValidation = validateName(newCustomer.name, 'Customer Name');
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
     
-    // Validate all fields
-    const validations = [
-      validateName(newCustomer.name, 'Customer Name'),
-      validateGSTIN(newCustomer.gstNumber),
-      validateAddress(newCustomer.address),
-      validateStateCode(newCustomer.stateCode),
-      validatePIN(newCustomer.pin),
-      validateMobile(newCustomer.mobile),
-      validateEmail(newCustomer.email)
-    ];
-
-    for (const validation of validations) {
-      if (!validation.valid) {
-        toast.error(validation.message);
-        return;
-      }
+    // Validate GSTIN
+    const gstValidation = validateGSTIN(newCustomer.gstNumber);
+    if (!gstValidation.valid) {
+      toast.error(gstValidation.message);
+      return;
+    }
+    
+    // Validate Address
+    const addressValidation = validateAddress(newCustomer.address);
+    if (!addressValidation.valid) {
+      toast.error(addressValidation.message);
+      return;
+    }
+    
+    // Validate City
+    const cityValidation = validateCity(newCustomer.city);
+    if (!cityValidation.valid) {
+      toast.error(cityValidation.message);
+      return;
+    }
+    
+    // Validate State Code
+    const stateCodeValidation = validateStateCode(newCustomer.stateCode);
+    if (!stateCodeValidation.valid) {
+      toast.error(stateCodeValidation.message);
+      return;
+    }
+    
+    // Validate PIN
+    const pinValidation = validatePIN(newCustomer.pin);
+    if (!pinValidation.valid) {
+      toast.error(pinValidation.message);
+      return;
+    }
+    
+    // Validate Email
+    const emailValidation = validateEmail(newCustomer.email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.message);
+      return;
+    }
+    
+    // Validate Mobile
+    const mobileValidation = validateMobile(newCustomer.mobile);
+    if (!mobileValidation.valid) {
+      toast.error(mobileValidation.message);
+      return;
     }
 
     try {
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        return;
+      }
+
+      // Map form data to API payload format
+      const payload = {
+        ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
+        customerName: newCustomer.name,
+        customerType: newCustomer.customerType === 'Govt' ? 'gov' : 'non-gov',
+        customerEmail: newCustomer.email,
+        address: newCustomer.address,
+        pinCode: newCustomer.pin,
+        stateCode: newCustomer.stateCode,
+        gstNumber: newCustomer.gstNumber,
+        city: newCustomer.city,
+        mobile: newCustomer.mobile,
+        exemptionNumber: newCustomer.exemptionCertNumber || '',
+        ddoId: parseInt(ddoId, 10),
+      };
+
       const response = await ApiService.handlePostRequest(
-        API_ENDPOINTS.CUSTOMER_ADD,
-        newCustomer
+        API_ENDPOINTS.CUSTOMER_ADD_OR_EDIT,
+        payload
       );
       
       if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
-        setShowCustomerModal(false);
-        setNewCustomer({
-          name: '',
-          gstNumber: '',
-          address: '',
-          stateCode: '',
-          pin: '',
-          mobile: '',
-          email: '',
-        });
-        // Refresh customers list and select the newly added customer
-        const updatedResponse = await ApiService.handleGetRequest(API_ENDPOINTS.CUSTOMER_LIST);
-        if (updatedResponse && updatedResponse.status === 'success') {
-          setCustomers(updatedResponse.data || []);
-          // Select the newly added customer (it should be the last one or match by GSTIN)
-          if (updatedResponse.data && updatedResponse.data.length > 0) {
-            const newCustomerData = updatedResponse.data.find(c => c.gstNumber === newCustomer.gstNumber) || updatedResponse.data[updatedResponse.data.length - 1];
-            if (newCustomerData) {
-              setSelectedCustomer(newCustomerData);
-            }
-          }
-        } else {
-          fetchCustomers();
-        }
+        toast.success(response.message || t('alert.success'));
+        setIsModalOpen(false);
+        fetchCustomers();
       } else {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
+      console.error('Error saving customer:', error);
       toast.error(t('alert.error'));
     }
+  
   };
 
   const handleAddLineItem = () => {
@@ -329,8 +450,8 @@ export default function GenerateBillPage() {
     const validations = [
       validateGSTIN(billDetails.gstinNumber),
       { valid: billDetails.gstAddress?.trim(), message: t('bill.gstAddressRequired') },
-      { valid: billDetails.ddoCode?.trim(), message: t('bill.ddoCodeRequired') },
-      validateBillNumber(billDetails.billNumber),
+      { valid: ddoDetails.ddoCode?.trim(), message: t('bill.ddoCodeRequired') },
+      validateBillNumber(invoiceNumber),
       validateBillDate(billDetails.date),
       { valid: selectedCustomer, message: t('bill.selectCustomerRequired') },
       { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') }
@@ -419,8 +540,8 @@ export default function GenerateBillPage() {
     const printHTML = `
       <!DOCTYPE html>
       <html>
-        <head>
-          <title>Tax Invoice - ${billDetails.billNumber}</title>
+        <head>billNumber
+          <title>Tax Invoice - ${invoiceNumber}</title>
           <meta charset="utf-8">
           <style>
             * {
@@ -676,12 +797,12 @@ export default function GenerateBillPage() {
               <img src="${logoSrc}" alt="Bengaluru City Police Logo" />
             </div>
             <div class="org-name">
-              Government of Karnataka - Office of the Director General & Inspector General of Police, Karnataka
+              {gstDetails.gstName}
             </div>
-            <div class="org-details">No.1, Police Head Quarters, Nrupathunga Road</div>
-            <div class="org-details">Opp: Martha's Hospital, Bengaluru-560001</div>
-            <div class="org-details">Contact No : 080-22535100 , Copadmin@ksp.gov.in</div>
-            <div class="gstin">GSTIN : ${billDetails.gstinNumber}</div>
+            <div class="org-details">{gstDetails.address}</div>
+            <div class="org-details">{gstDetails.city} - {gstDetails.pinCode}</div>
+            <div class="org-details">Contact No : {gstDetails.mobile} , {gstDetails.email}</div>
+            <div class="gstin">GSTIN : {gstDetails.gstNumber}</div>
           </div>
 
           <!-- Invoice Title -->
@@ -692,21 +813,21 @@ export default function GenerateBillPage() {
             <div class="bill-section">
               <div class="section-title">Details of Service Receiver (BILL TO)</div>
               <div class="section-content"><strong>Customer Type:</strong> <span style="color: #2C5F2D; font-weight: bold;">${customerType}</span></div>
-              <div class="section-content"><strong>M/s:</strong> ${selectedCustomer?.name || 'Karnataka Education Board'}</div>
-              <div class="section-content">${selectedCustomer?.address || 'O/o GOK Education Board, 1ST FLOOR, Bengaluru-560016'}</div>
+              <div class="section-content"><strong>M/s:</strong> ${selectedCustomer?.customerName || ''}</div>
+              <div class="section-content">${selectedCustomer?.address || ''}</div>
               <div class="section-content"><strong>GSTIN:</strong> ${selectedCustomer?.gstNumber || ''}</div>
-              ${exemptionNo ? `<div class="section-content"><strong>Exemption No:</strong> ${exemptionNo}</div>` : ''}
-              <div class="section-content"><strong>State Code:</strong> ${selectedCustomer?.stateCode || '29'}</div>
+              ${exemptionNo ? `<div class="section-content"><strong>Exemption No:</strong> ${selectedCustomer?.exemptionNumber || ''}</div>` : ''}
+              <div class="section-content"><strong>State Code:</strong> ${selectedCustomer?.stateCode || ''}</div>
               <div class="section-content"><strong>Exempted Service / RCM / FCM:</strong> <span style="color: #2C5F2D; font-weight: bold;">${invoiceType}</span></div>
             </div>
             <div class="bill-section">
               <div class="section-title">Invoice Details</div>
-              <div class="section-content"><strong>Invoice No:</strong> ${billDetails.billNumber}</div>
+              <div class="section-content"><strong>Invoice No:</strong> ${invoiceNumber}</div>
               <div class="section-content"><strong>Invoice Date:</strong> ${formatDate(billDetails.date)}</div>
               <div class="section-content"><strong>Place of Supply:</strong> ${billDetails.placeOfSupply || 'Bengaluru'}</div>
-              <div class="section-content"><strong>DDO Code:</strong> ${billDetails.ddoCode}</div>
-              <div class="section-content"><strong>DDO Name:</strong> DCP CAR HQ</div>
-              <div class="section-content"><strong>DDO City/District:</strong> Bengaluru</div>
+              <div class="section-content"><strong>DDO Code:</strong> ${ddoDetails.ddoCode}</div>
+              <div class="section-content"><strong>DDO Name:</strong> ${ddoDetails.fullName}</div>
+              <div class="section-content"><strong>DDO City/District:</strong> ${ddoDetails.city}</div>
             </div>
           </div>
 
@@ -919,20 +1040,20 @@ export default function GenerateBillPage() {
               {/* Header Text Section - Centered */}
               <div className="text-center max-w-4xl">
                 <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[var(--color-text-primary)] mb-3 leading-relaxed">
-                  Government of Karnataka - Office of the Director General & Inspector General of Police, Karnataka
+                   {gstDetails?.gstName||''}
                 </h1>
                 <div className="space-y-2 text-[var(--color-text-secondary)]">
                   <p className="text-xs sm:text-sm md:text-base">
-                    No.1, Police Head Quarters, Nrupathunga Road
+                   {gstDetails?.address||''}
                   </p>
                   <p className="text-xs sm:text-sm md:text-base">
-                    Opp: Martha's Hospital, Bengaluru-560001
+                    {gstDetails?.city||''} - {gstDetails?.pinCode||''}
                   </p>
                   <p className="text-xs sm:text-sm md:text-base">
-                    Contact No : 080-22535100 , Copadmin@ksp.gov.in
+                    Contact No : {gstDetails?.mobile||''} , {gstDetails?.email||''}
                   </p>
                   <p className="text-sm sm:text-base md:text-lg font-semibold text-[var(--color-primary)] mt-3">
-                    GSTIN : {billDetails.gstinNumber}
+                    GSTIN : {gstDetails?.gstNumber||''}
                   </p>
                 </div>
               </div>
@@ -970,7 +1091,7 @@ export default function GenerateBillPage() {
                   <option value="">{t('bill.selectCustomerPlaceholder')}</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.gstNumber || t('common.noGstin')}
+                      {customer.customerName} - {customer.gstNumber || t('common.noGstin')}
                     </option>
                   ))}
                 </select>
@@ -987,33 +1108,20 @@ export default function GenerateBillPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">{t('bill.customerType')}</label>
-                <div className="premium-input w-full px-4 py-3 bg-[var(--color-muted)] border border-[var(--color-border)] rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      customerType === 'Govt'
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
-                        : 'border-[var(--color-border)] bg-transparent'
-                    }`}>
-                      {customerType === 'Govt' && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                    <span className={`font-medium ${
-                      customerType === 'Govt'
-                        ? 'text-[var(--color-primary)]'
-                        : 'text-[var(--color-text-secondary)]'
-                    }`}>
-                      {customerType}
-                    </span>
-                  </div>
-                </div>
+              <input
+                  type="text"
+                  value={selectedCustomer?.customerType || ''}
+                  readOnly
+                  className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
+                  placeholder={t('bill.customerType')}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('common.ms')}</label>
                 <input
                   type="text"
-                  value={selectedCustomer?.name || ''}
+                  value={selectedCustomer?.customerName || ''}
                   readOnly
                   className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   placeholder={t('bill.customerName')}
@@ -1046,9 +1154,10 @@ export default function GenerateBillPage() {
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.exemptionNo')}</label>
                   <input
                     type="text"
-                    value={exemptionNo}
+                    value={selectedCustomer?.exemptionNumber || ''}
+                    readOnly
                     onChange={(e) => setExemptionNo(e.target.value)}
-                    className="premium-input w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded"
+                    className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                     placeholder={t('bill.exemptionNoPlaceholder')}
                   />
                 </div>
@@ -1058,7 +1167,7 @@ export default function GenerateBillPage() {
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.stateCode')}</label>
                 <input
                   type="text"
-                  value={selectedCustomer?.stateCode || '29'}
+                  value={selectedCustomer?.stateCode || ''}
                   readOnly
                   className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                 />
@@ -1094,7 +1203,7 @@ export default function GenerateBillPage() {
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.invoiceNo')}</label>
                   <input
                     type="text"
-                    value={billDetails.billNumber}
+                    value={invoiceNumber}
                     readOnly
                     className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   />
@@ -1125,7 +1234,7 @@ export default function GenerateBillPage() {
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.ddoCode')}</label>
                   <input
                     type="text"
-                    value={billDetails.ddoCode}
+                    value={ddoDetails.ddoCode}
                     readOnly
                     className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   />
@@ -1134,7 +1243,7 @@ export default function GenerateBillPage() {
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('label.ddoName')}</label>
                   <input
                     type="text"
-                    value="DCP CAR HQ"
+                    value={ddoDetails.fullName}
                     readOnly
                     className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                   />
@@ -1145,7 +1254,7 @@ export default function GenerateBillPage() {
                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]">{t('bill.ddoCityDistrict')}</label>
                 <input
                   type="text"
-                  value="Bengaluru"
+                  value={ddoDetails.city}
                   readOnly
                   className="premium-input w-full px-3 py-2 bg-[var(--color-muted)] border border-[var(--color-border)] rounded"
                 />
@@ -1491,166 +1600,176 @@ export default function GenerateBillPage() {
         </div>
 
         {/* Add Customer Modal */}
-        <Modal
-          isOpen={showCustomerModal}
-          onClose={() => setShowCustomerModal(false)}
-          title={t('bill.addNewCustomer')}
-          size="lg"
-        >
-          <form onSubmit={handleAddCustomer} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.customerNameRequired')}
-                </label>
-                <input
-                  type="text"
-                  value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder={t('bill.enterCustomerName')}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.gstinNumberRequired')}
-                </label>
-                <input
-                  type="text"
-                  value={newCustomer.gstNumber}
-                  onChange={(e) => setNewCustomer({...newCustomer, gstNumber: e.target.value.toUpperCase()})}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg uppercase"
-                  placeholder="29XXXXXXXXXXXXX"
-                  maxLength={15}
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                {t('bill.addressRequired')}
-              </label>
-              <textarea
-                value={newCustomer.address}
-                onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
-                className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none"
-                rows="3"
-                placeholder={t('bill.enterCompleteAddress')}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.stateCodeRequired')}
-                </label>
-                <input
-                  type="number"
-                  value={newCustomer.stateCode}
-                  onChange={(e) => setNewCustomer({...newCustomer, stateCode: e.target.value})}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder="29"
-                  min="1"
-                  max="99"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.pinCodeRequired')}
-                </label>
-                <input
-                  type="text"
-                  value={newCustomer.pin}
-                  onChange={(e) => setNewCustomer({...newCustomer, pin: e.target.value.replace(/\D/g, '').slice(0, 6)})}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-                    setNewCustomer({...newCustomer, pin: pastedText});
-                  }}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder="560001"
-                  maxLength={6}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.mobileNumberRequired')}
-                </label>
-                <input
-                  type="text"
-                  value={newCustomer.mobile}
-                  onChange={(e) => setNewCustomer({...newCustomer, mobile: e.target.value.replace(/\D/g, '').slice(0, 10)})}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                    setNewCustomer({...newCustomer, mobile: pastedText});
-                  }}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder="9876543210"
-                  maxLength={10}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-                  {t('bill.emailRequired')}
-                </label>
-                <input
-                  type="email"
-                  value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-                  className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder="customer@example.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-4 pt-6 border-t border-[var(--color-border)]">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowCustomerModal(false);
-                  setNewCustomer({
-                    name: '',
-                    gstNumber: '',
-                    address: '',
-                    stateCode: '',
-                    pin: '',
-                    mobile: '',
-                    email: '',
-                  });
-                }}
-                className="px-6 py-2"
-              >
-                {t('btn.cancel')}
-              </Button>
-              <Button type="submit" variant="primary" className="px-6 py-2">
-                {t('btn.addCustomer')}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+         <Modal
+                  isOpen={showPreviewModal}
+                  onClose={() => setShowPreviewModal(false)}
+                   title={t('bill.billPreview')}
+                  size="lg"
+                >
+                  <form onSubmit={handleAddCustomer} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Customer Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.name}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {t('label.gstin')} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.gstNumber}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase().slice(0, 15) })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        maxLength={15}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {t('label.address')} <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={newCustomer.address}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.city}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        State Code <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={newCustomer.stateCode}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, stateCode: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        required
+                      >
+                        <option value="">Select State Code</option>
+                        {getAllStates().map((state) => (
+                          <option key={state.code} value={state.code}>
+                            {state.code} - {state.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        PIN Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.pin}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                          setNewCustomer({ ...newCustomer, pin: pastedText });
+                        }}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Type of Customer <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={newCustomer.customerType}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, customerType: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        required
+                      >
+                        <option value="">Select Type</option>
+                        <option value="Govt">Govt</option>
+                        <option value="Non Govt">Non Govt</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Exemption Certificate Number
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.exemptionCertNumber}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, exemptionCertNumber: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        placeholder="Enter alphanumeric certificate number"
+                        pattern="[A-Za-z0-9]*"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {t('label.mobile')} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={newCustomer.mobile}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                          setNewCustomer({ ...newCustomer, mobile: pastedText });
+                        }}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        maxLength={10}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {t('label.email')} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={newCustomer.email}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                        required
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-3 pt-4">
+                      <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+                        {t('btn.cancel')}
+                      </Button>
+                      <Button type="submit" variant="primary">
+                        {t('btn.save')}
+                      </Button>
+                    </div>
+                  </form>
+                </Modal>
 
         {/* Bill Preview Modal */}
         <Modal
@@ -1682,13 +1801,13 @@ export default function GenerateBillPage() {
                   {/* Header Text Section - Centered */}
                   <div className="text-center max-w-5xl">
                     <h1 className="text-xl font-bold mb-4 leading-relaxed text-gray-800">
-                      Government of Karnataka - Office of the Director General & Inspector General of Police, Karnataka
+                     {gstDetails?.gstName||''}
                     </h1>
                     <div className="space-y-2 text-gray-700">
-                      <p className="text-base">No.1, Police Head Quarters, Nrupathunga Road</p>
-                      <p className="text-base">Opp: Martha's Hospital, Bengaluru-560001</p>
-                      <p className="text-base">Contact No : 080-22535100 , Copadmin@ksp.gov.in</p>
-                      <p className="text-lg font-bold text-[#2C5F2D] mt-4">GSTIN : {billDetails.gstinNumber}</p>
+                      <p className="text-base">{gstDetails?.address||''}</p>
+                      <p className="text-base">{gstDetails?.city||''} - {gstDetails?.pinCode||''}</p>
+                      <p className="text-base">Contact No : {gstDetails?.mobile||''} , {gstDetails?.email||''}</p>
+                      <p className="text-lg font-bold text-[#2C5F2D] mt-4">GSTIN : {gstDetails?.gstNumber||''}</p>
                     </div>
                   </div>
                 </div>
@@ -1707,11 +1826,11 @@ export default function GenerateBillPage() {
                   <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-gray-300 pb-2">{t('bill.serviceReceiver')} (BILL TO)</h3>
                   <div className="space-y-2">
                     <p className="mb-2"><strong>{t('bill.customerType')}:</strong> <span className="text-[#2C5F2D] font-semibold">{customerType}</span></p>
-                    <p className="font-bold mb-2 text-lg">{t('common.ms')} {selectedCustomer?.name || 'Karnataka Education Board'}</p>
-                    <p className="mb-2 leading-relaxed">{selectedCustomer?.address || 'O/o GOK Education Board, 1ST FLOOR, Bengaluru-560016'}</p>
+                    <p className="font-bold mb-2 text-lg">{t('common.ms')} {selectedCustomer?.name || ''}</p>
+                    <p className="mb-2 leading-relaxed">{selectedCustomer?.address || ''}</p>
                     <p className="mb-2"><strong>{t('label.gstin')}:</strong> {selectedCustomer?.gstNumber || ''}</p>
-                    {exemptionNo && <p className="mb-2"><strong>{t('bill.exemptionNo')}:</strong> {exemptionNo}</p>}
-                    <p className="mb-2"><strong>{t('label.stateCode')}:</strong> {selectedCustomer?.stateCode || '29'}</p>
+                    <p className="mb-2"><strong>{t('bill.exemptionNo')}:</strong> {selectedCustomer?.exemptionNumber||''}</p>
+                    <p className="mb-2"><strong>{t('label.stateCode')}:</strong> {selectedCustomer?.stateCode || ''}</p>
                     <p className="font-bold mb-2 text-[#2C5F2D]"><strong>{t('bill.exemptedService')} / RCM / FCM:</strong> {invoiceType}</p>
                   </div>
                 </div>
@@ -1722,7 +1841,7 @@ export default function GenerateBillPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="font-semibold text-gray-700">{t('bill.invoiceNo')}</p>
-                        <p className="text-lg font-bold">{billDetails.billNumber}</p>
+                        <p className="text-lg font-bold">{invoiceNumber}</p>
                       </div>
                       <div>
                         <p className="font-semibold text-gray-700">{t('bill.invoiceDate')}</p>
@@ -1736,16 +1855,16 @@ export default function GenerateBillPage() {
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
                         <p className="font-semibold text-gray-700">{t('label.ddoCode')}</p>
-                        <p className="font-bold">{billDetails.ddoCode}</p>
+                        <p className="font-bold">{ddoDetails.ddoCode}</p>
                       </div>
                       <div>
                         <p className="font-semibold text-gray-700">{t('label.ddoName')}</p>
-                        <p className="font-bold">DCP CAR HQ</p>
+                        <p className="font-bold">{ddoDetails.fullName}</p>
                       </div>
                     </div>
                     <div className="mt-4">
                       <p className="font-semibold text-gray-700">{t('bill.ddoCityDistrict')}</p>
-                      <p className="font-bold">Bengaluru</p>
+                      <p className="font-bold">{ddoDetails.city}</p>
                     </div>
                   </div>
                 </div>
