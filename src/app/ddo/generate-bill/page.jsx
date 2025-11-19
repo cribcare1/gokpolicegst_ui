@@ -8,7 +8,7 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t, getLanguage } from '@/lib/localization';
 import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode, isGovernmentGSTIN, isGovernmentPAN } from '@/lib/gstUtils';
-import { getAllStates } from '@/lib/stateCodes';
+import { getAllStates, getStateCodeFromGSTIN } from '@/lib/stateCodes';
 import { Plus, Trash2, X, Download, Printer, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar, LoadingProgressBar } from '@/components/shared/ProgressBar';
@@ -184,10 +184,20 @@ export default function GenerateBillPage() {
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
       if (response && response.status === 'success') {
-        setCustomers(response.data || []);
+        // Extract state code from GSTIN for each customer
+        const customersWithStateCode = (response.data || []).map(customer => {
+          if (customer.gstNumber && customer.gstNumber.length >= 2) {
+            const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
+            if (stateCode) {
+              customer.stateCode = stateCode.toString();
+            }
+          }
+          return customer;
+        });
+        setCustomers(customersWithStateCode);
         // Auto-select first customer for demo
-        if (response.data && response.data.length > 0) {
-          setSelectedCustomer(response.data[0]);
+        if (customersWithStateCode.length > 0) {
+          setSelectedCustomer(customersWithStateCode[0]);
         }
         setLoading(false);
       }
@@ -426,19 +436,29 @@ export default function GenerateBillPage() {
         // Refresh customers list and select the newly added customer
         const updatedResponse = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
         if (updatedResponse && updatedResponse.status === 'success') {
-          const mappedCustomers = updatedResponse.data.map((customer) => ({
-            id: customer.id,
-            name: customer.customerName || '',
-            gstNumber: customer.gstNumber || '',
-            address: customer.address || '',
-            city: customer.city || '',
-            stateCode: customer.stateCode || '',
-            pin: customer.pinCode || '',
-            customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
-            exemptionCertNumber: customer.exemptionNumber || '',
-            mobile: customer.mobile || '',
-            email: customer.customerEmail || '',
-          }));
+          const mappedCustomers = updatedResponse.data.map((customer) => {
+            // Extract state code from GSTIN if available
+            let stateCode = customer.stateCode || '';
+            if (customer.gstNumber && customer.gstNumber.length >= 2) {
+              const extractedStateCode = getStateCodeFromGSTIN(customer.gstNumber);
+              if (extractedStateCode) {
+                stateCode = extractedStateCode.toString();
+              }
+            }
+            return {
+              id: customer.id,
+              name: customer.customerName || '',
+              gstNumber: customer.gstNumber || '',
+              address: customer.address || '',
+              city: customer.city || '',
+              stateCode: stateCode,
+              pin: customer.pinCode || '',
+              customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
+              exemptionCertNumber: customer.exemptionNumber || '',
+              mobile: customer.mobile || '',
+              email: customer.customerEmail || '',
+            };
+          });
           setCustomers(mappedCustomers);
           // Select the newly added customer (it should be the last one or match by GSTIN)
           if (mappedCustomers && mappedCustomers.length > 0) {
@@ -1140,7 +1160,18 @@ export default function GenerateBillPage() {
                     }
                     // Convert both to string for comparison to handle number/string ID types
                     const customer = customers.find(c => String(c.id) === String(selectedId));
-                    setSelectedCustomer(customer || null);
+                    if (customer) {
+                      // Extract state code from GSTIN if available
+                      if (customer.gstNumber && customer.gstNumber.length >= 2) {
+                        const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
+                        if (stateCode) {
+                          customer.stateCode = stateCode.toString();
+                        }
+                      }
+                      setSelectedCustomer(customer);
+                    } else {
+                      setSelectedCustomer(null);
+                    }
                   }}
                   className="premium-input w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
                 >
@@ -1679,7 +1710,24 @@ export default function GenerateBillPage() {
               <input
                 type="text"
                 value={newCustomer.gstNumber}
-                onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase().slice(0, 15) })}
+                onChange={(e) => {
+                  const upperValue = e.target.value.toUpperCase().slice(0, 15);
+                  let updatedCustomer = { ...newCustomer, gstNumber: upperValue };
+                  
+                  // Extract state code from first 2 characters
+                  if (upperValue.length >= 2) {
+                    const stateCode = getStateCodeFromGSTIN(upperValue);
+                    if (stateCode) {
+                      updatedCustomer.stateCode = stateCode.toString();
+                    } else {
+                      updatedCustomer.stateCode = '';
+                    }
+                  } else {
+                    updatedCustomer.stateCode = '';
+                  }
+                  
+                  setNewCustomer(updatedCustomer);
+                }}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                 maxLength={15}
                 required
@@ -1716,8 +1764,9 @@ export default function GenerateBillPage() {
               <select
                 value={newCustomer.stateCode}
                 onChange={(e) => setNewCustomer({ ...newCustomer, stateCode: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
                 required
+                disabled
               >
                 <option value="">Select State Code</option>
                 {getAllStates().map((state) => (
