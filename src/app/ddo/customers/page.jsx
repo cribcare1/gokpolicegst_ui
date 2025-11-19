@@ -8,7 +8,7 @@ import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
 import { validateGSTIN, validateEmail, validateMobile, validatePIN, validateName, validateAddress, validateCity, validateStateCode, validateExemptionCert } from '@/lib/gstUtils';
-import { getAllStates } from '@/lib/stateCodes';
+import { getAllStates, getStateCodeFromGSTIN } from '@/lib/stateCodes';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ export default function CustomersPage() {
     stateCode: '',
     pin: '',
     customerType: '',
+    serviceType: '',
     exemptionCertNumber: '',
     mobile: '',
     email: '',
@@ -79,7 +80,8 @@ export default function CustomersPage() {
           city: customer.city||'', // Not in API response, keeping for compatibility
           stateCode: customer.stateCode || '',
           pin: customer.pinCode || '',
-          customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' ? 'Govt' : 'Non Govt',
+          customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' || customer.customerType === 'Government' ? 'Government' : 'Non-Government',
+          serviceType: customer.serviceType || '',
           exemptionCertNumber: customer.exemptionNumber || '',
           mobile: customer.mobile||'', // Not in API response, keeping for compatibility
           email: customer.customerEmail || '',
@@ -114,6 +116,7 @@ export default function CustomersPage() {
       stateCode: '',
       pin: '',
       customerType: '',
+      serviceType: '',
       exemptionCertNumber: '',
       mobile: '',
       email: '',
@@ -132,6 +135,7 @@ export default function CustomersPage() {
       stateCode: customer.stateCode || '',
       pin: customer.pin || '',
       customerType: customer.customerType || '',
+      serviceType: customer.serviceType || '',
       exemptionCertNumber: customer.exemptionCertNumber || '',
       mobile: customer.mobile || '',
       email: customer.email || '',
@@ -143,7 +147,7 @@ export default function CustomersPage() {
     if (!confirm('Are you sure you want to delete this customer?')) return;
     
     try {
-      const response = await ApiService.handleDeleteRequestClient(
+      const response = await ApiService.handlePostRequest(
         `${API_ENDPOINTS.CUSTOMER_DELETE_BY_ID}${customer.id}`
       );
       
@@ -159,6 +163,39 @@ export default function CustomersPage() {
     }
   };
 
+  const handleGSTINChange = (value) => {
+    const upperValue = value.toUpperCase().slice(0, 15);
+    let updatedFormData = { ...formData, gstNumber: upperValue };
+    
+    // Extract state code from first 2 characters
+    if (upperValue.length >= 2) {
+      const stateCode = getStateCodeFromGSTIN(upperValue);
+      if (stateCode) {
+        updatedFormData.stateCode = stateCode.toString();
+      } else {
+        updatedFormData.stateCode = '';
+      }
+    } else {
+      // Reset state code if GSTIN is less than 2 characters
+      updatedFormData.stateCode = '';
+    }
+    
+    // Check 6th character (index 5) if GSTIN has at least 6 characters
+    if (upperValue.length >= 6) {
+      const sixthChar = upperValue.charAt(5);
+      if (sixthChar === 'G') {
+        updatedFormData.customerType = 'Government';
+      } else {
+        updatedFormData.customerType = 'Non-Government';
+      }
+    } else {
+      // Reset customer type if GSTIN is less than 6 characters
+      updatedFormData.customerType = '';
+    }
+    
+    setFormData(updatedFormData);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("submit called");
@@ -169,11 +206,13 @@ export default function CustomersPage() {
       return;
     }
     
-    // Validate GSTIN
-    const gstValidation = validateGSTIN(formData.gstNumber);
-    if (!gstValidation.valid) {
-      toast.error(gstValidation.message);
-      return;
+    // Validate GSTIN (optional - only validate if provided)
+    if (formData.gstNumber && formData.gstNumber.trim() !== '') {
+      const gstValidation = validateGSTIN(formData.gstNumber);
+      if (!gstValidation.valid) {
+        toast.error(gstValidation.message);
+        return;
+      }
     }
     
     // Validate Address
@@ -201,6 +240,12 @@ export default function CustomersPage() {
     const pinValidation = validatePIN(formData.pin);
     if (!pinValidation.valid) {
       toast.error(pinValidation.message);
+      return;
+    }
+    
+    // Validate Service Type
+    if (!formData.serviceType || formData.serviceType.trim() === '') {
+      toast.error('Service Type is required');
       return;
     }
     
@@ -239,15 +284,16 @@ export default function CustomersPage() {
       const payload = {
         ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
         customerName: formData.name,
-        customerType: formData.customerType === 'Govt' ? 'gov' : 'non-gov',
+        customerType: formData.customerType === 'Government' ? 'gov' : 'non-gov',
         customerEmail: formData.email,
         address: formData.address,
         pinCode: formData.pin,
         stateCode: formData.stateCode,
-        gstNumber: formData.gstNumber,
+        gstNumber: formData.gstNumber || '',
         city: formData.city,
         mobile: formData.mobile,
         exemptionNumber: formData.exemptionCertNumber || '',
+        serviceType: formData.serviceType,
         ddoId: parseInt(ddoId, 10),
       };
 
@@ -373,15 +419,14 @@ export default function CustomersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                {t('label.gstin')} <span className="text-red-500">*</span>
+                GSTIN Number
               </label>
               <input
                 type="text"
                 value={formData.gstNumber}
-                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase().slice(0, 15) })}
+                onChange={(e) => handleGSTINChange(e.target.value)}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                 maxLength={15}
-                required
               />
             </div>
             <div>
@@ -415,8 +460,9 @@ export default function CustomersPage() {
               <select
                 value={formData.stateCode}
                 onChange={(e) => setFormData({ ...formData, stateCode: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
                 required
+                disabled
               >
                 <option value="">Select State Code</option>
                 {getAllStates().map((state) => (
@@ -456,12 +502,29 @@ export default function CustomersPage() {
               <select
                 value={formData.customerType}
                 onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                required
+                disabled
+              >
+                <option value="">Select Type</option>
+                <option value="Government">Government</option>
+                <option value="Non-Government">Non-Government</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Service Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.serviceType}
+                onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                 required
               >
-                <option value="">Select Type</option>
-                <option value="Govt">Govt</option>
-                <option value="Non Govt">Non Govt</option>
+                <option value="">Select Service Type</option>
+                <option value="Exempted">Exempted</option>
+                <option value="RCM">RCM</option>
+                <option value="FCM">FCM</option>
               </select>
             </div>
             <div>
