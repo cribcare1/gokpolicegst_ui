@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
 import Modal from '@/components/shared/Modal';
 import Button from '@/components/shared/Button';
@@ -16,6 +17,7 @@ import { useGstinList } from '@/hooks/useGstinList';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function GenerateBillPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState([]);
   const [hsnList, setHsnList] = useState([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -1185,7 +1187,7 @@ export default function GenerateBillPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setShowCustomerModal(true)}
+                  onClick={() => router.push('/ddo/customers?add=true')}
                   className="mt-3 px-4 py-2 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <Plus className="mr-2" size={14} />

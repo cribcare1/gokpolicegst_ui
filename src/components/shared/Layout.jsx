@@ -140,11 +140,11 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         {/* Sidebar */}
         <aside
           className={`
-            fixed lg:static left-0 z-40
-            top-[56px] sm:top-[64px] lg:top-0 lg:inset-y-0
-            h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-auto
+            fixed lg:fixed left-0 z-40
+            top-[56px] sm:top-[64px] lg:top-[56px] xl:top-[64px]
+            h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-[calc(100vh-56px)] xl:h-[calc(100vh-64px)]
             w-64 sm:w-72 flex-shrink-0 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)]
-            transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
+            transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-lg
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0 overflow-y-auto
           `}
@@ -178,7 +178,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 w-full lg:w-auto bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-[calc(100vh-56px)] sm:min-h-[calc(100vh-64px)] lg:min-h-screen">
+        <main className="flex-1 min-w-0 w-full lg:ml-64 xl:ml-72 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-surface)] to-[var(--color-background)] min-h-[calc(100vh-56px)] sm:min-h-[calc(100vh-64px)] lg:min-h-screen">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in max-w-full overflow-x-hidden">
             {children}
           </div>

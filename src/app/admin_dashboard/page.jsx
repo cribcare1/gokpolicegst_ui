@@ -37,11 +37,9 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       
-      // Get gstId from localStorage or use default value
-      const gstId = localStorage.getItem('gstId') || '4';
-      
-      // Build API URL with gstId parameter
-      const apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
+      // Admin should see all dashboard stats, not filtered by GSTIN
+      // Build API URL without gstId parameter for admin users
+      const apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}`;
       
       // Use ApiService to fetch data
       const result = await ApiService.handleGetRequest(apiUrl, 5000);

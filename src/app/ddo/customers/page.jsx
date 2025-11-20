@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function CustomersPage() {
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +40,33 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    // Check if 'add' query parameter is present
+    const addParam = searchParams.get('add');
+    if (addParam === 'true') {
+      // Open the add customer modal
+      setEditingCustomer(null);
+      setFormData({
+        name: '',
+        gstNumber: '',
+        address: '',
+        city: '',
+        stateCode: '',
+        pin: '',
+        customerType: '',
+        serviceType: '',
+        exemptionCertNumber: '',
+        mobile: '',
+        email: '',
+      });
+      setIsModalOpen(true);
+      // Remove the query parameter from URL without reloading
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/ddo/customers');
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchTerm) {
