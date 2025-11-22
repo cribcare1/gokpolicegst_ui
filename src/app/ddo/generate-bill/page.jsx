@@ -121,20 +121,36 @@ export default function GenerateBillPage() {
     if (selectedCustomer) {
       // Determine customer type from GSTIN or customer data
       const isGovt = selectedCustomer.customerType === 'Govt' || 
+                     selectedCustomer.customerType === 'Government' ||
                      (selectedCustomer.gstNumber && isGovernmentGSTIN(selectedCustomer.gstNumber)) ||
                      (selectedCustomer.pan && isGovernmentPAN(selectedCustomer.pan));
       setCustomerType(isGovt ? 'Govt' : 'Non Govt');
       
-      // Determine invoice type based on customer type and GSTIN
-      if (isGovt) {
-        setInvoiceType('EXEMPTED');
-        setTaxPayableReverseCharge('NA');
-      } else if (selectedCustomer.gstNumber) {
-        setInvoiceType('RCM');
-        setTaxPayableReverseCharge('YES');
+      // Determine invoice type based on customer's serviceType first, then fallback to old logic
+      if (selectedCustomer.serviceType) {
+        const serviceType = selectedCustomer.serviceType.toUpperCase();
+        if (serviceType === 'EXEMPTED') {
+          setInvoiceType('EXEMPTED');
+          setTaxPayableReverseCharge('NA');
+        } else if (serviceType === 'RCM') {
+          setInvoiceType('RCM');
+          setTaxPayableReverseCharge('YES');
+        } else if (serviceType === 'FCM') {
+          setInvoiceType('FCM');
+          setTaxPayableReverseCharge('NO');
+        }
       } else {
-        setInvoiceType('FCM');
-        setTaxPayableReverseCharge('NO');
+        // Fallback to old logic if serviceType is not available
+        if (isGovt) {
+          setInvoiceType('EXEMPTED');
+          setTaxPayableReverseCharge('NA');
+        } else if (selectedCustomer.gstNumber) {
+          setInvoiceType('RCM');
+          setTaxPayableReverseCharge('YES');
+        } else {
+          setInvoiceType('FCM');
+          setTaxPayableReverseCharge('NO');
+        }
       }
     }
   }, [selectedCustomer]);
@@ -146,6 +162,39 @@ export default function GenerateBillPage() {
       setGstCalculation(null);
     }
   }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList]);
+
+  // Auto-set HSN code if only one exists and ensure quantity is always 1
+  useEffect(() => {
+    if (lineItems.length === 0) return;
+    
+    let needsUpdate = false;
+    const updated = lineItems.map(item => {
+      const newItem = { ...item };
+      
+      // Auto-set HSN if only one exists and item doesn't have one
+      if (hsnList.length === 1) {
+        const defaultHsn = hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '';
+        if (item.hsnNumber !== defaultHsn) {
+          newItem.hsnNumber = defaultHsn;
+          needsUpdate = true;
+        }
+      }
+      
+      // Ensure quantity is always 1 (handle undefined, null, empty string, or any other value)
+      const currentQty = parseInt(item.quantity) || 0;
+      if (currentQty !== 1) {
+        newItem.quantity = 1;
+        needsUpdate = true;
+      }
+      
+      return newItem;
+    });
+    
+    if (needsUpdate) {
+      setLineItems(updated);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hsnList.length, hsnList, lineItems.length]);
 
 
   function  getDdoDetails() {
@@ -279,6 +328,30 @@ export default function GenerateBillPage() {
       return;
     }
 
+    // Check if customer has exemption (RCM/FCM Exempted case)
+    const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+    const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+    const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+
+    // For Exempted or RCM/FCM Exempted: Don't calculate GST
+    if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
+      setGstCalculation({
+        taxableValue,
+        gstAmount: 0,
+        igst: 0,
+        cgst: 0,
+        sgst: 0,
+        finalAmount: taxableValue,
+        isGovernment: invoiceType === 'EXEMPTED',
+        isSameState: false,
+        gstApplicable: false,
+        invoiceType: invoiceType,
+        note: '',
+        taxPayableBy: 'none',
+      });
+      return;
+    }
+
     // Get supplier GSTIN from bill details
     const supplierGSTIN = billDetails.gstinNumber;
     const customerGSTIN = selectedCustomer.gstNumber || '';
@@ -296,6 +369,7 @@ export default function GenerateBillPage() {
     const gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
     
     // Call calculateGST with proper parameters
+    // For RCM, GST is calculated in backend but we still calculate here to show values below notification
     const calculation = calculateGST(
       supplierGSTIN,
       customerGSTIN,
@@ -308,16 +382,37 @@ export default function GenerateBillPage() {
     
     setGstCalculation(calculation);
     
-    // Update note and notification details based on GST calculation
-    if (invoiceType === 'EXEMPTED' || calculation.isGovernment) {
-      setNote('Exempted Services - No GST (Government Entity)');
-      setNotificationDetails('Entry 6 of Notification No. 12/2017-CT (Rate) - Exempted from GST');
+    // Update note and notification details based on invoice type and customer data
+    if (invoiceType === 'EXEMPTED') {
+      // For Exempted: Show customer notification if available
+      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
+        setNote('GST is Exempted with Notification');
+        setNotificationDetails(`Notification No. ${exemptionNo} - GST is Exempted`);
+      } else {
+        setNote('GST is Exempted with Notification');
+        setNotificationDetails('Entry 6 of Notification No. 12/2017-CT (Rate) - Exempted from GST');
+      }
     } else if (invoiceType === 'RCM') {
+      // For RCM: Show notification and GST will be calculated in backend
       setNote('Reverse Charge Mechanism - Tax payable by recipient');
-      setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
+      // Check if customer has exemption (RCM Exempted case)
+      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
+        setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
+      } else {
+        setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
+      }
     } else if (invoiceType === 'FCM') {
-      setNote('Forward Charge Mechanism - Taxable @18%');
-      setNotificationDetails('Section 7 of the CGST Act, 2017. Taxable @18% Refer: Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
+      // For FCM: Check if customer has exemption (FCM Exempted case)
+      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
+        setNote('GST is Exempted with Notification');
+        setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
+      } else {
+        setNote('Forward Charge Mechanism - Taxable @18%');
+        setNotificationDetails('Section 7 of the CGST Act, 2017. Taxable @18% Refer: Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
+      }
     } else if (calculation.isSameState) {
       setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
       setNotificationDetails('Same State - CGST and SGST applicable');
@@ -482,13 +577,15 @@ export default function GenerateBillPage() {
   };
 
   const handleAddLineItem = () => {
+    // Auto-set HSN if only one exists
+    const defaultHsn = hsnList.length === 1 ? (hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '') : '';
     setLineItems([
       ...lineItems,
       { 
         serialNo: lineItems.length + 1, 
         description: '', 
         amount: 0, 
-        hsnNumber: '', 
+        hsnNumber: defaultHsn, 
         quantity: 1 
       },
     ]);
@@ -505,6 +602,10 @@ export default function GenerateBillPage() {
   };
 
   const handleLineItemChange = (index, field, value) => {
+    // Prevent quantity changes - always keep it as 1
+    if (field === 'quantity') {
+      return;
+    }
     const updated = [...lineItems];
     updated[index][field] = value;
     setLineItems(updated);
@@ -565,7 +666,7 @@ export default function GenerateBillPage() {
           description: item.description,
           amount: parseFloat(item.amount) || 0,
           hsnNumber: item.hsnNumber,
-          quantity: parseInt(item.quantity) || 1,
+          quantity: 1,
         })),
         taxableValue: gstCalculation?.taxableValue || 0,
         gstAmount: gstCalculation?.gstAmount || 0,
@@ -899,12 +1000,13 @@ export default function GenerateBillPage() {
           <!-- Line Items Table -->
           <table class="invoice-table" style="table-layout: fixed; width: 100%;">
             <colgroup>
-              <col style="width: 8%;" />
-              <col style="width: 42%;" />
-              <col style="width: 12%;" />
-              <col style="width: 8%;" />
+              <col style="width: 7%;" />
+              <col style="width: 38%;" />
+              <col style="width: 10%;" />
+              <col style="width: 7%;" />
+              <col style="width: 7%;" />
               <col style="width: 15%;" />
-              <col style="width: 15%;" />
+              <col style="width: 16%;" />
             </colgroup>
             <thead>
               <tr>
@@ -912,6 +1014,7 @@ export default function GenerateBillPage() {
                 <th>Item Description</th>
                 <th>HSN Code</th>
                 <th>Qty</th>
+                <th>Unit</th>
                 <th>Amount (Rs.)</th>
                 <th>Taxable Value (Rs.)</th>
               </tr>
@@ -922,7 +1025,8 @@ export default function GenerateBillPage() {
                   <td class="text-center">${item.serialNo}</td>
                   <td>${item.description}</td>
                   <td>${item.hsnNumber} - Public Administration</td>
-                  <td class="text-center">${item.quantity}</td>
+                  <td class="text-center">1</td>
+                  <td class="text-center">Nos</td>
                   <td class="text-right">${formatCurrency(item.amount)}</td>
                   <td class="text-right">${formatCurrency(item.amount)}</td>
                 </tr>
@@ -930,6 +1034,7 @@ export default function GenerateBillPage() {
               <tr class="table-footer">
                 <td colspan="3" class="text-right">Total Qty</td>
                 <td class="text-center">${totalQuantity}</td>
+                <td class="text-center">Nos</td>
                 <td class="text-right">Total Amt</td>
                 <td class="text-right">${formatCurrency(totalAmount)}</td>
               </tr>
@@ -937,55 +1042,79 @@ export default function GenerateBillPage() {
           </table>
 
           <!-- GST Calculation -->
-          <div class="gst-calculation">
-            <div class="calc-section">
-              <h4>Additional Information</h4>
-              <div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ${taxPayableReverseCharge}</div>
-              <div class="calc-row"><strong>Invoice Remarks:</strong></div>
-              <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">${note || '-'}</div>
-              <div class="calc-row"><strong>Notification Details:</strong></div>
-              <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">${notificationDetails || '-'}</div>
-              <div class="calc-row"><strong>Total Invoice Value in Words:</strong></div>
-              <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">${amountInWords(gstCalculation?.finalAmount || totalAmount)}</div>
-              <div class="calc-row"><strong>GST Payable Under RCM by the Recipient:</strong></div>
-              <div class="calc-row" style="margin-left: 15px;">
-                <strong>IGST:</strong> ${invoiceType === 'RCM' && gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'} |
-                <strong>CGST:</strong> ${invoiceType === 'RCM' && gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} |
-                <strong>SGST:</strong> ${invoiceType === 'RCM' && gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+          ${(function() {
+            const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+            const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+            const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+            const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
+            const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
+            
+            let rcmGSTSection = '';
+            if (showRCMGST) {
+              rcmGSTSection = `
+                <div class="calc-row"><strong>GST Payable Under RCM by the Recipient:</strong></div>
+                <div class="calc-row" style="margin-left: 15px;">
+                  <strong>IGST:</strong> ${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'} |
+                  <strong>CGST:</strong> ${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} |
+                  <strong>SGST:</strong> ${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                </div>
+              `;
+            }
+            
+            let gstCalcSection = '';
+            if (showGSTCalculationUI) {
+              gstCalcSection = `
+              <div class="calc-section">
+                <h4>GST Calculation</h4>
+                <div class="calc-row">
+                  <span><strong>Total Taxable Value</strong></span>
+                  <span><strong>${formatCurrency(totalAmount)}</strong></span>
+                </div>
+                <div class="calc-row">
+                  <span><strong>GST Collectable Under FCM</strong></span>
+                  <span>-</span>
+                </div>
+                <div class="calc-row">
+                  <span><strong>IGST @ 18%</strong></span>
+                  <span>${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
+                </div>
+                <div class="calc-row">
+                  <span><strong>CGST @ 9%</strong></span>
+                  <span><strong>${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</strong></span>
+                </div>
+                <div class="calc-row">
+                  <span><strong>SGST @ 9%</strong></span>
+                  <span><strong>${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</strong></span>
+                </div>
+                <div class="calc-row border-top">
+                  <span><strong>Total GST Amount</strong></span>
+                  <span><strong>${formatCurrency(gstCalculation?.gstAmount || 0)}</strong></span>
+                </div>
+                <div class="calc-row total">
+                  <span><strong>Total Invoice Amount</strong></span>
+                  <span><strong>${formatCurrency(gstCalculation?.finalAmount || totalAmount)}</strong></span>
+                </div>
               </div>
+              `;
+            }
+            
+            return `
+            <div class="gst-calculation">
+              <div class="calc-section">
+                <h4>Additional Information</h4>
+                <div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ${taxPayableReverseCharge}</div>
+                <div class="calc-row"><strong>Invoice Remarks:</strong></div>
+                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">${note || '-'}</div>
+                <div class="calc-row"><strong>Notification Details:</strong></div>
+                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">${notificationDetails || '-'}</div>
+                <div class="calc-row"><strong>Total Invoice Value in Words:</strong></div>
+                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">${amountInWords(gstCalculation?.finalAmount || totalAmount)}</div>
+                ${rcmGSTSection}
+              </div>
+              ${gstCalcSection}
             </div>
-            <div class="calc-section">
-              <h4>GST Calculation</h4>
-              <div class="calc-row">
-                <span><strong>Total Taxable Value</strong></span>
-                <span><strong>${formatCurrency(totalAmount)}</strong></span>
-              </div>
-              <div class="calc-row">
-                <span><strong>GST Collectable Under FCM</strong></span>
-                <span>-</span>
-              </div>
-              <div class="calc-row">
-                <span><strong>IGST @ 18%</strong></span>
-                <span>${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
-              </div>
-              <div class="calc-row">
-                <span><strong>CGST @ 9%</strong></span>
-                <span><strong>${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</strong></span>
-              </div>
-              <div class="calc-row">
-                <span><strong>SGST @ 9%</strong></span>
-                <span><strong>${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</strong></span>
-              </div>
-              <div class="calc-row border-top">
-                <span><strong>Total GST Amount</strong></span>
-                <span><strong>${formatCurrency(gstCalculation?.gstAmount || 0)}</strong></span>
-              </div>
-              <div class="calc-row total">
-                <span><strong>Total Invoice Amount</strong></span>
-                <span><strong>${formatCurrency(gstCalculation?.finalAmount || totalAmount)}</strong></span>
-              </div>
-            </div>
-          </div>
+            `;
+          })()}
 
           <!-- Bank Details -->
           <div class="bank-section">
@@ -1050,8 +1179,8 @@ export default function GenerateBillPage() {
     return words + ' Only';
   };
 
-  // Calculate totals
-  const totalQuantity = lineItems.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+  // Calculate totals - quantity is always 1 per item
+  const totalQuantity = lineItems.length;
   const totalAmount = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
   return (
@@ -1355,11 +1484,12 @@ export default function GenerateBillPage() {
               <table className="w-full border-collapse border border-[var(--color-border)] table-fixed">
                 <colgroup>
                   <col style={{ width: '5%' }} />
-                  <col style={{ width: '45%' }} />
+                  <col style={{ width: '40%' }} />
                   <col style={{ width: '10%' }} />
-                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '5%' }} />
                   <col style={{ width: '12%' }} />
-                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '13%' }} />
                   <col style={{ width: '10%' }} />
                 </colgroup>
                 <thead>
@@ -1368,6 +1498,7 @@ export default function GenerateBillPage() {
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.itemDescription')}</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.hsnCode')}</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.quantity')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">Unit</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.amount')}</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.taxableValueRs')}</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.action')}</th>
@@ -1386,22 +1517,30 @@ export default function GenerateBillPage() {
                         />
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-xs">
-                        <input
-                          type="text"
-                          value={item.hsnNumber}
-                          onChange={(e) => handleLineItemChange(index, 'hsnNumber', e.target.value)}
-                          className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                          list="hsn-list"
-                        />
+                        {hsnList.length === 1 ? (
+                          <input
+                            type="text"
+                            value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
+                            readOnly
+                            className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs font-medium"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={item.hsnNumber}
+                            onChange={(e) => handleLineItemChange(index, 'hsnNumber', e.target.value)}
+                            className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
+                            list="hsn-list"
+                          />
+                        )}
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-xs">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleLineItemChange(index, 'quantity', e.target.value)}
-                          className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                          min="1"
-                        />
+                        <div className="w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs font-medium text-center">
+                          1
+                        </div>
+                      </td>
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center font-semibold bg-[var(--color-muted)]/20">
+                        Nos
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-xs">
                         <input
@@ -1436,6 +1575,9 @@ export default function GenerateBillPage() {
                     </td>
                     <td className="border border-[var(--color-border)] p-2 text-xs font-bold text-center">
                       {totalQuantity}
+                    </td>
+                    <td className="border border-[var(--color-border)] p-2 text-xs font-bold text-center">
+                      Nos
                     </td>
                     <td className="border border-[var(--color-border)] p-2 text-xs font-bold text-right">
                       {t('bill.totalAmt')}
@@ -1473,138 +1615,158 @@ export default function GenerateBillPage() {
           </div>
 
           {/* GST Calculation Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.taxPayableReverse')}</label>
-                  <select
-                    value={taxPayableReverseCharge}
-                    onChange={(e) => setTaxPayableReverseCharge(e.target.value)}
-                    className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
-                  >
-                    <option value="YES">{t('bill.yes')}</option>
-                    <option value="NO">{t('bill.no')}</option>
-                    <option value="NA">{t('bill.na')}</option>
-                  </select>
-                </div>
-              </div>
+          {(() => {
+            // Determine if GST calculation UI should be shown
+            const isExempted = invoiceType === 'EXEMPTED';
+            const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+            const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+            const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+            const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
+            const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
 
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.invoiceRemarks')}</label>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                    rows="2"
-                    placeholder={t('bill.invoiceRemarksPlaceholder')}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.notificationDetails')}</label>
-                  <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg text-xs min-h-[60px] leading-relaxed">
-                    {notificationDetails || '-'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.totalInvoiceValueWords')}</label>
-                  <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg italic text-xs min-h-[50px] leading-relaxed font-medium">
-                    {amountInWords(gstCalculation?.finalAmount || totalAmount)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                <div>
-                  <label className="block text-xs font-semibold mb-2 text-[var(--color-text-primary)]">{t('bill.gstPayableRCM')}</label>
-                  <div className="grid grid-cols-3 gap-2">
+            return (
+              <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-4`}>
+                <div className="space-y-3">
+                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
                     <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">IGST:</label>
-                      <input
-                        type="text"
-                        value={invoiceType === 'RCM' && gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}
-                        readOnly
-                        className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
-                      />
+                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.taxPayableReverse')}</label>
+                      <select
+                        value={taxPayableReverseCharge}
+                        onChange={(e) => setTaxPayableReverseCharge(e.target.value)}
+                        className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
+                        disabled={isExempted || isRCMExempted || isFCMExempted}
+                      >
+                        <option value="YES">{t('bill.yes')}</option>
+                        <option value="NO">{t('bill.no')}</option>
+                        <option value="NA">{t('bill.na')}</option>
+                      </select>
                     </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
                     <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">CGST:</label>
-                      <input
-                        type="text"
-                        value={invoiceType === 'RCM' && gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}
-                        readOnly
-                        className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">SGST:</label>
-                      <input
-                        type="text"
-                        value={invoiceType === 'RCM' && gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
-                        readOnly
-                        className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
+                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.invoiceRemarks')}</label>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
+                        rows="2"
+                        placeholder={t('bill.invoiceRemarksPlaceholder')}
+                        readOnly={isExempted || isRCMExempted || isFCMExempted}
                       />
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-4 shadow-md">
-                <div className="bg-gradient-to-br from-[var(--color-primary)]/10 via-[var(--color-primary)]/5 to-[var(--color-accent)]/10 rounded-lg p-3 border border-[var(--color-primary)]/20">
-                  <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-3 pb-2 border-b border-[var(--color-primary)]/30">{t('bill.gstCalculation')}</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
-                      <span className="text-xs font-bold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.gstCollectableFCM')}</span>
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">-</span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.igst18')}</span>
-                      <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.cgst9')}</span>
-                      <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.sgst9')}</span>
-                      <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-2 border-t border-[var(--color-primary)]/50 mt-2">
-                      <span className="text-sm font-bold text-[var(--color-text-primary)]">{t('bill.totalGstAmount')}</span>
-                      <span className="text-sm font-bold text-[var(--color-primary)]">
-                        {formatCurrency(gstCalculation?.gstAmount || 0)}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/90 rounded-lg px-4 -mx-3 -mb-3 mt-3 text-white shadow-md">
-                      <span className="text-base font-extrabold">{t('bill.totalInvoiceAmount')}</span>
-                      <span className="text-base font-extrabold">
-                        {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
-                      </span>
+                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.notificationDetails')}</label>
+                      <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg text-xs min-h-[60px] leading-relaxed">
+                        {notificationDetails || '-'}
+                      </div>
                     </div>
                   </div>
+
+                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.totalInvoiceValueWords')}</label>
+                      <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg italic text-xs min-h-[50px] leading-relaxed font-medium">
+                        {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Show RCM GST values below notification only for RCM (not exempted) */}
+                  {showRCMGST && (
+                    <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                      <div>
+                        <label className="block text-xs font-semibold mb-2 text-[var(--color-text-primary)]">{t('bill.gstPayableRCM')}</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">IGST:</label>
+                            <input
+                              type="text"
+                              value={gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}
+                              readOnly
+                              className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">CGST:</label>
+                            <input
+                              type="text"
+                              value={gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}
+                              readOnly
+                              className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">SGST:</label>
+                            <input
+                              type="text"
+                              value={gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                              readOnly
+                              className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs text-center font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Show GST Calculation UI only for FCM (not exempted) */}
+                {showGSTCalculationUI && (
+                  <div>
+                    <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-4 shadow-md">
+                      <div className="bg-gradient-to-br from-[var(--color-primary)]/10 via-[var(--color-primary)]/5 to-[var(--color-accent)]/10 rounded-lg p-3 border border-[var(--color-primary)]/20">
+                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-3 pb-2 border-b border-[var(--color-primary)]/30">{t('bill.gstCalculation')}</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.gstCollectableFCM')}</span>
+                            <span className="text-xs text-[var(--color-text-muted)] font-medium">-</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.igst18')}</span>
+                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.cgst9')}</span>
+                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-primary)]">{t('bill.sgst9')}</span>
+                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-t border-[var(--color-primary)]/50 mt-2">
+                            <span className="text-sm font-bold text-[var(--color-text-primary)]">{t('bill.totalGstAmount')}</span>
+                            <span className="text-sm font-bold text-[var(--color-primary)]">
+                              {formatCurrency(gstCalculation?.gstAmount || 0)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/90 rounded-lg px-4 -mx-3 -mb-3 mt-3 text-white shadow-md">
+                            <span className="text-base font-extrabold">{t('bill.totalInvoiceAmount')}</span>
+                            <span className="text-base font-extrabold">
+                              {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Section Divider */}
           <div className="border-t border-[var(--color-primary)]/20 my-4"></div>
@@ -1968,12 +2130,13 @@ export default function GenerateBillPage() {
               <div className="mb-8">
                 <table className="w-full border-collapse border-2 border-gray-400 mb-6 table-fixed shadow-lg">
                   <colgroup>
-                    <col style={{ width: '8%' }} /> {/* Serial No */}
-                    <col style={{ width: '42%' }} /> {/* Item Description - Bigger */}
-                    <col style={{ width: '12%' }} /> {/* HSN Code - Smaller */}
-                    <col style={{ width: '8%' }} /> {/* Qty - Smaller */}
+                    <col style={{ width: '7%' }} /> {/* Serial No */}
+                    <col style={{ width: '38%' }} /> {/* Item Description - Bigger */}
+                    <col style={{ width: '10%' }} /> {/* HSN Code - Smaller */}
+                    <col style={{ width: '7%' }} /> {/* Qty - Smaller */}
+                    <col style={{ width: '7%' }} /> {/* Unit */}
                     <col style={{ width: '15%' }} /> {/* Amount */}
-                    <col style={{ width: '15%' }} /> {/* Taxable Value */}
+                    <col style={{ width: '16%' }} /> {/* Taxable Value */}
                   </colgroup>
                   <thead>
                     <tr className="bg-[#2C5F2D] text-white">
@@ -1981,6 +2144,7 @@ export default function GenerateBillPage() {
                       <th className="border border-gray-400 p-3 text-left font-bold text-sm">{t('bill.itemDescription')}</th>
                       <th className="border border-gray-400 p-3 text-left font-bold text-sm">{t('bill.hsnCode')}</th>
                       <th className="border border-gray-400 p-3 text-left font-bold text-sm">{t('bill.quantity')}</th>
+                      <th className="border border-gray-400 p-3 text-left font-bold text-sm">Unit</th>
                       <th className="border border-gray-400 p-3 text-left font-bold text-sm">{t('bill.amount')}</th>
                       <th className="border border-gray-400 p-3 text-left font-bold text-sm">{t('bill.taxableValueRs')}</th>
                     </tr>
@@ -1991,7 +2155,8 @@ export default function GenerateBillPage() {
                         <td className="border border-gray-400 p-3 text-sm font-bold text-center">{item.serialNo}</td>
                         <td className="border border-gray-400 p-3 text-sm leading-relaxed">{item.description}</td>
                         <td className="border border-gray-400 p-3 text-sm font-semibold">{item.hsnNumber} - {t('bill.publicAdministration')}</td>
-                        <td className="border border-gray-400 p-3 text-sm text-center font-semibold">{item.quantity}</td>
+                        <td className="border border-gray-400 p-3 text-sm text-center font-semibold">1</td>
+                        <td className="border border-gray-400 p-3 text-sm text-center font-semibold">Nos</td>
                         <td className="border border-gray-400 p-3 text-sm text-right font-bold">{formatCurrency(item.amount)}</td>
                         <td className="border border-gray-400 p-3 text-sm text-right font-bold">{formatCurrency(item.amount)}</td>
                       </tr>
@@ -1999,6 +2164,7 @@ export default function GenerateBillPage() {
                     <tr className="bg-gray-100 font-bold">
                       <td colSpan="3" className="border border-gray-400 p-3 text-sm text-right">{t('bill.totalQty')}</td>
                       <td className="border border-gray-400 p-3 text-sm text-center">{totalQuantity}</td>
+                      <td className="border border-gray-400 p-3 text-sm text-center">Nos</td>
                       <td className="border border-gray-400 p-3 text-sm text-right">{t('bill.totalAmt')}</td>
                       <td className="border border-gray-400 p-3 text-sm text-right">{formatCurrency(totalAmount)}</td>
                     </tr>
@@ -2007,68 +2173,82 @@ export default function GenerateBillPage() {
               </div>
 
               {/* GST Calculation */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
-                  <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-gray-300 pb-2">Additional Information</h3>
-                  <div className="space-y-3">
-                    <p className="font-semibold"><strong>{t('bill.taxPayableReverse')}:</strong> {taxPayableReverseCharge}</p>
-                    <div>
-                      <p className="font-semibold mb-2"><strong>{t('bill.invoiceRemarks')}:</strong></p>
-                      <p className="bg-white p-3 rounded border min-h-[60px] leading-relaxed">{note || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold mb-2"><strong>{t('bill.notificationDetails')}:</strong></p>
-                      <p className="bg-white p-3 rounded border text-sm min-h-[80px] leading-relaxed">{notificationDetails || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold mb-2"><strong>{t('bill.totalInvoiceValueWords')}</strong></p>
-                      <p className="bg-white p-3 rounded border italic font-semibold min-h-[60px] leading-relaxed">{amountInWords(gstCalculation?.finalAmount || totalAmount)}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold mb-2"><strong>{t('bill.gstPayableRCM')}</strong></p>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="bg-white p-2 rounded border text-center"><strong>IGST:</strong><br/>{invoiceType === 'RCM' && gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</div>
-                        <div className="bg-white p-2 rounded border text-center"><strong>CGST:</strong><br/>{invoiceType === 'RCM' && gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</div>
-                        <div className="bg-white p-2 rounded border text-center"><strong>SGST:</strong><br/>{invoiceType === 'RCM' && gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</div>
+              {(() => {
+                const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+                const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+                const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+                const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
+                const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
+
+                return (
+                  <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-8 mb-8`}>
+                    <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                      <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-gray-300 pb-2">Additional Information</h3>
+                      <div className="space-y-3">
+                        <p className="font-semibold"><strong>{t('bill.taxPayableReverse')}:</strong> {taxPayableReverseCharge}</p>
+                        <div>
+                          <p className="font-semibold mb-2"><strong>{t('bill.invoiceRemarks')}:</strong></p>
+                          <p className="bg-white p-3 rounded border min-h-[60px] leading-relaxed">{note || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold mb-2"><strong>{t('bill.notificationDetails')}:</strong></p>
+                          <p className="bg-white p-3 rounded border text-sm min-h-[80px] leading-relaxed">{notificationDetails || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold mb-2"><strong>{t('bill.totalInvoiceValueWords')}</strong></p>
+                          <p className="bg-white p-3 rounded border italic font-semibold min-h-[60px] leading-relaxed">{amountInWords(gstCalculation?.finalAmount || totalAmount)}</p>
+                        </div>
+                        {showRCMGST && (
+                          <div>
+                            <p className="font-semibold mb-2"><strong>{t('bill.gstPayableRCM')}</strong></p>
+                            <div className="grid grid-cols-3 gap-2 text-sm">
+                              <div className="bg-white p-2 rounded border text-center"><strong>IGST:</strong><br/>{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</div>
+                              <div className="bg-white p-2 rounded border text-center"><strong>CGST:</strong><br/>{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</div>
+                              <div className="bg-white p-2 rounded border text-center"><strong>SGST:</strong><br/>{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-[#2C5F2D]/10 to-green-500/10 p-6 rounded-lg border-2 border-[#2C5F2D]">
-                  <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-[#2C5F2D] pb-2">GST Calculation</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                      <span className="font-semibold">{t('bill.totalTaxableValue')}</span>
-                      <span className="font-bold text-lg">{formatCurrency(totalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                      <span className="font-semibold">{t('bill.gstCollectableFCM')}</span>
-                      <span className="text-gray-500">-</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                      <span className="font-semibold">{t('bill.igst18')}</span>
-                      <span className="font-semibold">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                      <span className="font-semibold">{t('bill.cgst9')}</span>
-                      <span className="font-bold text-lg">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                      <span className="font-semibold">{t('bill.sgst9')}</span>
-                      <span className="font-bold text-lg">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-3 border-t-2 border-[#2C5F2D]">
-                      <span className="font-bold text-lg">{t('bill.totalGstAmount')}</span>
-                      <span className="font-bold text-lg text-[#2C5F2D]">{formatCurrency(gstCalculation?.gstAmount || 0)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-4 bg-[#2C5F2D] text-white rounded-lg px-4 -mx-4">
-                      <span className="font-bold text-xl">{t('bill.totalInvoiceAmount')}</span>
-                      <span className="font-bold text-xl">{formatCurrency(gstCalculation?.finalAmount || totalAmount)}</span>
-                    </div>
+                    {showGSTCalculationUI && (
+                      <div className="bg-gradient-to-br from-[#2C5F2D]/10 to-green-500/10 p-6 rounded-lg border-2 border-[#2C5F2D]">
+                        <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-[#2C5F2D] pb-2">GST Calculation</h3>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center py-2 border-b border-gray-300">
+                            <span className="font-semibold">{t('bill.totalTaxableValue')}</span>
+                            <span className="font-bold text-lg">{formatCurrency(totalAmount)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-300">
+                            <span className="font-semibold">{t('bill.gstCollectableFCM')}</span>
+                            <span className="text-gray-500">-</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-300">
+                            <span className="font-semibold">{t('bill.igst18')}</span>
+                            <span className="font-semibold">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-300">
+                            <span className="font-semibold">{t('bill.cgst9')}</span>
+                            <span className="font-bold text-lg">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-300">
+                            <span className="font-semibold">{t('bill.sgst9')}</span>
+                            <span className="font-bold text-lg">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-3 border-t-2 border-[#2C5F2D]">
+                            <span className="font-bold text-lg">{t('bill.totalGstAmount')}</span>
+                            <span className="font-bold text-lg text-[#2C5F2D]">{formatCurrency(gstCalculation?.gstAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-4 bg-[#2C5F2D] text-white rounded-lg px-4 -mx-4">
+                            <span className="font-bold text-xl">{t('bill.totalInvoiceAmount')}</span>
+                            <span className="font-bold text-xl">{formatCurrency(gstCalculation?.finalAmount || totalAmount)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Bank Details */}
               <div className="mb-8 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
