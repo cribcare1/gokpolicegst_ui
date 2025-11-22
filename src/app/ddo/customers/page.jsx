@@ -36,6 +36,7 @@ export default function CustomersPage() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [gstinError, setGstinError] = useState('');
 
   useEffect(() => {
     fetchCustomers();
@@ -60,6 +61,7 @@ export default function CustomersPage() {
         mobile: '',
         email: '',
       });
+      setGstinError('');
       setIsModalOpen(true);
       // Remove the query parameter from URL without reloading
       if (typeof window !== 'undefined') {
@@ -150,12 +152,15 @@ export default function CustomersPage() {
       mobile: '',
       email: '',
     });
+    setGstinError('');
     setIsModalOpen(true);
   };
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
     // Map customer data back to form format
+    const customerType = customer.customerType === 'Government' ? 'Government' : 
+                        customer.customerType === 'Non-Government' ? 'Non-Government' : '';
     setFormData({
       name: customer.name || '',
       gstNumber: customer.gstNumber || '',
@@ -163,12 +168,13 @@ export default function CustomersPage() {
       city: customer.city || '',
       stateCode: customer.stateCode || '',
       pin: customer.pin || '',
-      customerType: customer.customerType || '',
+      customerType: customerType,
       serviceType: customer.serviceType || '',
       exemptionCertNumber: customer.exemptionCertNumber || '',
       mobile: customer.mobile || '',
       email: customer.email || '',
     });
+    setGstinError('');
     setIsModalOpen(true);
   };
 
@@ -195,6 +201,7 @@ export default function CustomersPage() {
   const handleGSTINChange = (value) => {
     const upperValue = value.toUpperCase().slice(0, 15);
     let updatedFormData = { ...formData, gstNumber: upperValue };
+    let errorMessage = '';
     
     // Extract state code from first 2 characters
     if (upperValue.length >= 2) {
@@ -209,20 +216,58 @@ export default function CustomersPage() {
       updatedFormData.stateCode = '';
     }
     
-    // Check 6th character (index 5) if GSTIN has at least 6 characters
-    if (upperValue.length >= 6) {
+    // Validate GSTIN for Govt type
+    if (updatedFormData.customerType === 'Government' && upperValue.length >= 6) {
       const sixthChar = upperValue.charAt(5);
-      if (sixthChar === 'G') {
-        updatedFormData.customerType = 'Government';
-      } else {
-        updatedFormData.customerType = 'Non-Government';
+      if (sixthChar !== 'G') {
+        errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
       }
-    } else {
-      // Reset customer type if GSTIN is less than 6 characters
-      updatedFormData.customerType = '';
     }
     
+    setGstinError(errorMessage);
+    
+    // Auto-set Service Type based on customer type and GSTIN
+    updateServiceType(updatedFormData.customerType, upperValue, updatedFormData);
+    
     setFormData(updatedFormData);
+  };
+
+  const handleCustomerTypeChange = (value) => {
+    let updatedFormData = { ...formData, customerType: value };
+    let errorMessage = '';
+    
+    // Validate GSTIN if Type is Govt
+    if (value === 'Government' && updatedFormData.gstNumber.length >= 6) {
+      const sixthChar = updatedFormData.gstNumber.charAt(5);
+      if (sixthChar !== 'G') {
+        errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
+      }
+    }
+    
+    setGstinError(errorMessage);
+    
+    // Auto-set Service Type based on customer type and GSTIN
+    updateServiceType(value, updatedFormData.gstNumber, updatedFormData);
+    
+    setFormData(updatedFormData);
+  };
+
+  const updateServiceType = (customerType, gstNumber, formDataObj) => {
+    if (customerType === 'Government') {
+      formDataObj.serviceType = 'Exempted';
+    } else if (customerType === 'Non-Government') {
+      if (gstNumber && gstNumber.trim() !== '') {
+        // Non Govt with GSTIN - default to RCM, but allow RCM/Exempted
+        if (!formDataObj.serviceType || formDataObj.serviceType === 'FCM') {
+          formDataObj.serviceType = 'RCM';
+        }
+      } else {
+        // Non Govt without GSTIN - default to FCM, but allow FCM/Exempted
+        if (!formDataObj.serviceType || formDataObj.serviceType === 'RCM') {
+          formDataObj.serviceType = 'FCM';
+        }
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -272,10 +317,27 @@ export default function CustomersPage() {
       return;
     }
     
+    // Validate GSTIN for Govt type
+    if (formData.customerType === 'Government' && formData.gstNumber && formData.gstNumber.length >= 6) {
+      const sixthChar = formData.gstNumber.charAt(5);
+      if (sixthChar !== 'G') {
+        toast.error('Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed');
+        return;
+      }
+    }
+    
     // Validate Service Type
     if (!formData.serviceType || formData.serviceType.trim() === '') {
       toast.error('Service Type is required');
       return;
+    }
+    
+    // Validate Exemption Certificate Number (required when Exempted and not Govt)
+    if (formData.serviceType === 'Exempted' && formData.customerType !== 'Government') {
+      if (!formData.exemptionCertNumber || formData.exemptionCertNumber.trim() === '') {
+        toast.error('Notification number is required when Service Type is Exempted for Non-Government customers');
+        return;
+      }
     }
     
     // Validate Email
@@ -448,15 +510,35 @@ export default function CustomersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
+                Type (Govt, Non Govt) <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.customerType}
+                onChange={(e) => handleCustomerTypeChange(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                required
+              >
+                <option value="">Select Type</option>
+                <option value="Government">Govt</option>
+                <option value="Non-Government">Non Govt</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
                 GSTIN Number
               </label>
               <input
                 type="text"
                 value={formData.gstNumber}
                 onChange={(e) => handleGSTINChange(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg ${
+                  gstinError ? 'border-red-500' : 'border-[var(--color-border)]'
+                }`}
                 maxLength={15}
               />
+              {gstinError && (
+                <p className="mt-1 text-sm text-red-500">{gstinError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -526,48 +608,59 @@ export default function CustomersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Type of Customer <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.customerType}
-                onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                required
-                disabled
-              >
-                <option value="">Select Type</option>
-                <option value="Government">Government</option>
-                <option value="Non-Government">Non-Government</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
                 Service Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.serviceType}
-                onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                onChange={(e) => {
+                  const updatedData = { ...formData, serviceType: e.target.value };
+                  // Clear exemption cert number if not Exempted
+                  if (e.target.value !== 'Exempted') {
+                    updatedData.exemptionCertNumber = '';
+                  }
+                  setFormData(updatedData);
+                }}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                 required
               >
                 <option value="">Select Service Type</option>
-                <option value="Exempted">Exempted</option>
-                <option value="RCM">RCM</option>
-                <option value="FCM">FCM</option>
+                {formData.customerType === 'Government' ? (
+                  <option value="Exempted">Exempted</option>
+                ) : formData.gstNumber && formData.gstNumber.trim() !== '' ? (
+                  <>
+                    <option value="RCM">RCM</option>
+                    <option value="Exempted">Exempted</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="FCM">FCM</option>
+                    <option value="Exempted">Exempted</option>
+                  </>
+                )}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Exemption Certificate Number
+                Notification Number
+                {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <input
                 type="text"
                 value={formData.exemptionCertNumber}
                 onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                placeholder="Enter alphanumeric certificate number"
+                placeholder="Enter notification number"
                 pattern="[A-Za-z0-9]*"
+                required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
+                disabled={formData.serviceType !== 'Exempted' || formData.customerType === 'Government'}
               />
+              {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                  Required for Exempted service type (Non-Government)
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">

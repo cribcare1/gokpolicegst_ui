@@ -1088,8 +1088,8 @@ export default function GenerateBillPage() {
           </div>
         ) : (
         <div className="premium-card p-6 sm:p-8 lg:p-12 space-y-8 sm:space-y-10 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-background)] to-[var(--color-muted)]/5 shadow-xl border border-[var(--color-border)]/50">
-          {/* Header Section with Logo - Centered */}
-          <div className="border-b-2 border-[var(--color-primary)]/30 pb-8 mb-8">
+          {/* Header Section with Logo - Centered - Hidden in UI, visible only in preview/print */}
+          <div className="hidden border-b-2 border-[var(--color-primary)]/30 pb-8 mb-8">
             <div className="flex flex-col items-center gap-6">
               {/* Logo Section - Centered */}
               <div className="flex-shrink-0">
@@ -1129,8 +1129,8 @@ export default function GenerateBillPage() {
             </div>
           </div>
 
-          {/* TAX INVOICE Header */}
-          <div className="text-center my-8">
+          {/* TAX INVOICE Header - Hidden in UI, visible only in preview/print */}
+          <div className="hidden text-center my-8">
             <div className="bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary)]/90 to-[var(--color-accent)] rounded-2xl px-8 py-5 inline-block shadow-lg border-2 border-[var(--color-primary)]/50">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white drop-shadow-md">
                 {t('bill.taxInvoice')}
