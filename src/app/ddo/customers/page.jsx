@@ -493,52 +493,199 @@ export default function CustomersPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           title={editingCustomer ? 'Edit Customer' : 'Add Customer'}
-          size="lg"
+          size="xl"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Customer Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Type (Govt, Non Govt) <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.customerType}
-                onChange={(e) => handleCustomerTypeChange(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                required
-              >
-                <option value="">Select Type</option>
-                <option value="Government">Govt</option>
-                <option value="Non-Government">Non Govt</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                GSTIN Number
-              </label>
-              <input
-                type="text"
-                value={formData.gstNumber}
-                onChange={(e) => handleGSTINChange(e.target.value)}
-                className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg ${
-                  gstinError ? 'border-red-500' : 'border-[var(--color-border)]'
-                }`}
-                maxLength={15}
-              />
-              {gstinError && (
-                <p className="mt-1 text-sm text-red-500">{gstinError}</p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Type (Govt, Non Govt) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.customerType}
+                  onChange={(e) => handleCustomerTypeChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  required
+                >
+                  <option value="">Select Type</option>
+                  <option value="Government">Govt</option>
+                  <option value="Non-Government">Non Govt</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  GSTIN Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.gstNumber}
+                  onChange={(e) => handleGSTINChange(e.target.value)}
+                  className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg ${
+                    gstinError ? 'border-red-500' : 'border-[var(--color-border)]'
+                  }`}
+                  maxLength={15}
+                />
+                {gstinError && (
+                  <p className="mt-1 text-sm text-red-500">{gstinError}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Service Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.serviceType}
+                  onChange={(e) => {
+                    const updatedData = { ...formData, serviceType: e.target.value };
+                    // Clear exemption cert number if not Exempted
+                    if (e.target.value !== 'Exempted') {
+                      updatedData.exemptionCertNumber = '';
+                    }
+                    setFormData(updatedData);
+                  }}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  required
+                >
+                  <option value="">Select Service Type</option>
+                  {formData.customerType === 'Government' ? (
+                    <option value="Exempted">Exempted</option>
+                  ) : formData.gstNumber && formData.gstNumber.trim() !== '' ? (
+                    <>
+                      <option value="RCM">RCM</option>
+                      <option value="Exempted">Exempted</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="FCM">FCM</option>
+                      <option value="Exempted">Exempted</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Notification Number
+                  {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
+                    <span className="text-red-500">*</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={formData.exemptionCertNumber}
+                  onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  placeholder="Enter notification number"
+                  pattern="[A-Za-z0-9]*"
+                  required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
+                  disabled={formData.serviceType !== 'Exempted' || formData.customerType === 'Government'}
+                />
+                {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
+                  <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                    Required for Exempted service type (Non-Government)
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  City <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  State Code <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.stateCode}
+                  onChange={(e) => setFormData({ ...formData, stateCode: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                  required
+                  disabled={formData.gstNumber && formData.gstNumber.trim() !== ''}
+                >
+                  <option value="">Select State Code</option>
+                  {getAllStates().map((state) => (
+                    <option key={state.code} value={state.code}>
+                      {state.code} - {state.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  PIN Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.pin}
+                  onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                  onKeyPress={(e) => {
+                    if (!/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                    setFormData({ ...formData, pin: pastedText });
+                  }}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t('label.mobile')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  onKeyPress={(e) => {
+                    if (!/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, mobile: pastedText });
+                  }}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  maxLength={10}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t('label.email')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -548,152 +695,7 @@ export default function CustomersPage() {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                rows={3}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                State Code <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.stateCode}
-                onChange={(e) => setFormData({ ...formData, stateCode: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                required
-                disabled
-              >
-                <option value="">Select State Code</option>
-                {getAllStates().map((state) => (
-                  <option key={state.code} value={state.code}>
-                    {state.code} - {state.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                PIN Code <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.pin}
-                onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-                onKeyPress={(e) => {
-                  if (!/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                onPaste={(e) => {
-                  e.preventDefault();
-                  const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-                  setFormData({ ...formData, pin: pastedText });
-                }}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                maxLength={6}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Service Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.serviceType}
-                onChange={(e) => {
-                  const updatedData = { ...formData, serviceType: e.target.value };
-                  // Clear exemption cert number if not Exempted
-                  if (e.target.value !== 'Exempted') {
-                    updatedData.exemptionCertNumber = '';
-                  }
-                  setFormData(updatedData);
-                }}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                required
-              >
-                <option value="">Select Service Type</option>
-                {formData.customerType === 'Government' ? (
-                  <option value="Exempted">Exempted</option>
-                ) : formData.gstNumber && formData.gstNumber.trim() !== '' ? (
-                  <>
-                    <option value="RCM">RCM</option>
-                    <option value="Exempted">Exempted</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="FCM">FCM</option>
-                    <option value="Exempted">Exempted</option>
-                  </>
-                )}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Notification Number
-                {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                  <span className="text-red-500">*</span>
-                )}
-              </label>
-              <input
-                type="text"
-                value={formData.exemptionCertNumber}
-                onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                placeholder="Enter notification number"
-                pattern="[A-Za-z0-9]*"
-                required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
-                disabled={formData.serviceType !== 'Exempted' || formData.customerType === 'Government'}
-              />
-              {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  Required for Exempted service type (Non-Government)
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                {t('label.mobile')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                onKeyPress={(e) => {
-                  if (!/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                onPaste={(e) => {
-                  e.preventDefault();
-                  const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                  setFormData({ ...formData, mobile: pastedText });
-                }}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                maxLength={10}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                {t('label.email')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                rows={2}
                 required
               />
             </div>
