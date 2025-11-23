@@ -560,8 +560,9 @@ export default function CustomersPage() {
                     }
                     setFormData(updatedData);
                   }}
-                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
                   required
+                  disabled={formData.customerType === 'Government'}
                 >
                   <option value="">Select Service Type</option>
                   {formData.customerType === 'Government' ? (
