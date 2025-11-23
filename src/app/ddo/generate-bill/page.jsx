@@ -129,28 +129,8 @@ export default function GenerateBillPage() {
       // Determine invoice type based on customer's serviceType first, then fallback to old logic
       if (selectedCustomer.serviceType) {
         const serviceType = selectedCustomer.serviceType.toUpperCase();
-        if (serviceType === 'EXEMPTED') {
-          setInvoiceType('EXEMPTED');
-          setTaxPayableReverseCharge('NA');
-        } else if (serviceType === 'RCM') {
-          setInvoiceType('RCM');
-          setTaxPayableReverseCharge('YES');
-        } else if (serviceType === 'FCM') {
-          setInvoiceType('FCM');
-          setTaxPayableReverseCharge('NO');
-        }
-      } else {
-        // Fallback to old logic if serviceType is not available
-        if (isGovt) {
-          setInvoiceType('EXEMPTED');
-          setTaxPayableReverseCharge('NA');
-        } else if (selectedCustomer.gstNumber) {
-          setInvoiceType('RCM');
-          setTaxPayableReverseCharge('YES');
-        } else {
-          setInvoiceType('FCM');
-          setTaxPayableReverseCharge('NO');
-        }
+        setInvoiceType(serviceType);
+        
       }
     }
   }, [selectedCustomer]);
@@ -1806,11 +1786,11 @@ export default function GenerateBillPage() {
           <div className="border-t border-[var(--color-primary)]/20 my-4"></div>
           
           {/* Section Header */}
-          <div className="text-center mb-3">
+          {/* <div className="text-center mb-3">
             <h3 className="text-base font-bold text-[var(--color-text-primary)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 px-4 py-2 rounded-lg inline-block border border-[var(--color-primary)]/30">
               {t('bill.termsAndBankDetails')}
             </h3>
-          </div>
+          </div> */}
 
           {/* Bank Details */}
           <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-4 mb-4 shadow-sm">
