@@ -216,6 +216,11 @@ export default function CustomersPage() {
       updatedFormData.stateCode = '';
     }
     
+    // Clear Notification field when GSTIN is present
+    if (upperValue && upperValue.trim() !== '') {
+      updatedFormData.exemptionCertNumber = '';
+    }
+    
     // Validate GSTIN for Govt type
     if (updatedFormData.customerType === 'Government' && upperValue.length >= 6) {
       const sixthChar = upperValue.charAt(5);
@@ -332,10 +337,10 @@ export default function CustomersPage() {
       return;
     }
     
-    // Validate Exemption Certificate Number (required when Exempted and not Govt)
-    if (formData.serviceType === 'Exempted' && formData.customerType !== 'Government') {
+    // Validate Exemption Certificate Number (required when Exempted and not Govt, and GSTIN is not present)
+    if (formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && !(formData.gstNumber && formData.gstNumber.trim() !== '')) {
       if (!formData.exemptionCertNumber || formData.exemptionCertNumber.trim() === '') {
-        toast.error('Notification number is required when Service Type is Exempted for Non-Government customers');
+        toast.error('Notification is required when Service Type is Exempted for Non-Government customers without GSTIN');
         return;
       }
     }
@@ -574,29 +579,31 @@ export default function CustomersPage() {
                   )}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Notification Number
+              {!(formData.gstNumber && formData.gstNumber.trim() !== '') && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Notification
+                    {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.exemptionCertNumber}
+                    onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
+                    placeholder="Enter notification"
+                    pattern="[A-Za-z0-9]*"
+                    required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
+                    disabled={formData.serviceType !== 'Exempted' || formData.customerType === 'Government'}
+                  />
                   {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                    <span className="text-red-500">*</span>
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                      Required for Exempted service type (Non-Government)
+                    </p>
                   )}
-                </label>
-                <input
-                  type="text"
-                  value={formData.exemptionCertNumber}
-                  onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                  placeholder="Enter notification number"
-                  pattern="[A-Za-z0-9]*"
-                  required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
-                  disabled={formData.serviceType !== 'Exempted' || formData.customerType === 'Government'}
-                />
-                {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                  <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                    Required for Exempted service type (Non-Government)
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   City <span className="text-red-500">*</span>

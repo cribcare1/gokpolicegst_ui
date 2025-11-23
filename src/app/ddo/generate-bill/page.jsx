@@ -333,25 +333,6 @@ export default function GenerateBillPage() {
     const isRCMExempted = invoiceType === 'RCM' && hasExemption;
     const isFCMExempted = invoiceType === 'FCM' && hasExemption;
 
-    // For Exempted or RCM/FCM Exempted: Don't calculate GST
-    if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
-      setGstCalculation({
-        taxableValue,
-        gstAmount: 0,
-        igst: 0,
-        cgst: 0,
-        sgst: 0,
-        finalAmount: taxableValue,
-        isGovernment: invoiceType === 'EXEMPTED',
-        isSameState: false,
-        gstApplicable: false,
-        invoiceType: invoiceType,
-        note: '',
-        taxPayableBy: 'none',
-      });
-      return;
-    }
-
     // Get supplier GSTIN from bill details
     const supplierGSTIN = billDetails.gstinNumber;
     const customerGSTIN = selectedCustomer.gstNumber || '';
@@ -368,21 +349,8 @@ export default function GenerateBillPage() {
     // Get GST rate from HSN details or default to 18%
     const gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
     
-    // Call calculateGST with proper parameters
-    // For RCM, GST is calculated in backend but we still calculate here to show values below notification
-    const calculation = calculateGST(
-      supplierGSTIN,
-      customerGSTIN,
-      customerPAN,
-      taxableValue,
-      gstRate,
-      invoiceType,
-      hsnDetails
-    );
-    
-    setGstCalculation(calculation);
-    
     // Update note and notification details based on invoice type and customer data
+    // This needs to be set BEFORE the early return for EXEMPTED cases
     if (invoiceType === 'EXEMPTED') {
       // For Exempted: Show customer notification if available
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
@@ -413,12 +381,51 @@ export default function GenerateBillPage() {
         setNote('Forward Charge Mechanism - Taxable @18%');
         setNotificationDetails('Section 7 of the CGST Act, 2017. Taxable @18% Refer: Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
       }
-    } else if (calculation.isSameState) {
-      setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
-      setNotificationDetails('Same State - CGST and SGST applicable');
-    } else {
-      setNote(`IGST @18% (Different State)`);
-      setNotificationDetails('Different State - IGST applicable');
+    }
+
+    // For Exempted or RCM/FCM Exempted: Don't calculate GST
+    if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
+      setGstCalculation({
+        taxableValue,
+        gstAmount: 0,
+        igst: 0,
+        cgst: 0,
+        sgst: 0,
+        finalAmount: taxableValue,
+        isGovernment: invoiceType === 'EXEMPTED',
+        isSameState: false,
+        gstApplicable: false,
+        invoiceType: invoiceType,
+        note: '',
+        taxPayableBy: 'none',
+      });
+      return;
+    }
+    
+    // Call calculateGST with proper parameters
+    // For RCM, GST is calculated in backend but we still calculate here to show values below notification
+    const calculation = calculateGST(
+      supplierGSTIN,
+      customerGSTIN,
+      customerPAN,
+      taxableValue,
+      gstRate,
+      invoiceType,
+      hsnDetails
+    );
+    
+    setGstCalculation(calculation);
+    
+    // Update note and notification details for non-exempted, non-RCM, non-FCM cases
+    // Only update if invoiceType is not RCM or FCM (those already have their notification details set above)
+    if (invoiceType !== 'RCM' && invoiceType !== 'FCM' && invoiceType !== 'EXEMPTED') {
+      if (calculation.isSameState) {
+        setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
+        setNotificationDetails('Same State - CGST and SGST applicable');
+      } else {
+        setNote(`IGST @18% (Different State)`);
+        setNotificationDetails('Different State - IGST applicable');
+      }
     }
   };
 
@@ -1269,110 +1276,46 @@ export default function GenerateBillPage() {
               
               <div>
                 <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.selectCustomer')}</label>
-                <select
-                  value={selectedCustomer?.id ? String(selectedCustomer.id) : ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    if (!selectedId) {
-                      setSelectedCustomer(null);
-                      return;
-                    }
-                    const customer = customers.find(c => String(c.id) === String(selectedId));
-                    if (customer) {
-                      if (customer.gstNumber && customer.gstNumber.length >= 2) {
-                        const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
-                        if (stateCode) {
-                          customer.stateCode = stateCode.toString();
-                        }
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedCustomer?.id ? String(selectedCustomer.id) : ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) {
+                        setSelectedCustomer(null);
+                        return;
                       }
-                      setSelectedCustomer(customer);
-                    } else {
-                      setSelectedCustomer(null);
-                    }
-                  }}
-                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                >
-                  <option value="">{t('bill.selectCustomerPlaceholder')}</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={String(customer.id)}>
-                      {customer.customerName} - {customer.gstNumber || t('common.noGstin')}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => router.push('/ddo/customers?add=true')}
-                  className="mt-2 px-3 py-1.5 text-xs shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <Plus className="mr-1" size={12} />
-                  {t('bill.addNewCustomer')}
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.customerType')}</label>
-                  <input
-                    type="text"
-                    value={selectedCustomer?.customerType || ''}
-                    readOnly
-                    className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                    placeholder={t('bill.customerType')}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('common.ms')}</label>
-                  <input
-                    type="text"
-                    value={selectedCustomer?.customerName || ''}
-                    readOnly
-                    className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                    placeholder={t('bill.customerName')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.address')}</label>
-                <textarea
-                  value={selectedCustomer?.address || ''}
-                  readOnly
-                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg resize-none font-medium"
-                  rows="2"
-                  placeholder={t('bill.customerAddress')}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.gstin')}</label>
-                  <input
-                    type="text"
-                    value={selectedCustomer?.gstNumber || ''}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg uppercase font-medium"
-                    placeholder={t('label.gstin')}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.stateCode')}</label>
-                  <input
-                    type="text"
-                    value={selectedCustomer?.stateCode || ''}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.exemptionNo')}</label>
-                  <input
-                    type="text"
-                    value={selectedCustomer?.exemptionNumber || ''}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                    placeholder={t('bill.exemptionNoPlaceholder')}
-                  />
+                      const customer = customers.find(c => String(c.id) === String(selectedId));
+                      if (customer) {
+                        if (customer.gstNumber && customer.gstNumber.length >= 2) {
+                          const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
+                          if (stateCode) {
+                            customer.stateCode = stateCode.toString();
+                          }
+                        }
+                        setSelectedCustomer(customer);
+                      } else {
+                        setSelectedCustomer(null);
+                      }
+                    }}
+                    className="premium-input flex-1 px-1.5 py-3 text-xs bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
+                  >
+                    <option value="">{t('bill.selectCustomerPlaceholder')}</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={String(customer.id)}>
+                        {customer.customerName} - {customer.gstNumber || t('common.noGstin')}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push('/ddo/customers?add=true')}
+                    className="px-2 py-1 text-xs shadow-sm hover:shadow-md transition-shadow whitespace-nowrap"
+                  >
+                    <Plus className="mr-1" size={10} />
+                    {t('bill.addNewCustomer')}
+                  </Button>
                 </div>
               </div>
 
@@ -1390,12 +1333,23 @@ export default function GenerateBillPage() {
                       setTaxPayableReverseCharge('NO');
                     }
                   }}
-                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
+                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium mb-3"
                 >
                   <option value="EXEMPTED">Exempted Service</option>
                   <option value="RCM">RCM</option>
                   <option value="FCM">FCM</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">Details of Service Receiver</label>
+                <textarea
+                  value={`${selectedCustomer?.customerName ? `Name: M/s ${selectedCustomer.customerName}` : 'Name:'}${selectedCustomer?.gstNumber ? ` | GSTIN: ${selectedCustomer.gstNumber}` : ''}${selectedCustomer?.stateCode ? ` | State: ${selectedCustomer.stateCode}` : ''}${invoiceType ? ` | ${invoiceType === 'EXEMPTED' ? 'Exempted' : invoiceType}` : ''}\n${selectedCustomer?.address ? `Address: ${selectedCustomer.address}` : 'Address:'}\n${notificationDetails ? `Notification: ${notificationDetails}` : 'Notification:'}`}
+                  readOnly
+                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg resize-none font-medium"
+                  rows="4"
+                  placeholder="Service Receiver details will appear here..."
+                />
               </div>
             </div>
 
@@ -1426,43 +1380,46 @@ export default function GenerateBillPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.placeOfSupply')}</label>
-                <input
-                  type="text"
-                  value={billDetails.placeOfSupply}
-                  readOnly
-                  className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                />
-              </div>
+              {/* Hidden fields - only visible in print preview */}
+              <div className="hidden print-preview-fields">
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.placeOfSupply')}</label>
+                  <input
+                    type="text"
+                    value={billDetails.placeOfSupply}
+                    readOnly
+                    className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
+                  />
+                </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.ddoCode')}</label>
-                  <input
-                    type="text"
-                    value={ddoDetails.ddoCode}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.ddoName')}</label>
-                  <input
-                    type="text"
-                    value={ddoDetails.fullName}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.ddoCityDistrict')}</label>
-                  <input
-                    type="text"
-                    value={ddoDetails.city}
-                    readOnly
-                    className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
-                  />
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.ddoCode')}</label>
+                    <input
+                      type="text"
+                      value={ddoDetails.ddoCode}
+                      readOnly
+                      className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('label.ddoName')}</label>
+                    <input
+                      type="text"
+                      value={ddoDetails.fullName}
+                      readOnly
+                      className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.ddoCityDistrict')}</label>
+                    <input
+                      type="text"
+                      value={ddoDetails.city}
+                      readOnly
+                      className="premium-input w-full px-2 py-2 text-xs bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg font-medium"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1494,14 +1451,14 @@ export default function GenerateBillPage() {
                 </colgroup>
                 <thead>
                   <tr className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/90 text-white">
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.serialNo')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.serialNo')}</th>
                     <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.itemDescription')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.hsnCode')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.quantity')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">Unit</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.amount')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.taxableValueRs')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-bold text-xs">{t('bill.action')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.hsnCode')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.quantity')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">Unit</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.amount')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.taxableValueRs')}</th>
+                    <th className="border border-[var(--color-primary)] p-2 text-center font-bold text-xs">{t('bill.action')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1516,25 +1473,15 @@ export default function GenerateBillPage() {
                           rows="2"
                         />
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-xs">
-                        {hsnList.length === 1 ? (
-                          <input
-                            type="text"
-                            value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
-                            readOnly
-                            className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs font-medium"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={item.hsnNumber}
-                            onChange={(e) => handleLineItemChange(index, 'hsnNumber', e.target.value)}
-                            className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                            list="hsn-list"
-                          />
-                        )}
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center">
+                        <input
+                          type="text"
+                          value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
+                          readOnly
+                          className="premium-input w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs font-medium text-center"
+                        />
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-xs">
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center">
                         <div className="w-full px-2 py-1.5 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-xs font-medium text-center">
                           1
                         </div>
@@ -1542,24 +1489,24 @@ export default function GenerateBillPage() {
                       <td className="border border-[var(--color-border)] p-2 text-xs text-center font-semibold bg-[var(--color-muted)]/20">
                         Nos
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-xs">
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center">
                         <input
                           type="number"
                           value={item.amount}
                           onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
-                          className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
+                          className="premium-input w-full px-2 py-1.5 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all text-center"
                           min="0"
                           step="0.01"
                         />
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-xs text-right font-semibold bg-[var(--color-muted)]/20">
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center font-semibold bg-[var(--color-muted)]/20">
                         {formatCurrency(item.amount)}
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-xs">
+                      <td className="border border-[var(--color-border)] p-2 text-xs text-center">
                         {lineItems.length > 1 && (
                           <button
                             onClick={() => handleRemoveLineItem(index)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 transition-all"
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 transition-all inline-flex items-center justify-center"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1627,50 +1574,60 @@ export default function GenerateBillPage() {
             return (
               <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-4`}>
                 <div className="space-y-3">
-                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.taxPayableReverse')}</label>
-                      <select
-                        value={taxPayableReverseCharge}
-                        onChange={(e) => setTaxPayableReverseCharge(e.target.value)}
-                        className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
-                        disabled={isExempted || isRCMExempted || isFCMExempted}
-                      >
-                        <option value="YES">{t('bill.yes')}</option>
-                        <option value="NO">{t('bill.no')}</option>
-                        <option value="NA">{t('bill.na')}</option>
-                      </select>
-                    </div>
-                  </div>
+                  {/* Two-column layout: 50% - 50% */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Left Column */}
+                    <div className="space-y-3">
+                      {/* Tax is Payable on Reverse Charges - Label on left, dropdown on right */}
+                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-semibold text-[var(--color-text-primary)] whitespace-nowrap flex-shrink-0">{t('bill.taxPayableReverse')}</label>
+                          <select
+                            value={taxPayableReverseCharge}
+                            onChange={(e) => setTaxPayableReverseCharge(e.target.value)}
+                            className="premium-input flex-1 px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
+                            disabled={isExempted || isRCMExempted || isFCMExempted}
+                          >
+                            <option value="YES">{t('bill.yes')}</option>
+                            <option value="NO">{t('bill.no')}</option>
+                            <option value="NA">{t('bill.na')}</option>
+                          </select>
+                        </div>
+                      </div>
 
-                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.invoiceRemarks')}</label>
-                      <textarea
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                        rows="2"
-                        placeholder={t('bill.invoiceRemarksPlaceholder')}
-                        readOnly={isExempted || isRCMExempted || isFCMExempted}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.notificationDetails')}</label>
-                      <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg text-xs min-h-[60px] leading-relaxed">
-                        {notificationDetails || '-'}
+                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                        <div>
+                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.invoiceRemarks')}</label>
+                          <textarea
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
+                            rows="2"
+                            placeholder={t('bill.invoiceRemarksPlaceholder')}
+                            readOnly={isExempted || isRCMExempted || isFCMExempted}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.totalInvoiceValueWords')}</label>
-                      <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg italic text-xs min-h-[50px] leading-relaxed font-medium">
-                        {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                    {/* Right Column */}
+                    <div className="space-y-3">
+                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                        <div>
+                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.notificationDetails')}</label>
+                          <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg text-xs min-h-[60px] leading-relaxed">
+                            {notificationDetails || '-'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                        <div>
+                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.totalInvoiceValueWords')}</label>
+                          <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg italic text-xs min-h-[50px] leading-relaxed font-medium">
+                            {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2082,7 +2039,7 @@ export default function GenerateBillPage() {
                   <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-gray-300 pb-2">{t('bill.serviceReceiver')} (BILL TO)</h3>
                   <div className="space-y-2">
                     <p className="mb-2"><strong>{t('bill.customerType')}:</strong> <span className="text-[#2C5F2D] font-semibold">{customerType}</span></p>
-                    <p className="font-bold mb-2 text-lg">{t('common.ms')} {selectedCustomer?.name || ''}</p>
+                    <p className="font-bold mb-2 text-lg">{t('common.ms')} {selectedCustomer?.customerName || ''}</p>
                     <p className="mb-2 leading-relaxed">{selectedCustomer?.address || ''}</p>
                     <p className="mb-2"><strong>{t('label.gstin')}:</strong> {selectedCustomer?.gstNumber || ''}</p>
                     <p className="mb-2"><strong>{t('bill.exemptionNo')}:</strong> {selectedCustomer?.exemptionNumber||''}</p>
