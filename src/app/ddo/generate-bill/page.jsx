@@ -79,6 +79,7 @@ export default function GenerateBillPage() {
   const [ddoDetails, setDdoDetails] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
   const { gstinList } = useGstinList();
 
@@ -407,6 +408,11 @@ export default function GenerateBillPage() {
         setNotificationDetails('Different State - IGST applicable');
       }
     }
+  };
+
+  const handleNavigateToAddCustomer = () => {
+    setIsNavigatingToCustomer(true);
+    router.push('/ddo/customers?add=true');
   };
 
   const handleAddCustomer = async (e) => {
@@ -1268,6 +1274,14 @@ export default function GenerateBillPage() {
             <LoadingProgressBar message="Loading bill data..." variant="primary" />
           </div>
         ) : (
+        <>
+        {isNavigatingToCustomer && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="premium-card p-8 sm:p-16">
+              <LoadingProgressBar message="Navigating to add customer..." variant="primary" />
+            </div>
+          </div>
+        )}
         <div className="premium-card p-6 sm:p-8 space-y-8 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-background)] to-[var(--color-muted)]/5 shadow-xl border border-[var(--color-border)]/50">
           {/* Header Section with Logo - Centered - Hidden in UI, visible only in preview/print */}
           <div className="hidden border-b-2 border-[var(--color-primary)]/30 pb-8 mb-8">
@@ -1374,7 +1388,8 @@ export default function GenerateBillPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => router.push('/ddo/customers?add=true')}
+                      onClick={handleNavigateToAddCustomer}
+                      disabled={isNavigatingToCustomer}
                       className="px-4 py-3 text-sm shadow-lg hover:shadow-xl transition-all whitespace-nowrap bg-gradient-to-br from-[var(--color-accent)]/10 to-[var(--color-primary)]/10 hover:from-[var(--color-accent)]/20 hover:to-[var(--color-primary)]/20 border border-[var(--color-accent)]/30"
                     >
                       <Plus className="mr-2" size={14} />
@@ -1890,6 +1905,7 @@ export default function GenerateBillPage() {
             </Button>
           </div>
         </div>
+        </>
         )}
 
         {/* Add Customer Modal */}
