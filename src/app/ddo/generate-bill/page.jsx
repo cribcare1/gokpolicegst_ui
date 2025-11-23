@@ -1160,31 +1160,79 @@ export default function GenerateBillPage() {
     });
   };
 
-  const numberToWords = (num) => {
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    
-    if (num === 0) return 'Zero';
-    if (num < 10) return ones[num];
-    if (num < 20) return teens[num - 10];
-    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '');
-    if (num < 1000) return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' and ' + numberToWords(num % 100) : '');
-    
-    return 'Number too large for conversion';
-  };
+ function numberToWords(num) {
+  if (num === 0) return "Zero";
+
+  const words = [
+    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+    "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+    "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+  ];
+
+  const tens = [
+    "", "", "Twenty", "Thirty", "Forty", "Fifty",
+    "Sixty", "Seventy", "Eighty", "Ninety"
+  ];
+
+  const units = [
+    { value: 10000000, str: "Crore" },
+    { value: 100000, str: "Lakh" },
+    { value: 1000, str: "Thousand" },
+    { value: 100, str: "Hundred" }
+  ];
+
+  let result = "";
+
+  for (const unit of units) {
+    if (num >= unit.value) {
+      const quotient = Math.floor(num / unit.value);
+      result += numberToWords(quotient) + " " + unit.str + " ";
+      num %= unit.value;
+    }
+  }
+
+  if (num > 0) {
+    if (num < 20) {
+      result += words[num] + " ";
+    } else {
+      result += tens[Math.floor(num / 10)] + " ";
+      if (num % 10 > 0) result += words[num % 10] + " ";
+    }
+  }
+
+  return result.trim();
+}
+
 
   const amountInWords = (amount) => {
-    const rupees = Math.floor(amount);
-    const paise = Math.round((amount - rupees) * 100);
-    
-    let words = numberToWords(rupees) + ' Rupees';
-    if (paise > 0) {
-      words += ' and ' + numberToWords(paise) + ' Paise';
-    }
-    
-    return words + ' Only';
-  };
+    console.log("amount-------", amount);
+  // If amount is null, undefined, empty string → return empty
+  if (amount === null || amount === undefined || amount === '') {
+    return '';
+  }
+
+  // Convert string to number safely
+  const numericAmount = Number(amount);
+
+  // If not a valid number → return empty
+  if (isNaN(numericAmount)) {
+    return '';
+  }
+
+  const rupees = Math.floor(numericAmount);
+  const paise = Math.round((numericAmount - rupees) * 100);
+
+  // Convert rupees
+  let words = numberToWords(rupees) + ' Rupees';
+
+  // Convert paise only if exists
+  if (paise > 0) {
+    words += ' and ' + numberToWords(paise) + ' Paise';
+  }
+
+  return words + ' Only';
+};
+
 
   // Calculate totals - quantity is always 1 per item
   const totalQuantity = lineItems.length;
@@ -1319,7 +1367,7 @@ export default function GenerateBillPage() {
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.exemptedService')} / RCM / FCM</label>
                 <select 
                   value={invoiceType}
@@ -1339,7 +1387,7 @@ export default function GenerateBillPage() {
                   <option value="RCM">RCM</option>
                   <option value="FCM">FCM</option>
                 </select>
-              </div>
+              </div> */}
 
               <div>
                 <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">Details of Service Receiver</label>
@@ -1575,62 +1623,91 @@ export default function GenerateBillPage() {
               <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-4`}>
                 <div className="space-y-3">
                   {/* Two-column layout: 50% - 50% */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Left Column */}
-                    <div className="space-y-3">
-                      {/* Tax is Payable on Reverse Charges - Label on left, dropdown on right */}
-                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-semibold text-[var(--color-text-primary)] whitespace-nowrap flex-shrink-0">{t('bill.taxPayableReverse')}</label>
-                          <select
-                            value={taxPayableReverseCharge}
-                            onChange={(e) => setTaxPayableReverseCharge(e.target.value)}
-                            className="premium-input flex-1 px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all font-medium"
-                            disabled={isExempted || isRCMExempted || isFCMExempted}
-                          >
-                            <option value="YES">{t('bill.yes')}</option>
-                            <option value="NO">{t('bill.no')}</option>
-                            <option value="NA">{t('bill.na')}</option>
-                          </select>
-                        </div>
-                      </div>
+                 <div className="grid grid-cols-2 gap-3">
+  
+  {/* ---------------- Left Column ---------------- */}
+  <div className="space-y-3">
 
-                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                        <div>
-                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.invoiceRemarks')}</label>
-                          <textarea
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-                            rows="2"
-                            placeholder={t('bill.invoiceRemarksPlaceholder')}
-                            readOnly={isExempted || isRCMExempted || isFCMExempted}
-                          />
-                        </div>
-                      </div>
-                    </div>
+    
 
-                    {/* Right Column */}
-                    <div className="space-y-3">
-                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                        <div>
-                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.notificationDetails')}</label>
-                          <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg text-xs min-h-[60px] leading-relaxed">
-                            {notificationDetails || '-'}
-                          </div>
-                        </div>
-                      </div>
+    {/* Invoice Remarks */}
+    <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 
+                    border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">
+        {t('bill.invoiceRemarks')}
+      </label>
 
-                      <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
-                        <div>
-                          <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">{t('bill.totalInvoiceValueWords')}</label>
-                          <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded-lg italic text-xs min-h-[50px] leading-relaxed font-medium">
-                            {amountInWords(gstCalculation?.finalAmount || totalAmount)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        className="premium-input w-full px-3 py-2 text-sm bg-[var(--color-background)] 
+                   border border-[var(--color-border)] rounded-lg resize-none
+                   focus:border-[var(--color-primary)] focus:ring-1 
+                   focus:ring-[var(--color-primary)]/20 transition-all"
+        rows="2"
+        placeholder={t('bill.invoiceRemarksPlaceholder')}
+        readOnly={isExempted || isRCMExempted || isFCMExempted}
+      />
+    </div>
+    {/* Tax Payable on Reverse Charge */}
+    {selectedCustomer?.serviceType?.toString().trim().toUpperCase() === 'RCM' && (
+  <div className="flex items-center gap-3">
+    <label className="text-xs font-semibold text-[var(--color-text-primary)] whitespace-nowrap flex-shrink-0">
+      {t('bill.taxPayableReverse')}
+    </label>
+
+    <span className="premium-input flex-1 px-3 py-2 text-sm bg-[var(--color-muted)]/50 
+                     border border-[var(--color-border)] rounded-lg font-medium">
+      YES
+    </span>
+  </div>
+)}
+
+  </div>
+
+  {/* ---------------- Right Column ---------------- */}
+  <div className="space-y-3">
+     
+    {/* Notification Details */}
+    <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 
+                    border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+      <label className="block text-xs font-semibold mb-1 text-[var(--color-text-primary)]">
+        {t('bill.notificationDetails')}
+      </label>
+
+      <div className="premium-input w-full px-3 py-2 bg-[var(--color-muted)]/50 
+                      border border-[var(--color-border)] rounded-lg text-xs 
+                      min-h-[65px] leading-relaxed">
+        {notificationDetails || '-'}
+      </div>
+    </div>
+     {/* Total Invoice Value in Words */}
+    <div className="bg-gradient-to-br from-[var(--color-background)] to-[var(--color-muted)]/30 
+                border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+
+        <div className="flex items-center gap-3">
+
+          <label className="text-xs font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
+            {t('bill.totalInvoiceValueWords')}
+          </label>
+
+          <div
+            className="premium-input px-3 py-2 bg-[var(--color-muted)]/50 
+                      border border-[var(--color-border)] rounded-lg italic text-xs 
+                      leading-relaxed font-bold flex-1 whitespace-nowrap overflow-x-auto"
+          >
+            {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+          </div>
+
+
+        </div>
+    </div>
+  
+
+    </div>
+
+</div>
+
 
                   {/* Show RCM GST values below notification only for RCM (not exempted) */}
                   {showRCMGST && (
