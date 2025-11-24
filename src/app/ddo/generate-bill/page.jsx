@@ -1246,7 +1246,7 @@ export default function GenerateBillPage() {
                   type="text"
                   value={invoiceNumber}
                   readOnly
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-muted)]/50 text-[var(--color-primary)] font-semibold min-w-[200px]"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-muted)]/50 text-[var(--color-primary)] font-semibold min-w-[260px]"
                 />
               </div>
               <div>
