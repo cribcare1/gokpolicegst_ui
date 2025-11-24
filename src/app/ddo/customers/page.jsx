@@ -1,4 +1,6 @@
 "use client";
+
+import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
