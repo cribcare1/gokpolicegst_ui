@@ -38,16 +38,17 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [gstinError, setGstinError] = useState('');
+  const [hasOpenedFromQuery, setHasOpenedFromQuery] = useState(false); // Fix: track modal opening from query param
 
   useEffect(() => {
     fetchCustomers();
   }, []);
 
+  // Fix: Open modal from query param reliably
   useEffect(() => {
-    // Check if 'add' query parameter is present
     const addParam = searchParams.get('add');
-    if (addParam === 'true') {
-      // Open the add customer modal
+
+    if (addParam === 'true' && !hasOpenedFromQuery) {
       setEditingCustomer(null);
       setFormData({
         name: '',
@@ -64,12 +65,15 @@ export default function CustomersPage() {
       });
       setGstinError('');
       setIsModalOpen(true);
-      // Remove the query parameter from URL without reloading
+
+      // Remove query param from URL without reload
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', '/ddo/customers');
       }
+
+      setHasOpenedFromQuery(true);
     }
-  }, [searchParams]);
+  }, [searchParams, hasOpenedFromQuery]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -91,7 +95,7 @@ export default function CustomersPage() {
     setLoading(true);
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-      
+
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
         setLoading(false);
@@ -103,22 +107,21 @@ export default function CustomersPage() {
       );
 
       if (response && response.status === 'success' && response.data) {
-        // Map API response to table format
         const mappedCustomers = response.data.map((customer) => ({
           id: customer.id,
           name: customer.customerName || '',
           gstNumber: customer.gstNumber || '',
           address: customer.address || '',
-          city: customer.city||'', // Not in API response, keeping for compatibility
+          city: customer.city || '',
           stateCode: customer.stateCode || '',
           pin: customer.pinCode || '',
           customerType: customer.customerType === 'gov' || customer.customerType === 'Govt' || customer.customerType === 'Government' ? 'Government' : 'Non-Government',
           serviceType: customer.serviceType || '',
           exemptionCertNumber: customer.exemptionNumber || '',
-          mobile: customer.mobile||'', // Not in API response, keeping for compatibility
+          mobile: customer.mobile || '',
           email: customer.customerEmail || '',
         }));
-        
+
         setCustomers(mappedCustomers);
         setFilteredCustomers(mappedCustomers);
       } else {
@@ -159,7 +162,6 @@ export default function CustomersPage() {
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
-    // Map customer data back to form format
     const customerType = customer.customerType === 'Government' ? 'Government' : 
                         customer.customerType === 'Non-Government' ? 'Non-Government' : '';
     setFormData({
@@ -181,12 +183,12 @@ export default function CustomersPage() {
 
   const handleDelete = async (customer) => {
     if (!confirm('Are you sure you want to delete this customer?')) return;
-    
+
     try {
       const response = await ApiService.handlePostRequest(
         `${API_ENDPOINTS.CUSTOMER_DELETE_BY_ID}${customer.id}`
       );
-      
+
       if (response && response.status === 'success') {
         toast.success(response.message || t('alert.success'));
         fetchCustomers();
@@ -203,58 +205,43 @@ export default function CustomersPage() {
     const upperValue = value.toUpperCase().slice(0, 15);
     let updatedFormData = { ...formData, gstNumber: upperValue };
     let errorMessage = '';
-    
-    // Extract state code from first 2 characters
+
     if (upperValue.length >= 2) {
       const stateCode = getStateCodeFromGSTIN(upperValue);
-      if (stateCode) {
-        updatedFormData.stateCode = stateCode.toString();
-      } else {
-        updatedFormData.stateCode = '';
-      }
+      updatedFormData.stateCode = stateCode ? stateCode.toString() : '';
     } else {
-      // Reset state code if GSTIN is less than 2 characters
       updatedFormData.stateCode = '';
     }
-    
-    // Clear Notification field when GSTIN is present
+
     if (upperValue && upperValue.trim() !== '') {
       updatedFormData.exemptionCertNumber = '';
     }
-    
-    // Validate GSTIN for Govt type
+
     if (updatedFormData.customerType === 'Government' && upperValue.length >= 6) {
       const sixthChar = upperValue.charAt(5);
       if (sixthChar !== 'G') {
         errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
       }
     }
-    
+
     setGstinError(errorMessage);
-    
-    // Auto-set Service Type based on customer type and GSTIN
     updateServiceType(updatedFormData.customerType, upperValue, updatedFormData);
-    
     setFormData(updatedFormData);
   };
 
   const handleCustomerTypeChange = (value) => {
     let updatedFormData = { ...formData, customerType: value };
     let errorMessage = '';
-    
-    // Validate GSTIN if Type is Govt
+
     if (value === 'Government' && updatedFormData.gstNumber.length >= 6) {
       const sixthChar = updatedFormData.gstNumber.charAt(5);
       if (sixthChar !== 'G') {
         errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
       }
     }
-    
+
     setGstinError(errorMessage);
-    
-    // Auto-set Service Type based on customer type and GSTIN
     updateServiceType(value, updatedFormData.gstNumber, updatedFormData);
-    
     setFormData(updatedFormData);
   };
 
@@ -263,12 +250,10 @@ export default function CustomersPage() {
       formDataObj.serviceType = 'Exempted';
     } else if (customerType === 'Non-Government') {
       if (gstNumber && gstNumber.trim() !== '') {
-        // Non Govt with GSTIN - default to RCM, but allow RCM/Exempted
         if (!formDataObj.serviceType || formDataObj.serviceType === 'FCM') {
           formDataObj.serviceType = 'RCM';
         }
       } else {
-        // Non Govt without GSTIN - default to FCM, but allow FCM/Exempted
         if (!formDataObj.serviceType || formDataObj.serviceType === 'RCM') {
           formDataObj.serviceType = 'FCM';
         }
@@ -278,15 +263,13 @@ export default function CustomersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("submit called");
-    // Validate Name
+
     const nameValidation = validateName(formData.name, 'Customer Name');
     if (!nameValidation.valid) {
       toast.error(nameValidation.message);
       return;
     }
-    
-    // Validate GSTIN (optional - only validate if provided)
+
     if (formData.gstNumber && formData.gstNumber.trim() !== '') {
       const gstValidation = validateGSTIN(formData.gstNumber);
       if (!gstValidation.valid) {
@@ -294,36 +277,31 @@ export default function CustomersPage() {
         return;
       }
     }
-    
-    // Validate Address
+
     const addressValidation = validateAddress(formData.address);
     if (!addressValidation.valid) {
       toast.error(addressValidation.message);
       return;
     }
-    
-    // Validate City
+
     const cityValidation = validateCity(formData.city);
     if (!cityValidation.valid) {
       toast.error(cityValidation.message);
       return;
     }
-    
-    // Validate State Code
+
     const stateCodeValidation = validateStateCode(formData.stateCode);
     if (!stateCodeValidation.valid) {
       toast.error(stateCodeValidation.message);
       return;
     }
-    
-    // Validate PIN
+
     const pinValidation = validatePIN(formData.pin);
     if (!pinValidation.valid) {
       toast.error(pinValidation.message);
       return;
     }
-    
-    // Validate GSTIN for Govt type
+
     if (formData.customerType === 'Government' && formData.gstNumber && formData.gstNumber.length >= 6) {
       const sixthChar = formData.gstNumber.charAt(5);
       if (sixthChar !== 'G') {
@@ -331,53 +309,39 @@ export default function CustomersPage() {
         return;
       }
     }
-    
-    // Validate Service Type
+
     if (!formData.serviceType || formData.serviceType.trim() === '') {
       toast.error('Service Type is required');
       return;
     }
-    
-    // Validate Exemption Certificate Number (required when Exempted and not Govt, and GSTIN is not present)
+
     if (formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && !(formData.gstNumber && formData.gstNumber.trim() !== '')) {
       if (!formData.exemptionCertNumber || formData.exemptionCertNumber.trim() === '') {
         toast.error('Notification is required when Service Type is Exempted for Non-Government customers without GSTIN');
         return;
       }
     }
-    
-    // Validate Email
+
     const emailValidation = validateEmail(formData.email);
     if (!emailValidation.valid) {
       toast.error(emailValidation.message);
       return;
     }
-    
-    // Validate Mobile
+
     const mobileValidation = validateMobile(formData.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
       return;
     }
-    
-    // Validate Exemption Certificate (optional)
-    // if (formData.exemptionCertNumber && formData.exemptionCertNumber.trim() !== '') {
-    //   const exemptionValidation = validateExemptionCert(formData.exemptionCertNumber);
-    //   if (!exemptionValidation.valid) {
-    //     toast.error(exemptionValidation.message);
-    //     return;
-    //   }
-    // }
 
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-      
+
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
         return;
       }
 
-      // Map form data to API payload format
       const payload = {
         ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
         customerName: formData.name,
@@ -398,7 +362,7 @@ export default function CustomersPage() {
         API_ENDPOINTS.CUSTOMER_ADD_OR_EDIT,
         payload
       );
-      
+
       if (response && response.status === 'success') {
         toast.success(response.message || t('alert.success'));
         setIsModalOpen(false);
@@ -501,7 +465,7 @@ export default function CustomersPage() {
           title={editingCustomer ? 'Edit Customer' : 'Add Customer'}
           size="xl"
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -722,4 +686,3 @@ export default function CustomersPage() {
     </Layout>
   );
 }
-
