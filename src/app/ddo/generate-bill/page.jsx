@@ -77,6 +77,13 @@ export default function GenerateBillPage() {
   const [note, setNote] = useState('');
   const [notificationDetails, setNotificationDetails] = useState('');
   const [ddoDetails, setDdoDetails] = useState('');
+  const [bankDetails, setBankDetails] = useState({
+    bankName: 'Union Bank of India-Current Account',
+    bankBranch: 'Banaswadi',
+    ifscCode: 'UBIN0534567',
+    accountNumber: '1234567890123456',
+    accountType: 'Current Account'
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
@@ -1113,8 +1120,13 @@ export default function GenerateBillPage() {
           <div class="bank-section">
             <h3>Bank Details</h3>
             <div class="bank-details">
-              <div><strong>Bank Name:</strong> Union Bank of India-Current Account</div>
-              <div><strong>Bank Branch:</strong> Banaswadi</div>
+              <div>
+                <strong>Bank Name:</strong> ${bankDetails.bankName}
+                ${bankDetails.bankBranch ? ` | <strong>Branch:</strong> ${bankDetails.bankBranch}` : ''}
+                ${bankDetails.ifscCode ? ` | <strong>IFSC:</strong> ${bankDetails.ifscCode}` : ''}
+                ${bankDetails.accountNumber ? ` | <strong>Account No:</strong> ${bankDetails.accountNumber}` : ''}
+                ${bankDetails.accountType ? ` | ${bankDetails.accountType}` : ''}
+              </div>
             </div>
           </div>
 
@@ -1580,88 +1592,166 @@ export default function GenerateBillPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {/* Left Column */}
                       <div className="space-y-3">
-                        {/* Invoice Remarks */}
-                        <div className="border border-[var(--color-border)] rounded p-3">
-                          <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                            {t('bill.invoiceRemarks')}
-                          </label>
-                          <textarea
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                            rows="2"
-                            placeholder={t('bill.invoiceRemarksPlaceholder')}
-                            readOnly={isExempted || isRCMExempted || isFCMExempted}
-                          />
-                        </div>
-                        {/* Tax Payable on Reverse Charge */}
-                        {selectedCustomer?.serviceType?.toString().trim().toUpperCase() === 'RCM' && (
-                          <div className="flex items-center gap-3">
-                            <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                              {t('bill.taxPayableReverse')}
-                            </label>
-                            <span className="flex-1 px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm">
-                              YES
-                            </span>
-                          </div>
+                        {invoiceType === 'EXEMPTED' ? (
+                          // EXEMPTED: Show Invoice Remarks, Notification Details and Total Invoice Value in Words on left
+                          <>
+                            {/* Invoice Remarks */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                {t('bill.invoiceRemarks')}
+                              </label>
+                              <textarea
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                                rows="2"
+                                placeholder={t('bill.invoiceRemarksPlaceholder')}
+                                readOnly={isExempted || isRCMExempted || isFCMExempted}
+                              />
+                            </div>
+                            {/* Notification Details */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                {t('bill.notificationDetails')}
+                              </label>
+                              <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
+                                {notificationDetails || '-'}
+                              </div>
+                            </div>
+                            {/* Total Invoice Value in Words */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <div className="flex items-center gap-3">
+                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                  {t('bill.totalInvoiceValueWords')}
+                                </label>
+                                <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
+                                  {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          // RCM: Show Invoice Remarks, Tax Payable on Reverse Charge, Notification Details, Total Invoice Value in Words, and GST values on left
+                          <>
+                            {/* Invoice Remarks */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                {t('bill.invoiceRemarks')}
+                              </label>
+                              <textarea
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                                rows="2"
+                                placeholder={t('bill.invoiceRemarksPlaceholder')}
+                                readOnly={isExempted || isRCMExempted || isFCMExempted}
+                              />
+                            </div>
+                            {/* Tax Payable on Reverse Charge */}
+                            {selectedCustomer?.serviceType?.toString().trim().toUpperCase() === 'RCM' && (
+                              <div className="flex items-center gap-3">
+                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                  {t('bill.taxPayableReverse')}
+                                </label>
+                                <span className="flex-1 px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm">
+                                  YES
+                                </span>
+                              </div>
+                            )}
+                            {/* Notification Details */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                {t('bill.notificationDetails')}
+                              </label>
+                              <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
+                                {notificationDetails || '-'}
+                              </div>
+                            </div>
+                            {/* Total Invoice Value in Words */}
+                            <div className="border border-[var(--color-border)] rounded p-3">
+                              <div className="flex items-center gap-3">
+                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                  {t('bill.totalInvoiceValueWords')}
+                                </label>
+                                <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
+                                  {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                                </div>
+                              </div>
+                            </div>
+                            {/* Show RCM GST values for RCM (not exempted) */}
+                            {showRCMGST && (
+                              <div className="border border-[var(--color-border)] rounded p-3 max-w-md">
+                                <div>
+                                  <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">{t('bill.gstPayableRCM')}</label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">IGST:</label>
+                                      <input
+                                        type="text"
+                                        value={gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}
+                                        readOnly
+                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">CGST:</label>
+                                      <input
+                                        type="text"
+                                        value={gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}
+                                        readOnly
+                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">SGST:</label>
+                                      <input
+                                        type="text"
+                                        value={gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                                        readOnly
+                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
                       {/* Right Column */}
                       <div className="space-y-3">
-                        {/* Notification Details */}
-                        <div className="border border-[var(--color-border)] rounded p-3">
-                          <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                            {t('bill.notificationDetails')}
-                          </label>
-                          <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
-                            {notificationDetails || '-'}
-                          </div>
-                        </div>
-                        {/* Total Invoice Value in Words */}
-                        <div className="border border-[var(--color-border)] rounded p-3">
-                          <div className="flex items-center gap-3">
-                            <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                              {t('bill.totalInvoiceValueWords')}
-                            </label>
-                            <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
-                              {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                        {invoiceType === 'EXEMPTED' ? (
+                          // EXEMPTED: Show Total Taxable Value and Total Invoice Amount on right
+                          <div className="border border-[var(--color-border)] rounded p-4">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                                <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                                <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                              </div>
+
+                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-2 font-semibold">
+                                <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
+                                <span className="text-base">
+                                  {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        {/* Show RCM GST values for RCM (not exempted) */}
-                        {showRCMGST && (
-                          <div className="border border-[var(--color-border)] rounded p-3 max-w-md">
-                            <div>
-                              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">{t('bill.gstPayableRCM')}</label>
-                              <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">IGST:</label>
-                                  <input
-                                    type="text"
-                                    value={gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}
-                                    readOnly
-                                    className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">CGST:</label>
-                                  <input
-                                    type="text"
-                                    value={gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}
-                                    readOnly
-                                    className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">SGST:</label>
-                                  <input
-                                    type="text"
-                                    value={gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
-                                    readOnly
-                                    className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                  />
-                                </div>
+                        ) : (
+                          // RCM: Show Total Taxable Value and Total Invoice Amount on right
+                          <div className="border border-[var(--color-border)] rounded p-4">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                                <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                                <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                              </div>
+
+                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-2 font-semibold">
+                                <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
+                                <span className="text-base">
+                                  {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -1715,7 +1805,6 @@ export default function GenerateBillPage() {
                 {showGSTCalculationUI && (
                   <div>
                     <div className="border border-[var(--color-border)] rounded p-4">
-                      <h4 className="text-sm font-semibold mb-3 pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">{t('bill.gstCalculation')}</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
                           <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
@@ -1764,33 +1853,41 @@ export default function GenerateBillPage() {
           })()}
 
           {/* Bank Details Section */}
-          <div className="border border-[var(--color-border)] rounded p-4">
-            <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] mb-4 text-[var(--color-text-primary)]">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
               {t('bill.bankDetails')}
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
-                  {t('bill.bankName')}
-                </label>
-                <input
-                  type="text"
-                  value="Union Bank of India-Current Account"
-                  readOnly
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-muted)]/50 text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
-                  {t('bill.bankBranch')}
-                </label>
-                <input
-                  type="text"
-                  value="Banaswadi"
-                  readOnly
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-muted)]/50 text-[var(--color-text-primary)]"
-                />
+            </label>
+            <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
+              <div className="text-sm">
+                <span className="font-medium text-[var(--color-text-primary)]">Bank Name: </span>
+                <span className="text-[var(--color-text-secondary)]">{bankDetails.bankName}</span>
+                {bankDetails.bankBranch && (
+                  <>
+                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">Branch: </span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails.bankBranch}</span>
+                  </>
+                )}
+                {bankDetails.ifscCode && (
+                  <>
+                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">IFSC: </span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails.ifscCode}</span>
+                  </>
+                )}
+                {bankDetails.accountNumber && (
+                  <>
+                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">Account No: </span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails.accountNumber}</span>
+                  </>
+                )}
+                {bankDetails.accountType && (
+                  <>
+                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails.accountType}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -2261,13 +2358,38 @@ export default function GenerateBillPage() {
               {/* Bank Details */}
               <div className="mb-8 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
                 <h3 className="font-bold mb-4 text-lg text-gray-800 border-b border-gray-300 pb-2">{t('bill.bankDetails')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base">
-                  <div>
-                    <p><strong className="text-gray-700">{t('bill.bankName')}:</strong> <span className="font-semibold">Union Bank of India-Current Account</span></p>
-                  </div>
-                  <div>
-                    <p><strong className="text-gray-700">{t('bill.bankBranch')}:</strong> <span className="font-semibold">Banaswadi</span></p>
-                  </div>
+                <div className="text-base">
+                  <p>
+                    <strong className="text-gray-700">Bank Name: </strong>
+                    <span className="font-semibold">{bankDetails.bankName}</span>
+                    {bankDetails.bankBranch && (
+                      <>
+                        <span className="text-gray-700 mx-2">|</span>
+                        <strong className="text-gray-700">Branch: </strong>
+                        <span className="font-semibold">{bankDetails.bankBranch}</span>
+                      </>
+                    )}
+                    {bankDetails.ifscCode && (
+                      <>
+                        <span className="text-gray-700 mx-2">|</span>
+                        <strong className="text-gray-700">IFSC: </strong>
+                        <span className="font-semibold">{bankDetails.ifscCode}</span>
+                      </>
+                    )}
+                    {bankDetails.accountNumber && (
+                      <>
+                        <span className="text-gray-700 mx-2">|</span>
+                        <strong className="text-gray-700">Account No: </strong>
+                        <span className="font-semibold">{bankDetails.accountNumber}</span>
+                      </>
+                    )}
+                    {bankDetails.accountType && (
+                      <>
+                        <span className="text-gray-700 mx-2">|</span>
+                        <span className="font-semibold">{bankDetails.accountType}</span>
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
 

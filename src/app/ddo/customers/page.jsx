@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -16,7 +16,7 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
-export default function CustomersPage() {
+function CustomersPageContent() {
   const searchParams = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
@@ -684,5 +684,19 @@ export default function CustomersPage() {
         </Modal>
       </div>
     </Layout>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={
+      <Layout role="ddo">
+        <div className="p-8 sm:p-16">
+          <LoadingProgressBar message="Loading customers..." variant="primary" />
+        </div>
+      </Layout>
+    }>
+      <CustomersPageContent />
+    </Suspense>
   );
 }
