@@ -1052,11 +1052,9 @@ export default function GenerateBillPage() {
             let rcmGSTSection = '';
             if (showRCMGST) {
               rcmGSTSection = `
-                <div class="calc-row"><strong>GST Payable Under RCM by the Recipient:</strong></div>
-                <div class="calc-row" style="margin-left: 15px;">
-                  <strong>IGST:</strong> ${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'} |
-                  <strong>CGST:</strong> ${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} |
-                  <strong>SGST:</strong> ${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                <div class="calc-row">
+                  <strong>GST Payable Under RCM by the Recipient = </strong>
+                  <span>IGST: ${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: ${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: ${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                 </div>
               `;
             }
@@ -1680,38 +1678,12 @@ export default function GenerateBillPage() {
                             </div>
                             {/* Show RCM GST values for RCM (not exempted) */}
                             {showRCMGST && (
-                              <div className="border border-[var(--color-border)] rounded p-3 max-w-md">
-                                <div>
-                                  <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">{t('bill.gstPayableRCM')}</label>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">IGST:</label>
-                                      <input
-                                        type="text"
-                                        value={gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}
-                                        readOnly
-                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">CGST:</label>
-                                      <input
-                                        type="text"
-                                        value={gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}
-                                        readOnly
-                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">SGST:</label>
-                                      <input
-                                        type="text"
-                                        value={gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
-                                        readOnly
-                                        className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center font-semibold"
-                                      />
-                                    </div>
-                                  </div>
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                                  <span>GST Payable Under RCM by the Recipient = </span>
+                                  <span className="font-semibold">
+                                    IGST: {gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: {gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: {gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                                  </span>
                                 </div>
                               </div>
                             )}
@@ -1730,7 +1702,7 @@ export default function GenerateBillPage() {
                                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
                               </div>
 
-                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-2 font-semibold">
+                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
                                 <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
                                 <span className="text-base">
                                   {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
@@ -1747,7 +1719,7 @@ export default function GenerateBillPage() {
                                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
                               </div>
 
-                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-2 font-semibold">
+                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
                                 <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
                                 <span className="text-base">
                                   {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
@@ -1838,7 +1810,7 @@ export default function GenerateBillPage() {
                           </span>
                         </div>
 
-                        <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-3 font-semibold">
+                        <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
                           <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
                           <span className="text-base">
                             {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
@@ -2305,12 +2277,12 @@ export default function GenerateBillPage() {
                         </div>
                         {showRCMGST && (
                           <div>
-                            <p className="font-semibold mb-2"><strong>{t('bill.gstPayableRCM')}</strong></p>
-                            <div className="grid grid-cols-3 gap-2 text-sm">
-                              <div className="bg-white p-2 rounded border text-center"><strong>IGST:</strong><br/>{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</div>
-                              <div className="bg-white p-2 rounded border text-center"><strong>CGST:</strong><br/>{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</div>
-                              <div className="bg-white p-2 rounded border text-center"><strong>SGST:</strong><br/>{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</div>
-                            </div>
+                            <p className="font-semibold mb-2 text-sm">
+                              <strong>GST Payable Under RCM by the Recipient = </strong>
+                              <span className="font-normal">
+                                IGST: {gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: {gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: {gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                              </span>
+                            </p>
                           </div>
                         )}
                       </div>

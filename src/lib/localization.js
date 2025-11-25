@@ -15,7 +15,7 @@ export const translations = {
   "nav.hsn": { en: "HSN/SSC", kn: "HSN/SSC ಮಾಸ್ಟರ್" },
   "nav.bank": { en: "Bank Details", kn: "ಬ್ಯಾಂಕ್ ವಿವರಗಳು" },
   "nav.customers": { en: "Customers", kn: "ಗ್ರಾಹಕರು" },
-  "nav.generateBill": { en: "Generate Bill", kn: "ಬಿಲ್ ರಚಿಸಿ" },
+  "nav.generateBill": { en: "Generate Proforma Invoice", kn: "ಬಿಲ್ ರಚಿಸಿ" },
   "nav.invoiceList": { en: "Invoice List", kn: "ಚಲಾನ್ ಪಟ್ಟಿ" },
   "nav.reports": { en: "Reports", kn: "ವರದಿಗಳು" },
   "nav.settings": { en: "Settings", kn: "ಸettings" },
@@ -101,7 +101,7 @@ export const translations = {
   "creditNote.reason": { en: "Reason", kn: "ಕಾರಣ" },
   
   // Bill Generation Page
-  "bill.generateBillSubtitle": { en: "Generate GST Bill - Government of Karnataka Format", kn: "GST ಬಿಲ್ ರಚಿಸಿ - ಕರ್ನಾಟಕ ಸರ್ಕಾರದ ಸ್ವರೂಪ" },
+  "bill.generateBillSubtitle": { en: "Generate Proforma Invoice - Government of Karnataka Format", kn: "GST ಬಿಲ್ ರಚಿಸಿ - ಕರ್ನಾಟಕ ಸರ್ಕಾರದ ಸ್ವರೂಪ" },
   "bill.taxInvoice": { en: "TAX INVOICE", kn: "ತೆರಿಗೆ ಚಲಾನ್" },
   "bill.serviceReceiver": { en: "Details of Service Receiver (BILL TO)", kn: "ಸೇವಾ ಸ್ವೀಕರಿಸುವವರ ವಿವರಗಳು (ಬಿಲ್ ಟು)" },
   "bill.selectCustomer": { en: "Select Customer", kn: "ಗ್ರಾಹಕ ಆಯ್ಕೆಮಾಡಿ" },
