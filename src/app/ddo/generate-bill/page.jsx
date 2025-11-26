@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
+import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
 import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
@@ -10,7 +11,7 @@ import ApiService from '@/components/api/api_service';
 import { t, getLanguage } from '@/lib/localization';
 import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode, isGovernmentGSTIN, isGovernmentPAN } from '@/lib/gstUtils';
 import { getAllStates, getStateCodeFromGSTIN } from '@/lib/stateCodes';
-import { Plus, Trash2, X, Download, Printer, FileText } from 'lucide-react';
+import { Plus, Trash2, X, Download, Printer, FileText, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar, LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { useGstinList } from '@/hooks/useGstinList';
@@ -23,6 +24,7 @@ export default function GenerateBillPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  
   // Bill Details
   const [billDetails, setBillDetails] = useState({
     gstinNumber: '29AAAG01111W1ZB',
@@ -36,9 +38,9 @@ export default function GenerateBillPage() {
   // Customer
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [gstDetails, setGstDetails] = useState(null);
-  const [customerType, setCustomerType] = useState('Govt'); // Govt or Non Govt
-  const [invoiceType, setInvoiceType] = useState('FCM'); // RCM, FCM, or EXEMPTED
-  const [taxPayableReverseCharge, setTaxPayableReverseCharge] = useState('YES'); // YES, NO, NA
+  const [customerType, setCustomerType] = useState('Govt');
+  const [invoiceType, setInvoiceType] = useState('FCM');
+  const [taxPayableReverseCharge, setTaxPayableReverseCharge] = useState('YES');
   const [exemptionNo, setExemptionNo] = useState('');
   const [newCustomer, setNewCustomer] = useState({
     name: '',
@@ -89,25 +91,27 @@ export default function GenerateBillPage() {
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
   const { gstinList } = useGstinList();
+  const [proformaList, setProformaList] = useState([]);
+  const [filteredProformaList, setFilteredProformaList] = useState([]);
+  const [proformaSearchTerm, setProformaSearchTerm] = useState('');
+  const [proformaLoading, setProformaLoading] = useState(true);
+  const [isProformaFormOpen, setIsProformaFormOpen] = useState(false);
 
   useEffect(() => {
     fetchGSTDetails();
     getDdoDetails();
     fetchCustomers();
     fetchHSNList();
-    // loadDDOInfo();
+    fetchProformaRecords();
     setCurrentLang(getLanguage());
     
-    // Listen for language changes
     const handleLanguageChange = (event) => {
       const newLang = event?.detail?.language || getLanguage();
       setCurrentLang(newLang);
     };
     
-    // Listen to custom language change event
     if (typeof window !== 'undefined') {
       window.addEventListener('languageChanged', handleLanguageChange);
-      // Also listen to storage events (for cross-tab communication)
       window.addEventListener('storage', (e) => {
         if (e.key === 'preferredLanguage') {
           setCurrentLang(getLanguage());
@@ -121,24 +125,18 @@ export default function GenerateBillPage() {
       }
     };
   }, []);
-  function Ddo(){
-    
-  }
 
   useEffect(() => {
     if (selectedCustomer) {
-      // Determine customer type from GSTIN or customer data
       const isGovt = selectedCustomer.customerType === 'Govt' || 
                      selectedCustomer.customerType === 'Government' ||
                      (selectedCustomer.gstNumber && isGovernmentGSTIN(selectedCustomer.gstNumber)) ||
                      (selectedCustomer.pan && isGovernmentPAN(selectedCustomer.pan));
       setCustomerType(isGovt ? 'Govt' : 'Non Govt');
       
-      // Determine invoice type based on customer's serviceType first, then fallback to old logic
       if (selectedCustomer.serviceType) {
         const serviceType = selectedCustomer.serviceType.toUpperCase();
         setInvoiceType(serviceType);
-        
       }
     }
   }, [selectedCustomer]);
@@ -151,7 +149,6 @@ export default function GenerateBillPage() {
     }
   }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList]);
 
-  // Auto-set HSN code if only one exists and ensure quantity is always 1
   useEffect(() => {
     if (lineItems.length === 0) return;
     
@@ -159,7 +156,6 @@ export default function GenerateBillPage() {
     const updated = lineItems.map(item => {
       const newItem = { ...item };
       
-      // Auto-set HSN if only one exists and item doesn't have one
       if (hsnList.length === 1) {
         const defaultHsn = hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '';
         if (item.hsnNumber !== defaultHsn) {
@@ -168,7 +164,6 @@ export default function GenerateBillPage() {
         }
       }
       
-      // Ensure quantity is always 1 (handle undefined, null, empty string, or any other value)
       const currentQty = parseInt(item.quantity) || 0;
       if (currentQty !== 1) {
         newItem.quantity = 1;
@@ -181,36 +176,47 @@ export default function GenerateBillPage() {
     if (needsUpdate) {
       setLineItems(updated);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hsnList.length, hsnList, lineItems.length]);
 
+  useEffect(() => {
+    if (!proformaSearchTerm.trim()) {
+      setFilteredProformaList(proformaList);
+      return;
+    }
 
-  function  getDdoDetails() {
+    const term = proformaSearchTerm.toLowerCase();
+    const filtered = proformaList.filter((record) => {
+      return [
+        record.proformaNumber,
+        record.customerName,
+        record.serviceType,
+        record.taxInvoiceAmount,
+      ].some((value) => {
+        if (value === null || value === undefined) return false;
+        return value.toString().toLowerCase().includes(term);
+      });
+    });
+    setFilteredProformaList(filtered);
+  }, [proformaSearchTerm, proformaList]);
+
+  function getDdoDetails() {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
-          console.log("storedprfole", storedProfile);
-          if (storedProfile) {
-            try {
-              // Check if the value looks like JSON (starts with { or [)
-              const trimmedValue = storedProfile.trim();
-              if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
-                const userProfile = JSON.parse(storedProfile);
-                console.log("userProfile", userProfile);
-                // If data exists and not empty
-                if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
-                  console.log("userProfile=====called");
-                  setDdoDetails(userProfile);
-                  return;
-                }
-              }
-              // If not valid JSON or empty, fetch from API
-              // fetchProfileData();
-            } catch (error) {
-              // If JSON parsing fails, fetch from API
-              console.error('Error parsing stored profile data:', error);
-              // fetchProfileData();
-            }
+    if (storedProfile) {
+      try {
+        const trimmedValue = storedProfile.trim();
+        if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+          const userProfile = JSON.parse(storedProfile);
+          if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
+            setDdoDetails(userProfile);
+            return;
           }
+        }
+      } catch (error) {
+        console.error('Error parsing stored profile data:', error);
+      }
+    }
   }
+
   const fetchCustomers = async () => {
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -223,7 +229,6 @@ export default function GenerateBillPage() {
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
       if (response && response.status === 'success') {
-        // Extract state code from GSTIN for each customer
         const customersWithStateCode = (response.data || []).map(customer => {
           if (customer.gstNumber && customer.gstNumber.length >= 2) {
             const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
@@ -234,7 +239,6 @@ export default function GenerateBillPage() {
           return customer;
         });
         setCustomers(customersWithStateCode);
-        // Auto-select first customer for demo
         if (customersWithStateCode.length > 0) {
           setSelectedCustomer(customersWithStateCode[0]);
         }
@@ -258,17 +262,17 @@ export default function GenerateBillPage() {
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GET_CURRENT_GST_OF_DDO}?ddoId=${ddoId}`);
       if (response) {
-          setGstDetails(response || []);
-       setLoading(false);
-       fetchInvoiceNumber(response.gstId);
+        setGstDetails(response || []);
+        setLoading(false);
+        fetchInvoiceNumber(response.gstId);
       }
     } catch (error) {
-      console.error('Error fetching customers:', error);
+      console.error('Error fetching GST details:', error);
       setLoading(false);
     }
   };
 
-    const fetchInvoiceNumber = async (gstId) => {
+  const fetchInvoiceNumber = async (gstId) => {
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
@@ -278,14 +282,13 @@ export default function GenerateBillPage() {
         return;
       }
 
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`); //invoices/generate-number?ddoId=16&gstId=5
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`);
       if (response && response.status === 'success') {
         setInvoiceNumber(response?.invoiceNumber || '');
-        // Auto-select first customer for demo
         setLoading(false);
       }
     } catch (error) {
-      console.error('Error fetching customers:', error);
+      console.error('Error fetching invoice number:', error);
       setLoading(false);
     }
   };
@@ -301,7 +304,90 @@ export default function GenerateBillPage() {
     }
   };
 
+  const fetchProformaRecords = async () => {
+    const demoRecords = [
+      {
+        id: 'PA-2025-0001',
+        proformaNumber: 'PA-2025-0001',
+        proformaAmount: 500000,
+        taxInvoiceAmount: 0,
+        customerName: 'M/s Pradeep',
+        serviceType: 'Exempted',
+        proformaDate: '2025-11-20T00:00:00.000Z',
+        invoiceDate: null,
+      },
+      {
+        id: 'PA-2025-0002',
+        proformaNumber: 'PA-2025-0002',
+        proformaAmount: 200000,
+        taxInvoiceAmount: 0,
+        customerName: 'Metro Constructions',
+        serviceType: 'RCM',
+        proformaDate: '2025-11-18T00:00:00.000Z',
+        invoiceDate: null,
+      },
+      {
+        id: 'PA-2025-0003',
+        proformaNumber: 'PA-2025-0003',
+        proformaAmount: 345000,
+        taxInvoiceAmount: 125000,
+        customerName: 'Global Industries',
+        serviceType: 'FCM',
+        proformaDate: '2025-11-10T00:00:00.000Z',
+        invoiceDate: '2025-11-15T00:00:00.000Z',
+      },
+    ];
 
+    setProformaList(demoRecords);
+    setFilteredProformaList(demoRecords);
+    setProformaLoading(false);
+
+    try {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const ddoCode = localStorage.getItem('ddoCode') || '';
+      if (!ddoCode) {
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.BILL_LIST}?ddoCode=${ddoCode}`);
+      if (response?.status === 'success' && Array.isArray(response.data)) {
+        const mappedRecords = response.data.map((item, index) => ({
+          id: item.id || item.billId || `proforma-${index}`,
+          proformaNumber: item.billNumber || item.proformaNumber || `PA-${String(index + 1).padStart(4, '0')}`,
+          proformaAmount: item.totalAmount || item.billAmount || 0,
+          taxInvoiceAmount: item.invoiceAmount || item.paidAmount || 0,
+          customerName: item.customerName || item.customer?.customerName || '-',
+          serviceType: item.serviceType || item.invoiceType || '-',
+          proformaDate: item.billDate || item.createdAt || item.createdDate || null,
+          invoiceDate: item.invoiceDate || item.updatedAt || null,
+        }));
+
+        setProformaList(mappedRecords);
+        setFilteredProformaList(mappedRecords);
+      }
+    } catch (error) {
+      console.error('Error fetching proforma advices:', error);
+    }
+  };
+
+  const handleScrollToForm = () => {
+    setIsProformaFormOpen(true);
+    if (typeof window === 'undefined') return;
+    
+    setTimeout(() => {
+      const formSection = document.getElementById('proforma-form');
+      formSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const handleCreateInvoiceFromProforma = (record) => {
+    if (!record) return;
+    const reference = record.id || record.proformaNumber;
+    router.push(`/ddo/invoices?fromProforma=${encodeURIComponent(reference)}`);
+  };
 
   const calculateGSTAmount = () => {
     if (!selectedCustomer) {
@@ -316,17 +402,14 @@ export default function GenerateBillPage() {
       return;
     }
 
-    // Check if customer has exemption (RCM/FCM Exempted case)
     const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
     const isRCMExempted = invoiceType === 'RCM' && hasExemption;
     const isFCMExempted = invoiceType === 'FCM' && hasExemption;
 
-    // Get supplier GSTIN from bill details
     const supplierGSTIN = billDetails.gstinNumber;
     const customerGSTIN = selectedCustomer.gstNumber || '';
     const customerPAN = selectedCustomer.pan || '';
     
-    // Get HSN details if available (for GST rates)
     const firstHSN = lineItems[0]?.hsnNumber;
     const hsnDetails = firstHSN ? hsnList.find(h => 
       h.hsnNumber === firstHSN || 
@@ -334,13 +417,9 @@ export default function GenerateBillPage() {
       h.code === firstHSN
     ) : null;
     
-    // Get GST rate from HSN details or default to 18%
     const gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
     
-    // Update note and notification details based on invoice type and customer data
-    // This needs to be set BEFORE the early return for EXEMPTED cases
     if (invoiceType === 'EXEMPTED') {
-      // For Exempted: Show customer notification if available
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
         const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
         setNote('GST is Exempted with Notification');
@@ -350,9 +429,7 @@ export default function GenerateBillPage() {
         setNotificationDetails('Entry 6 of Notification No. 12/2017-CT (Rate) - Exempted from GST');
       }
     } else if (invoiceType === 'RCM') {
-      // For RCM: Show notification and GST will be calculated in backend
       setNote('Reverse Charge Mechanism - Tax payable by recipient');
-      // Check if customer has exemption (RCM Exempted case)
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
         const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
@@ -360,7 +437,6 @@ export default function GenerateBillPage() {
         setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
       }
     } else if (invoiceType === 'FCM') {
-      // For FCM: Check if customer has exemption (FCM Exempted case)
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
         const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
         setNote('GST is Exempted with Notification');
@@ -371,7 +447,6 @@ export default function GenerateBillPage() {
       }
     }
 
-    // For Exempted or RCM/FCM Exempted: Don't calculate GST
     if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
       setGstCalculation({
         taxableValue,
@@ -390,8 +465,6 @@ export default function GenerateBillPage() {
       return;
     }
     
-    // Call calculateGST with proper parameters
-    // For RCM, GST is calculated in backend but we still calculate here to show values below notification
     const calculation = calculateGST(
       supplierGSTIN,
       customerGSTIN,
@@ -404,8 +477,6 @@ export default function GenerateBillPage() {
     
     setGstCalculation(calculation);
     
-    // Update note and notification details for non-exempted, non-RCM, non-FCM cases
-    // Only update if invoiceType is not RCM or FCM (those already have their notification details set above)
     if (invoiceType !== 'RCM' && invoiceType !== 'FCM' && invoiceType !== 'EXEMPTED') {
       if (calculation.isSameState) {
         setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
@@ -425,62 +496,53 @@ export default function GenerateBillPage() {
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     
-    // Validate Name
     const nameValidation = validateName(newCustomer.name, 'Customer Name');
     if (!nameValidation.valid) {
       toast.error(nameValidation.message);
       return;
     }
     
-    // Validate GSTIN
     const gstValidation = validateGSTIN(newCustomer.gstNumber);
     if (!gstValidation.valid) {
       toast.error(gstValidation.message);
       return;
     }
     
-    // Validate Address
     const addressValidation = validateAddress(newCustomer.address);
     if (!addressValidation.valid) {
       toast.error(addressValidation.message);
       return;
     }
     
-    // Validate City
     const cityValidation = validateCity(newCustomer.city);
     if (!cityValidation.valid) {
       toast.error(cityValidation.message);
       return;
     }
     
-    // Validate State Code
     const stateCodeValidation = validateStateCode(newCustomer.stateCode);
     if (!stateCodeValidation.valid) {
       toast.error(stateCodeValidation.message);
       return;
     }
     
-    // Validate PIN
     const pinValidation = validatePIN(newCustomer.pin);
     if (!pinValidation.valid) {
       toast.error(pinValidation.message);
       return;
     }
     
-    // Validate Customer Type
     if (!newCustomer.customerType || newCustomer.customerType.trim() === '') {
       toast.error('Customer Type is required');
       return;
     }
     
-    // Validate Email
     const emailValidation = validateEmail(newCustomer.email);
     if (!emailValidation.valid) {
       toast.error(emailValidation.message);
       return;
     }
     
-    // Validate Mobile
     const mobileValidation = validateMobile(newCustomer.mobile);
     if (!mobileValidation.valid) {
       toast.error(mobileValidation.message);
@@ -495,7 +557,6 @@ export default function GenerateBillPage() {
         return;
       }
 
-      // Map form data to API payload format
       const payload = {
         customerName: newCustomer.name,
         customerType: newCustomer.customerType === 'Govt' ? 'gov' : 'non-gov',
@@ -530,11 +591,10 @@ export default function GenerateBillPage() {
           mobile: '',
           email: '',
         });
-        // Refresh customers list and select the newly added customer
+        
         const updatedResponse = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
         if (updatedResponse && updatedResponse.status === 'success') {
           const mappedCustomers = updatedResponse.data.map((customer) => {
-            // Extract state code from GSTIN if available
             let stateCode = customer.stateCode || '';
             if (customer.gstNumber && customer.gstNumber.length >= 2) {
               const extractedStateCode = getStateCodeFromGSTIN(customer.gstNumber);
@@ -557,7 +617,6 @@ export default function GenerateBillPage() {
             };
           });
           setCustomers(mappedCustomers);
-          // Select the newly added customer (it should be the last one or match by GSTIN)
           if (mappedCustomers && mappedCustomers.length > 0) {
             const newCustomerData = mappedCustomers.find(c => c.gstNumber === newCustomer.gstNumber) || mappedCustomers[mappedCustomers.length - 1];
             if (newCustomerData) {
@@ -577,7 +636,6 @@ export default function GenerateBillPage() {
   };
 
   const handleAddLineItem = () => {
-    // Auto-set HSN if only one exists
     const defaultHsn = hsnList.length === 1 ? (hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '') : '';
     setLineItems([
       ...lineItems,
@@ -602,7 +660,6 @@ export default function GenerateBillPage() {
   };
 
   const handleLineItemChange = (index, field, value) => {
-    // Prevent quantity changes - always keep it as 1
     if (field === 'quantity') {
       return;
     }
@@ -612,7 +669,6 @@ export default function GenerateBillPage() {
   };
 
   const handleSaveBill = async () => {
-    // Validate all required fields
     const validations = [
       validateGSTIN(billDetails.gstinNumber),
       { valid: billDetails.gstAddress?.trim(), message: t('bill.gstAddressRequired') },
@@ -630,7 +686,6 @@ export default function GenerateBillPage() {
       }
     }
 
-    // Validate line items
     for (let i = 0; i < lineItems.length; i++) {
       const item = lineItems[i];
       const descValidation = validateDescription(item.description);
@@ -673,7 +728,7 @@ export default function GenerateBillPage() {
         igst: gstCalculation?.igst || 0,
         cgst: gstCalculation?.cgst || 0,
         sgst: gstCalculation?.sgst || 0,
-        finalAmount: gstCalculation?.finalAmount || 0,
+        finalAmount: invoiceType === 'RCM' ? taxableValue : (gstCalculation?.finalAmount || 0),
         paidAmount: parseFloat(paidAmount) || 0,
         note,
         notificationDetails,
@@ -698,7 +753,6 @@ export default function GenerateBillPage() {
   };
 
   const handlePrintBill = () => {
-    // Get logo image source
     const logoImg = document.querySelector('#bill-preview-content img');
     const logoSrc = logoImg ? logoImg.src : '/1.png';
     
@@ -706,7 +760,7 @@ export default function GenerateBillPage() {
     const printHTML = `
       <!DOCTYPE html>
       <html>
-        <head>billNumber
+        <head>
           <title>Tax Invoice - ${invoiceNumber}</title>
           <meta charset="utf-8">
           <style>
@@ -901,6 +955,38 @@ export default function GenerateBillPage() {
               border-radius: 0 0 8px 8px;
             }
             
+            .signature-row {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+              gap: 20px;
+              margin-top: 15px;
+              padding: 15px;
+              border: 1px dashed #b2b2b2;
+              border-radius: 8px;
+              background: #f8fdf8;
+            }
+            
+            .signature-block span {
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              color: #2C5F2D;
+              font-weight: 600;
+            }
+            
+            .signature-value {
+              margin-top: 8px;
+              font-size: 13px;
+              font-weight: bold;
+              color: #1a1a1a;
+            }
+            
+            .signature-line {
+              margin-top: 20px;
+              border-bottom: 2px dashed #999;
+              height: 20px;
+            }
+            
             .terms-section {
               margin-top: 25px;
               padding: 20px 0;
@@ -963,12 +1049,12 @@ export default function GenerateBillPage() {
               <img src="${logoSrc}" alt="Bengaluru City Police Logo" />
             </div>
             <div class="org-name">
-              {gstDetails.gstName}
+              ${gstDetails?.gstName || ''}
             </div>
-            <div class="org-details">{gstDetails.address}</div>
-            <div class="org-details">{gstDetails.city} - {gstDetails.pinCode}</div>
-            <div class="org-details">Contact No : {gstDetails.mobile} , {gstDetails.email}</div>
-            <div class="gstin">GSTIN : {gstDetails.gstNumber}</div>
+            <div class="org-details">${gstDetails?.address || ''}</div>
+            <div class="org-details">${gstDetails?.city || ''} - ${gstDetails?.pinCode || ''}</div>
+            <div class="org-details">Contact No : ${gstDetails?.mobile || ''} , ${gstDetails?.email || ''}</div>
+            <div class="gstin">GSTIN : ${gstDetails?.gstNumber || ''}</div>
           </div>
 
           <!-- Invoice Title -->
@@ -1048,70 +1134,18 @@ export default function GenerateBillPage() {
             const isFCMExempted = invoiceType === 'FCM' && hasExemption;
             const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
             const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
-            
+    
             let rcmGSTSection = '';
             if (showRCMGST) {
-              rcmGSTSection = `
-                <div class="calc-row">
-                  <strong>GST Payable Under RCM by the Recipient = </strong>
-                  <span>IGST: ${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: ${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: ${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
-                </div>
-              `;
+              rcmGSTSection = '<div class="calc-row"><strong>GST Payable Under RCM by the Recipient = </strong><span>IGST: ' + (gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-') + '  CGST: ' + (gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-') + ' SGST: ' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</span></div>';
             }
-            
+    
             let gstCalcSection = '';
             if (showGSTCalculationUI) {
-              gstCalcSection = `
-              <div class="calc-section">
-                <h4>GST Calculation</h4>
-                <div class="calc-row">
-                  <span><strong>Total Taxable Value</strong></span>
-                  <span><strong>${formatCurrency(totalAmount)}</strong></span>
-                </div>
-                <div class="calc-row">
-                  <span><strong>GST Collectable Under FCM</strong></span>
-                  <span>-</span>
-                </div>
-                <div class="calc-row">
-                  <span><strong>IGST @ 18%</strong></span>
-                  <span>${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
-                </div>
-                <div class="calc-row">
-                  <span><strong>CGST @ 9%</strong></span>
-                  <span><strong>${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</strong></span>
-                </div>
-                <div class="calc-row">
-                  <span><strong>SGST @ 9%</strong></span>
-                  <span><strong>${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</strong></span>
-                </div>
-                <div class="calc-row border-top">
-                  <span><strong>Total GST Amount</strong></span>
-                  <span><strong>${formatCurrency(gstCalculation?.gstAmount || 0)}</strong></span>
-                </div>
-                <div class="calc-row total">
-                  <span><strong>Total Invoice Amount</strong></span>
-                  <span><strong>${formatCurrency(gstCalculation?.finalAmount || totalAmount)}</strong></span>
-                </div>
-              </div>
-              `;
+              gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4><div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div><div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div><div class="calc-row"><span><strong>IGST @ 18%</strong></span><span>' + (gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-') + '</span></div><div class="calc-row"><span><strong>CGST @ 9%</strong></span><span><strong>' + (gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-') + '</strong></span></div><div class="calc-row"><span><strong>SGST @ 9%</strong></span><span><strong>' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</strong></span></div><div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(gstCalculation?.gstAmount || 0) + '</strong></span></div><div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div><div class="signature-row"><div class="signature-block"><span>' + t('label.ddoName') + '</span><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div></div><div class="signature-block"><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
             }
-            
-            return `
-            <div class="gst-calculation">
-              <div class="calc-section">
-                <h4>Additional Information</h4>
-                <div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ${taxPayableReverseCharge}</div>
-                <div class="calc-row"><strong>Invoice Remarks:</strong></div>
-                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">${note || '-'}</div>
-                <div class="calc-row"><strong>Notification Details:</strong></div>
-                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">${notificationDetails || '-'}</div>
-                <div class="calc-row"><strong>Total Invoice Value in Words:</strong></div>
-                <div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">${amountInWords(gstCalculation?.finalAmount || totalAmount)}</div>
-                ${rcmGSTSection}
-              </div>
-              ${gstCalcSection}
-            </div>
-            `;
+    
+            return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
           })()}
 
           <!-- Bank Details -->
@@ -1139,7 +1173,6 @@ export default function GenerateBillPage() {
     printWindow.document.write(printHTML);
     printWindow.document.close();
     
-    // Wait for images to load before printing
     printWindow.onload = () => {
       setTimeout(() => {
         printWindow.print();
@@ -1156,83 +1189,149 @@ export default function GenerateBillPage() {
     });
   };
 
- function numberToWords(num) {
-  if (num === 0) return "Zero";
+  function numberToWords(num) {
+    if (num === 0) return "Zero";
 
-  const words = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
-    "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
-    "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
-  ];
+    const words = [
+      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+      "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+      "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+    ];
 
-  const tens = [
-    "", "", "Twenty", "Thirty", "Forty", "Fifty",
-    "Sixty", "Seventy", "Eighty", "Ninety"
-  ];
+    const tens = [
+      "", "", "Twenty", "Thirty", "Forty", "Fifty",
+      "Sixty", "Seventy", "Eighty", "Ninety"
+    ];
 
-  const units = [
-    { value: 10000000, str: "Crore" },
-    { value: 100000, str: "Lakh" },
-    { value: 1000, str: "Thousand" },
-    { value: 100, str: "Hundred" }
-  ];
+    const units = [
+      { value: 10000000, str: "Crore" },
+      { value: 100000, str: "Lakh" },
+      { value: 1000, str: "Thousand" },
+      { value: 100, str: "Hundred" }
+    ];
 
-  let result = "";
+    let result = "";
 
-  for (const unit of units) {
-    if (num >= unit.value) {
-      const quotient = Math.floor(num / unit.value);
-      result += numberToWords(quotient) + " " + unit.str + " ";
-      num %= unit.value;
+    for (const unit of units) {
+      if (num >= unit.value) {
+        const quotient = Math.floor(num / unit.value);
+        result += numberToWords(quotient) + " " + unit.str + " ";
+        num %= unit.value;
+      }
     }
-  }
 
-  if (num > 0) {
-    if (num < 20) {
-      result += words[num] + " ";
-    } else {
-      result += tens[Math.floor(num / 10)] + " ";
-      if (num % 10 > 0) result += words[num % 10] + " ";
+    if (num > 0) {
+      if (num < 20) {
+        result += words[num] + " ";
+      } else {
+        result += tens[Math.floor(num / 10)] + " ";
+        if (num % 10 > 0) result += words[num % 10] + " ";
+      }
     }
+
+    return result.trim();
   }
-
-  return result.trim();
-}
-
 
   const amountInWords = (amount) => {
-    console.log("amount-------", amount);
-  // If amount is null, undefined, empty string → return empty
-  if (amount === null || amount === undefined || amount === '') {
-    return '';
-  }
+    if (amount === null || amount === undefined || amount === '') {
+      return '';
+    }
 
-  // Convert string to number safely
-  const numericAmount = Number(amount);
+    const numericAmount = Number(amount);
 
-  // If not a valid number → return empty
-  if (isNaN(numericAmount)) {
-    return '';
-  }
+    if (isNaN(numericAmount)) {
+      return '';
+    }
 
-  const rupees = Math.floor(numericAmount);
-  const paise = Math.round((numericAmount - rupees) * 100);
+    const rupees = Math.floor(numericAmount);
+    const paise = Math.round((numericAmount - rupees) * 100);
 
-  // Convert rupees
-  let words = numberToWords(rupees) + ' Rupees';
+    let words = numberToWords(rupees) + ' Rupees';
 
-  // Convert paise only if exists
-  if (paise > 0) {
-    words += ' and ' + numberToWords(paise) + ' Paise';
-  }
+    if (paise > 0) {
+      words += ' and ' + numberToWords(paise) + ' Paise';
+    }
 
-  return words + ' Only';
-};
+    return words + ' Only';
+  };
 
-
-  // Calculate totals - quantity is always 1 per item
+  // Calculate totals
   const totalQuantity = lineItems.length;
   const totalAmount = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const totalAdviceAmountReceivable = invoiceType === 'RCM' ? totalAmount : (gstCalculation?.finalAmount || totalAmount);
+  
+  const proformaColumns = [
+    { key: 'proformaNumber', label: 'Proforma Advice' },
+    { 
+      key: 'proformaAmount', 
+      label: 'Proforma Advice Amount',
+      render: (value) => formatCurrency(value || 0),
+    },
+    { 
+      key: 'taxInvoiceAmount', 
+      label: 'Tax Invoice',
+      render: (value) => value ? formatCurrency(value) : '-', 
+    },
+    { 
+      key: 'differenceAmount', 
+      label: 'Difference Amount',
+      render: (_, row) => {
+        const difference = (row.proformaAmount || 0) - (row.taxInvoiceAmount || 0);
+        return formatCurrency(Math.max(difference, 0));
+      },
+    },
+    { key: 'customerName', label: 'Customer Name' },
+    { 
+      key: 'serviceType', 
+      label: 'Service Type',
+      render: (value) => value || '-',
+    },
+    { 
+      key: 'proformaDate', 
+      label: 'Proforma Advice Date',
+      render: (value) => value ? formatDate(value) : '-',
+    },
+    { 
+      key: 'invoiceDate', 
+      label: 'Invoice Date',
+      render: (value) => value ? formatDate(value) : '-',
+    },
+  ];
+
+  const renderProformaActions = (row) => (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleCreateInvoiceFromProforma(row);
+      }}
+      className="px-3 py-1.5 text-xs sm:text-sm"
+    >
+      Create Invoice
+    </Button>
+  );
+
+  const renderDDOSignatureSection = () => (
+    <div className="mt-4 pt-4 border-t border-dashed border-[var(--color-border)]">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="flex-1">
+          <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
+            {t('label.ddoName')}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">
+            {ddoDetails?.fullName || '-'}
+          </p>
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
+            {t('bill.signatureOfDdo')}
+          </p>
+          <div className="mt-2 h-10 border-b border-dashed border-[var(--color-border)]"></div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <Layout role="ddo">
@@ -1274,626 +1373,674 @@ export default function GenerateBillPage() {
           </div>
         </div>
 
+        <section className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
+                Proforma Advice List
+              </h2>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Search existing Proforma Advice entries and quickly jump back to the creation form.
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push('/ddo/proforma-advice')}
+              variant="primary"
+              className="w-full sm:w-auto"
+            >
+              <FileText className="mr-2" size={18} />
+              Proforma Advice
+            </Button>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" size={18} />
+            <input
+              type="text"
+              value={proformaSearchTerm}
+              onChange={(e) => setProformaSearchTerm(e.target.value)}
+              placeholder="Search by advice number, customer, or invoice..."
+              className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            />
+          </div>
+
+          <div className="premium-card overflow-hidden">
+            {proformaLoading ? (
+              <div className="p-8 sm:p-16">
+                <LoadingProgressBar message="Loading proforma advices..." variant="primary" />
+              </div>
+            ) : (
+              <Table
+                columns={proformaColumns}
+                data={filteredProformaList}
+                actions={renderProformaActions}
+                itemsPerPage={5}
+              />
+            )}
+          </div>
+        </section>
+
         {loading ? (
           <div className="premium-card p-8 sm:p-16">
             <LoadingProgressBar message="Loading bill data..." variant="primary" />
           </div>
         ) : (
-        <>
-        {isNavigatingToCustomer && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="premium-card p-8 sm:p-16">
-              <LoadingProgressBar message="Navigating to add customer..." variant="primary" />
-            </div>
-          </div>
-        )}
-        <div className="premium-card p-6 space-y-6 border border-[var(--color-border)]">
-          {/* Header Section with Logo - Centered - Hidden in UI, visible only in preview/print */}
-          <div className="hidden border-b-2 border-[var(--color-primary)]/30 pb-8 mb-8">
-            <div className="flex flex-col items-center gap-6">
-              {/* Logo Section - Centered */}
-              <div className="flex-shrink-0">
-                <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 drop-shadow-2xl">
-                  <Image
-                    src="/1.png"
-                    alt="Bengaluru City Police Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                    quality={90}
-                    sizes="(max-width: 768px) 128px, (max-width: 1024px) 160px, 192px"
-                  />
+          <>
+            {isNavigatingToCustomer && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="premium-card p-8 sm:p-16">
+                  <LoadingProgressBar message="Navigating to add customer..." variant="primary" />
                 </div>
               </div>
+            )}
+
+            {/* Header Section with Logo - Centered - Hidden in UI, visible only in preview/print */}
+            <div className="hidden border-b-2 border-[var(--color-primary)]/30 pb-8 mb-8">
+              <div className="flex flex-col items-center gap-6">
+                {/* Logo Section - Centered */}
+                <div className="flex-shrink-0">
+                  <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 drop-shadow-2xl">
+                    <Image
+                      src="/1.png"
+                      alt="Bengaluru City Police Logo"
+                      fill
+                      className="object-contain"
+                      priority
+                      quality={90}
+                      sizes="(max-width: 768px) 128px, (max-width: 1024px) 160px, 192px"
+                    />
+                  </div>
+                </div>
+                
+                {/* Header Text Section - Centered */}
+                <div className="text-center max-w-4xl">
+                  <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[var(--color-text-primary)] mb-4 leading-relaxed">
+                    {gstDetails?.gstName||''}
+                  </h1>
+                  <div className="space-y-2 text-[var(--color-text-secondary)]">
+                    <p className="text-sm sm:text-base md:text-lg leading-relaxed">
+                      {gstDetails?.address||''}
+                    </p>
+                    <p className="text-sm sm:text-base md:text-lg">
+                      {gstDetails?.city||''} - {gstDetails?.pinCode||''}
+                    </p>
+                    <p className="text-sm sm:text-base md:text-lg">
+                      Contact No : {gstDetails?.mobile||''} , {gstDetails?.email||''}
+                    </p>
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[var(--color-primary)] mt-4 px-4 py-2 bg-[var(--color-primary)]/10 rounded-lg inline-block">
+                      GSTIN : {gstDetails?.gstNumber||''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TAX INVOICE Header - Hidden in UI, visible only in preview/print */}
+            <div className="hidden text-center my-8">
+              <div className="bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary)]/90 to-[var(--color-accent)] rounded-2xl px-8 py-5 inline-block shadow-lg border-2 border-[var(--color-primary)]/50">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white drop-shadow-md">
+                  {t('bill.taxInvoice')}
+                </h2>
+              </div>
+            </div>
+
+            {/* Bill To Section */}
+            <div className="border border-[var(--color-border)] rounded p-4 space-y-4">
+              <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">
+                {t('bill.serviceReceiver')} (BILL TO)
+              </h3>
               
-              {/* Header Text Section - Centered */}
-              <div className="text-center max-w-4xl">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[var(--color-text-primary)] mb-4 leading-relaxed">
-                   {gstDetails?.gstName||''}
-                </h1>
-                <div className="space-y-2 text-[var(--color-text-secondary)]">
-                  <p className="text-sm sm:text-base md:text-lg leading-relaxed">
-                   {gstDetails?.address||''}
-                  </p>
-                  <p className="text-sm sm:text-base md:text-lg">
-                    {gstDetails?.city||''} - {gstDetails?.pinCode||''}
-                  </p>
-                  <p className="text-sm sm:text-base md:text-lg">
-                    Contact No : {gstDetails?.mobile||''} , {gstDetails?.email||''}
-                  </p>
-                  <p className="text-base sm:text-lg md:text-xl font-bold text-[var(--color-primary)] mt-4 px-4 py-2 bg-[var(--color-primary)]/10 rounded-lg inline-block">
-                    GSTIN : {gstDetails?.gstNumber||''}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* TAX INVOICE Header - Hidden in UI, visible only in preview/print */}
-          <div className="hidden text-center my-8">
-            <div className="bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary)]/90 to-[var(--color-accent)] rounded-2xl px-8 py-5 inline-block shadow-lg border-2 border-[var(--color-primary)]/50">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white drop-shadow-md">
-                {t('bill.taxInvoice')}
-              </h2>
-            </div>
-          </div>
-
-          {/* Bill To Section */}
-          <div className="border border-[var(--color-border)] rounded p-4 space-y-4">
-            <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">
-              {t('bill.serviceReceiver')} (BILL TO)
-            </h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Left Column - Select Customer */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
-                  {t('bill.selectCustomer')}
-                </label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={selectedCustomer?.id ? String(selectedCustomer.id) : ''}
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
-                      if (!selectedId) {
-                        setSelectedCustomer(null);
-                        return;
-                      }
-                      const customer = customers.find(c => String(c.id) === String(selectedId));
-                      if (customer) {
-                        if (customer.gstNumber && customer.gstNumber.length >= 2) {
-                          const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
-                          if (stateCode) {
-                            customer.stateCode = stateCode.toString();
-                          }
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Left Column - Select Customer */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
+                    {t('bill.selectCustomer')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedCustomer?.id ? String(selectedCustomer.id) : ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        if (!selectedId) {
+                          setSelectedCustomer(null);
+                          return;
                         }
-                        setSelectedCustomer(customer);
-                      } else {
-                        setSelectedCustomer(null);
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                  >
-                    <option value="">{t('bill.selectCustomerPlaceholder')}</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={String(customer.id)}>
-                        {customer.customerName} - {customer.gstNumber || t('common.noGstin')}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleNavigateToAddCustomer}
-                    disabled={isNavigatingToCustomer}
-                    className="px-3 py-2 text-sm border border-[var(--color-border)] rounded hover:bg-[var(--color-muted)]"
-                  >
-                    <Plus className="mr-1" size={14} />
-                    {t('bill.addNewCustomer')}
-                  </Button>
+                        const customer = customers.find(c => String(c.id) === String(selectedId));
+                        if (customer) {
+                          if (customer.gstNumber && customer.gstNumber.length >= 2) {
+                            const stateCode = getStateCodeFromGSTIN(customer.gstNumber);
+                            if (stateCode) {
+                              customer.stateCode = stateCode.toString();
+                            }
+                          }
+                          setSelectedCustomer(customer);
+                        } else {
+                          setSelectedCustomer(null);
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      <option value="">{t('bill.selectCustomerPlaceholder')}</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={String(customer.id)}>
+                          {customer.customerName} - {customer.gstNumber || t('common.noGstin')}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleNavigateToAddCustomer}
+                      disabled={isNavigatingToCustomer}
+                      className="px-3 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="mr-1" size={14} />
+                      {t('bill.addNewCustomer')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Right Column - Customer Information */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
-                  Customer Information
-                </label>
-                <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium text-[var(--color-text-primary)]">Name: </span>
-                    <span className="text-[var(--color-text-secondary)]">{selectedCustomer ? `M/s ${selectedCustomer.customerName}` : 'Not selected'}</span>
-                    {selectedCustomer?.gstNumber && (
-                      <>
-                        <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                        <span className="font-medium text-[var(--color-text-primary)]">GSTIN: </span>
-                        <span className="text-[var(--color-text-secondary)]">{selectedCustomer.gstNumber}</span>
-                      </>
+                {/* Right Column - Customer Information */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
+                    Customer Information
+                  </label>
+                  <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
+                    <div className="text-sm">
+                      <span className="font-medium text-[var(--color-text-primary)]">Name: </span>
+                      <span className="text-[var(--color-text-secondary)]">{selectedCustomer ? `M/s ${selectedCustomer.customerName}` : 'Not selected'}</span>
+                      {selectedCustomer?.gstNumber && (
+                        <>
+                          <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                          <span className="font-medium text-[var(--color-text-primary)]">GSTIN: </span>
+                          <span className="text-[var(--color-text-secondary)]">{selectedCustomer.gstNumber}</span>
+                        </>
+                      )}
+                      {selectedCustomer?.stateCode && (
+                        <>
+                          <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                          <span className="font-medium text-[var(--color-text-primary)]">State: </span>
+                          <span className="text-[var(--color-text-secondary)]">{selectedCustomer.stateCode}</span>
+                        </>
+                      )}
+                      {invoiceType && (
+                        <>
+                          <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                          <span className="text-[var(--color-text-secondary)]">{invoiceType === 'EXEMPTED' ? 'Exempted' : invoiceType}</span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {selectedCustomer?.address && (
+                      <div className="text-sm">
+                        <span className="font-medium text-[var(--color-text-primary)]">Address: </span>
+                        <span className="text-[var(--color-text-secondary)]">{selectedCustomer.address}</span>
+                      </div>
                     )}
-                    {selectedCustomer?.stateCode && (
-                      <>
-                        <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                        <span className="font-medium text-[var(--color-text-primary)]">State: </span>
-                        <span className="text-[var(--color-text-secondary)]">{selectedCustomer.stateCode}</span>
-                      </>
-                    )}
-                    {invoiceType && (
-                      <>
-                        <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                        <span className="text-[var(--color-text-secondary)]">{invoiceType === 'EXEMPTED' ? 'Exempted' : invoiceType}</span>
-                      </>
+                    
+                    {notificationDetails && (
+                      <div className="text-sm">
+                        <span className="font-medium text-[var(--color-text-primary)]">Notification: </span>
+                        <span className="text-[var(--color-text-secondary)]">{notificationDetails}</span>
+                      </div>
                     )}
                   </div>
-                  
-                  {selectedCustomer?.address && (
-                    <div className="text-sm">
-                      <span className="font-medium text-[var(--color-text-primary)]">Address: </span>
-                      <span className="text-[var(--color-text-secondary)]">{selectedCustomer.address}</span>
-                    </div>
-                  )}
-                  
-                  {notificationDetails && (
-                    <div className="text-sm">
-                      <span className="font-medium text-[var(--color-text-primary)]">Notification: </span>
-                      <span className="text-[var(--color-text-secondary)]">{notificationDetails}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Line Items Section */}
-          <div className="border border-[var(--color-border)] rounded p-4 space-y-4">
-            {/* Table Container */}
-            <div className="overflow-x-auto border border-[var(--color-border)] rounded">
-              <table className="w-full border-collapse table-fixed">
-                <colgroup>
-                  <col style={{ width: '6%' }} />
-                  <col style={{ width: '35%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '8%' }} />
-                </colgroup>
-                <thead>
-                  <tr className="bg-[var(--color-primary)] text-white">
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.serialNo')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-left font-semibold text-sm">{t('bill.itemDescription')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.hsnCode')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.quantity')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">Unit</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.amount')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.taxableValueRs')}</th>
-                    <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.action')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, index) => (
-                    <tr key={index} className="hover:bg-[var(--color-muted)]/20">
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center font-medium text-[var(--color-text-primary)]">
-                        {item.serialNo}
+            {/* Line Items Section */}
+            <div className="border border-[var(--color-border)] rounded p-4 space-y-4">
+              {/* Table Container */}
+              <div className="overflow-x-auto border border-[var(--color-border)] rounded">
+                <table className="w-full border-collapse table-fixed">
+                  <colgroup>
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '35%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '8%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="bg-[var(--color-primary)] text-white">
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.serialNo')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-left font-semibold text-sm">{t('bill.itemDescription')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.hsnCode')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.quantity')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">Unit</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.amount')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.taxableValueRs')}</th>
+                      <th className="border border-[var(--color-primary)] p-2 text-center font-semibold text-sm">{t('bill.action')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((item, index) => (
+                      <tr key={index} className="hover:bg-[var(--color-muted)]/20">
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center font-medium text-[var(--color-text-primary)]">
+                          {item.serialNo}
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm">
+                          <textarea
+                            value={item.description}
+                            onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                            className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                            rows="2"
+                            placeholder="Enter item description..."
+                          />
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center">
+                          <input
+                            type="text"
+                            value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
+                            readOnly
+                            className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold"
+                          />
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center">
+                          <div className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-accent)] font-semibold">
+                            1
+                          </div>
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center font-medium text-[var(--color-text-primary)]">
+                          Nos
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center">
+                          <input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
+                            className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-center"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center font-semibold text-[var(--color-primary)]">
+                          {formatCurrency(item.amount)}
+                        </td>
+                        <td className="border border-[var(--color-border)] p-2 text-sm text-center">
+                          {lineItems.length > 1 && (
+                            <button
+                              onClick={() => handleRemoveLineItem(index)}
+                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600"
+                              title="Remove line item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-[var(--color-primary)]/20 font-semibold">
+                      <td colSpan="3" className="border border-[var(--color-border)] p-2 text-sm text-right text-[var(--color-text-primary)]">
+                        {t('bill.totalQty')}
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm">
-                        <textarea
-                          value={item.description}
-                          onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                          className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                          rows="2"
-                          placeholder="Enter item description..."
-                        />
+                      <td className="border border-[var(--color-border)] p-2 text-sm text-center text-[var(--color-text-primary)]">
+                        {totalQuantity}
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        <input
-                          type="text"
-                          value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
-                          readOnly
-                          className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold"
-                        />
-                      </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        <div className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-accent)] font-semibold">
-                          1
-                        </div>
-                      </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center font-medium text-[var(--color-text-primary)]">
+                      <td className="border border-[var(--color-border)] p-2 text-sm text-center text-[var(--color-text-primary)]">
                         Nos
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        <input
-                          type="number"
-                          value={item.amount}
-                          onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
-                          className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-center"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                        />
+                      <td className="border border-[var(--color-border)] p-2 text-sm text-right text-[var(--color-text-primary)]">
+                        {t('bill.totalAmt')}
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center font-semibold text-[var(--color-primary)]">
-                        {formatCurrency(item.amount)}
+                      <td className="border border-[var(--color-border)] p-2 text-sm text-right font-bold text-[var(--color-primary)]">
+                        {formatCurrency(totalAmount)}
                       </td>
-                      <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        {lineItems.length > 1 && (
-                          <button
-                            onClick={() => handleRemoveLineItem(index)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600"
-                            title="Remove line item"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </td>
+                      <td className="border border-[var(--color-border)] p-2"></td>
                     </tr>
+                  </tfoot>
+                </table>
+                <datalist id="hsn-list">
+                  {hsnList.map((hsn) => (
+                    <option key={hsn.id || hsn.hsnNumber} value={hsn.hsnNumber || hsn.hsnCode || hsn.code}>
+                      {hsn.name || hsn.description || hsn.hsnNumber}
+                    </option>
                   ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-[var(--color-primary)]/20 font-semibold">
-                    <td colSpan="3" className="border border-[var(--color-border)] p-2 text-sm text-right text-[var(--color-text-primary)]">
-                      {t('bill.totalQty')}
-                    </td>
-                    <td className="border border-[var(--color-border)] p-2 text-sm text-center text-[var(--color-text-primary)]">
-                      {totalQuantity}
-                    </td>
-                    <td className="border border-[var(--color-border)] p-2 text-sm text-center text-[var(--color-text-primary)]">
-                      Nos
-                    </td>
-                    <td className="border border-[var(--color-border)] p-2 text-sm text-right text-[var(--color-text-primary)]">
-                      {t('bill.totalAmt')}
-                    </td>
-                    <td className="border border-[var(--color-border)] p-2 text-sm text-right font-bold text-[var(--color-primary)]">
-                      {formatCurrency(totalAmount)}
-                    </td>
-                    <td className="border border-[var(--color-border)] p-2"></td>
-                  </tr>
-                </tfoot>
-              </table>
-              <datalist id="hsn-list">
-                {hsnList.map((hsn) => (
-                  <option key={hsn.id || hsn.hsnNumber} value={hsn.hsnNumber || hsn.hsnCode || hsn.code}>
-                    {hsn.name || hsn.description || hsn.hsnNumber}
-                  </option>
-                ))}
-              </datalist>
+                </datalist>
+              </div>
+              {/* Add Line Item Button */}
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleAddLineItem} 
+                  variant="secondary" 
+                  className="px-3 py-2 text-sm border border-[var(--color-border)] rounded hover:bg-[var(--color-muted)]"
+                >
+                  <Plus className="mr-1" size={16} />
+                  {t('bill.addLineItem')}
+                </Button>
+              </div>
             </div>
-            {/* Add Line Item Button */}
-            <div className="flex justify-end pt-2">
-              <Button 
-                onClick={handleAddLineItem} 
-                variant="secondary" 
-                className="px-3 py-2 text-sm border border-[var(--color-border)] rounded hover:bg-[var(--color-muted)]"
-              >
-                <Plus className="mr-1" size={16} />
-                {t('bill.addLineItem')}
-              </Button>
-            </div>
-          </div>
 
-          {/* GST Calculation Section */}
-          {(() => {
-            // Determine if GST calculation UI should be shown
-            const isExempted = invoiceType === 'EXEMPTED';
-            const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
-            const isRCMExempted = invoiceType === 'RCM' && hasExemption;
-            const isFCMExempted = invoiceType === 'FCM' && hasExemption;
-            const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
-            const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
+            {/* GST Calculation Section */}
+            {(() => {
+              const isExempted = invoiceType === 'EXEMPTED';
+              const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+              const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+              const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+              const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
+              const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
 
-            return (
-              <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-4`}>
-                <div className="space-y-3">
-                  {/* Conditional layout: 2-column for RCM and EXEMPTED, single column for FCM */}
-                  {invoiceType === 'RCM' || invoiceType === 'EXEMPTED' ? (
-                    // RCM/EXEMPTED: 2-column layout (original design)
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Left Column */}
-                      <div className="space-y-3">
-                        {invoiceType === 'EXEMPTED' ? (
-                          // EXEMPTED: Show Invoice Remarks, Notification Details and Total Invoice Value in Words on left
-                          <>
-                            {/* Invoice Remarks */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                                {t('bill.invoiceRemarks')}
-                              </label>
-                              <textarea
-                                value={note}
-                                onChange={(e) => setNote(e.target.value)}
-                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                                rows="2"
-                                placeholder={t('bill.invoiceRemarksPlaceholder')}
-                                readOnly={isExempted || isRCMExempted || isFCMExempted}
-                              />
-                            </div>
-                            {/* Notification Details */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                                {t('bill.notificationDetails')}
-                              </label>
-                              <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
-                                {notificationDetails || '-'}
-                              </div>
-                            </div>
-                            {/* Total Invoice Value in Words */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <div className="flex items-center gap-3">
-                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                                  {t('bill.totalInvoiceValueWords')}
-                                </label>
-                                <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
-                                  {amountInWords(gstCalculation?.finalAmount || totalAmount)}
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          // RCM: Show Invoice Remarks, Tax Payable on Reverse Charge, Notification Details, Total Invoice Value in Words, and GST values on left
-                          <>
-                            {/* Invoice Remarks */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                                {t('bill.invoiceRemarks')}
-                              </label>
-                              <textarea
-                                value={note}
-                                onChange={(e) => setNote(e.target.value)}
-                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                                rows="2"
-                                placeholder={t('bill.invoiceRemarksPlaceholder')}
-                                readOnly={isExempted || isRCMExempted || isFCMExempted}
-                              />
-                            </div>
-                            {/* Tax Payable on Reverse Charge */}
-                            {selectedCustomer?.serviceType?.toString().trim().toUpperCase() === 'RCM' && (
-                              <div className="flex items-center gap-3">
-                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                                  {t('bill.taxPayableReverse')}
-                                </label>
-                                <span className="flex-1 px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm">
-                                  YES
-                                </span>
-                              </div>
-                            )}
-                            {/* Notification Details */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                                {t('bill.notificationDetails')}
-                              </label>
-                              <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
-                                {notificationDetails || '-'}
-                              </div>
-                            </div>
-                            {/* Total Invoice Value in Words */}
-                            <div className="border border-[var(--color-border)] rounded p-3">
-                              <div className="flex items-center gap-3">
-                                <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                                  {t('bill.totalInvoiceValueWords')}
-                                </label>
-                                <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
-                                  {amountInWords(gstCalculation?.finalAmount || totalAmount)}
-                                </div>
-                              </div>
-                            </div>
-                            {/* Show RCM GST values for RCM (not exempted) */}
-                            {showRCMGST && (
+              return (
+                <div className={`grid grid-cols-1 ${showGSTCalculationUI ? 'lg:grid-cols-2' : ''} gap-4`}>
+                  <div className="space-y-3">
+                    {/* Conditional layout: 2-column for RCM and EXEMPTED, single column for FCM */}
+                    {invoiceType === 'RCM' || invoiceType === 'EXEMPTED' ? (
+                      // RCM/EXEMPTED: 2-column layout
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Left Column */}
+                        <div className="space-y-3">
+                          {invoiceType === 'EXEMPTED' ? (
+                            // EXEMPTED: Show Invoice Remarks, Notification Details and Total Invoice Value in Words on left
+                            <>
+                              {/* Invoice Remarks */}
                               <div className="border border-[var(--color-border)] rounded p-3">
-                                <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                                  <span>GST Payable Under RCM by the Recipient = </span>
-                                  <span className="font-semibold">
-                                    IGST: {gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: {gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: {gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                  {t('bill.invoiceRemarks')}
+                                </label>
+                                <textarea
+                                  value={note}
+                                  onChange={(e) => setNote(e.target.value)}
+                                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                                  rows="2"
+                                  placeholder={t('bill.invoiceRemarksPlaceholder')}
+                                  readOnly={isExempted || isRCMExempted || isFCMExempted}
+                                />
+                              </div>
+                              {/* Notification Details */}
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                  {t('bill.notificationDetails')}
+                                </label>
+                                <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
+                                  {notificationDetails || '-'}
+                                </div>
+                              </div>
+                              {/* Total Invoice Value in Words */}
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <div className="flex items-center gap-3">
+                                  <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                    {t('bill.totalInvoiceValueWords')}
+                                  </label>
+                                  <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
+                                    {amountInWords(totalAdviceAmountReceivable)}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            // RCM: Show Invoice Remarks, Tax Payable on Reverse Charge, Notification Details, Total Invoice Value in Words, and GST values on left
+                            <>
+                              {/* Invoice Remarks */}
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                  {t('bill.invoiceRemarks')}
+                                </label>
+                                <textarea
+                                  value={note}
+                                  onChange={(e) => setNote(e.target.value)}
+                                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                                  rows="2"
+                                  placeholder={t('bill.invoiceRemarksPlaceholder')}
+                                  readOnly={isExempted || isRCMExempted || isFCMExempted}
+                                />
+                              </div>
+                              {/* Tax Payable on Reverse Charge */}
+                              {selectedCustomer?.serviceType?.toString().trim().toUpperCase() === 'RCM' && (
+                                <div className="flex items-center gap-3">
+                                  <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                    {t('bill.taxPayableReverse')}
+                                  </label>
+                                  <span className="flex-1 px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm">
+                                    YES
                                   </span>
                                 </div>
+                              )}
+                              {/* Notification Details */}
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                                  {t('bill.notificationDetails')}
+                                </label>
+                                <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
+                                  {notificationDetails || '-'}
+                                </div>
                               </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Right Column */}
-                      <div className="space-y-3">
-                        {invoiceType === 'EXEMPTED' ? (
-                          // EXEMPTED: Show Total Taxable Value and Total Invoice Amount on right
-                          <div className="border border-[var(--color-border)] rounded p-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                                <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
-                                <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                              {/* Total Invoice Value in Words */}
+                              <div className="border border-[var(--color-border)] rounded p-3">
+                                <div className="flex items-center gap-3">
+                                  <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                                    {t('bill.totalInvoiceValueWords')}
+                                  </label>
+                                  <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
+                                    {amountInWords(totalAdviceAmountReceivable)}
+                                  </div>
+                                </div>
                               </div>
+                              {/* Show RCM GST values for RCM (not exempted) */}
+                              {showRCMGST && (
+                                <div className="border border-[var(--color-border)] rounded p-3">
+                                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                                    <span>GST Payable Under RCM by the Recipient = </span>
+                                    <span className="font-semibold">
+                                      IGST: {gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}  CGST: {gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'} SGST: {gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
 
-                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
-                                <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
-                                <span className="text-base">
-                                  {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
-                                </span>
+                        {/* Right Column */}
+                        <div className="space-y-3">
+                          {invoiceType === 'EXEMPTED' ? (
+                            // EXEMPTED: Show Total Taxable Value and Total Invoice Amount on right
+                            <div className="border border-[var(--color-border)] rounded p-4">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                                  <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                                </div>
+
+                                <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
+                                  <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
+                                  <span className="text-base">
+                                    {formatCurrency(totalAdviceAmountReceivable)}
+                                  </span>
+                                </div>
+                                {renderDDOSignatureSection()}
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          // RCM: Show Total Taxable Value and Total Invoice Amount on right
-                          <div className="border border-[var(--color-border)] rounded p-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                                <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
-                                <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
-                              </div>
+                          ) : (
+                            // RCM: Show Total Taxable Value and Total Invoice Amount on right
+                            <div className="border border-[var(--color-border)] rounded p-4">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                                  <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                                </div>
 
-                              <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
-                                <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
-                                <span className="text-base">
-                                  {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
-                                </span>
+                                <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
+                                  <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
+                                  <span className="text-base">
+                                    {formatCurrency(totalAdviceAmountReceivable)}
+                                  </span>
+                                </div>
+                                {renderDDOSignatureSection()}
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    // FCM: Single column layout (new design)
-                    <div className="space-y-3">
-                      {/* 1. Invoice Remarks */}
-                      <div className="border border-[var(--color-border)] rounded p-3">
-                        <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                          {t('bill.invoiceRemarks')}
-                        </label>
-                        <textarea
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                          className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                          rows="2"
-                          placeholder={t('bill.invoiceRemarksPlaceholder')}
-                          readOnly={isExempted || isRCMExempted || isFCMExempted}
-                        />
-                      </div>
-
-                      {/* 2. Notification Details */}
-                      <div className="border border-[var(--color-border)] rounded p-3">
-                        <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                          {t('bill.notificationDetails')}
-                        </label>
-                        <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
-                          {notificationDetails || '-'}
+                          )}
                         </div>
                       </div>
-
-                      {/* 3. Total Invoice Value in Words */}
-                      <div className="border border-[var(--color-border)] rounded p-3">
-                        <div className="flex items-center gap-3">
-                          <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
-                            {t('bill.totalInvoiceValueWords')}
+                    ) : (
+                      // FCM: Single column layout
+                      <div className="space-y-3">
+                        {/* 1. Invoice Remarks */}
+                        <div className="border border-[var(--color-border)] rounded p-3">
+                          <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                            {t('bill.invoiceRemarks')}
                           </label>
-                          <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
-                            {amountInWords(gstCalculation?.finalAmount || totalAmount)}
+                          <textarea
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                            rows="2"
+                            placeholder={t('bill.invoiceRemarksPlaceholder')}
+                            readOnly={isExempted || isRCMExempted || isFCMExempted}
+                          />
+                        </div>
+
+                        {/* 2. Notification Details */}
+                        <div className="border border-[var(--color-border)] rounded p-3">
+                          <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                            {t('bill.notificationDetails')}
+                          </label>
+                          <div className="w-full px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm min-h-[65px] text-[var(--color-text-secondary)]">
+                            {notificationDetails || '-'}
                           </div>
+                        </div>
+
+                        {/* 3. Total Invoice Value in Words */}
+                        <div className="border border-[var(--color-border)] rounded p-3">
+                          <div className="flex items-center gap-3">
+                            <label className="text-sm font-medium whitespace-nowrap text-[var(--color-text-primary)]">
+                              {t('bill.totalInvoiceValueWords')}
+                            </label>
+                            <div className="px-3 py-2 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded italic text-sm flex-1 overflow-x-auto font-semibold text-[var(--color-text-primary)]">
+                              {amountInWords(totalAdviceAmountReceivable)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Show GST Calculation UI only for FCM (not exempted) */}
+                  {showGSTCalculationUI && (
+                    <div>
+                      <div className="border border-[var(--color-border)] rounded p-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.gstCollectableFCM')}</span>
+                            <span className="text-sm text-[var(--color-text-secondary)]">-</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.igst18')}</span>
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.cgst9')}</span>
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.sgst9')}</span>
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-2 border-t border-[var(--color-border)] mt-2">
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">{t('bill.totalGstAmount')}</span>
+                            <span className="text-sm font-semibold text-[var(--color-primary)]">
+                              {formatCurrency(gstCalculation?.gstAmount || 0)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
+                            <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
+                            <span className="text-base">
+                              {formatCurrency(totalAdviceAmountReceivable)}
+                            </span>
+                          </div>
+                          {renderDDOSignatureSection()}
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
+              );
+            })()}
 
-                {/* Show GST Calculation UI only for FCM (not exempted) */}
-                {showGSTCalculationUI && (
-                  <div>
-                    <div className="border border-[var(--color-border)] rounded p-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.totalTaxableValue')}</span>
-                          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{formatCurrency(totalAmount)}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.gstCollectableFCM')}</span>
-                          <span className="text-sm text-[var(--color-text-secondary)]">-</span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.igst18')}</span>
-                          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.cgst9')}</span>
-                          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.sgst9')}</span>
-                          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-2 border-t border-[var(--color-border)] mt-2">
-                          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{t('bill.totalGstAmount')}</span>
-                          <span className="text-sm font-semibold text-[var(--color-primary)]">
-                            {formatCurrency(gstCalculation?.gstAmount || 0)}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded px-4 -mx-4 -mb-4 mt-24 font-semibold">
-                          <span className="text-base">{t('bill.totalInvoiceAmount')}</span>
-                          <span className="text-base">
-                            {formatCurrency(gstCalculation?.finalAmount || totalAmount)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Bank Details Section */}
-          <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
-              {t('bill.bankDetails')}
-            </label>
-            <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
-              <div className="text-sm">
-                <span className="font-medium text-[var(--color-text-primary)]">Bank Name: </span>
-                <span className="text-[var(--color-text-secondary)]">{bankDetails.bankName}</span>
-                {bankDetails.bankBranch && (
-                  <>
-                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                    <span className="font-medium text-[var(--color-text-primary)]">Branch: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.bankBranch}</span>
-                  </>
-                )}
-                {bankDetails.ifscCode && (
-                  <>
-                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                    <span className="font-medium text-[var(--color-text-primary)]">IFSC: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.ifscCode}</span>
-                  </>
-                )}
-                {bankDetails.accountNumber && (
-                  <>
-                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                    <span className="font-medium text-[var(--color-text-primary)]">Account No: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.accountNumber}</span>
-                  </>
-                )}
-                {bankDetails.accountType && (
-                  <>
-                    <span className="text-[var(--color-text-primary)] mx-2">|</span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.accountType}</span>
-                  </>
-                )}
+            {/* Bank Details Section */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
+                {t('bill.bankDetails')}
+              </label>
+              <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium text-[var(--color-text-primary)]">Bank Name: </span>
+                  <span className="text-[var(--color-text-secondary)]">{bankDetails.bankName}</span>
+                  {bankDetails.bankBranch && (
+                    <>
+                      <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                      <span className="font-medium text-[var(--color-text-primary)]">Branch: </span>
+                      <span className="text-[var(--color-text-secondary)]">{bankDetails.bankBranch}</span>
+                    </>
+                  )}
+                  {bankDetails.ifscCode && (
+                    <>
+                      <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                      <span className="font-medium text-[var(--color-text-primary)]">IFSC: </span>
+                      <span className="text-[var(--color-text-secondary)]">{bankDetails.ifscCode}</span>
+                    </>
+                  )}
+                  {bankDetails.accountNumber && (
+                    <>
+                      <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                      <span className="font-medium text-[var(--color-text-primary)]">Account No: </span>
+                      <span className="text-[var(--color-text-secondary)]">{bankDetails.accountNumber}</span>
+                    </>
+                  )}
+                  {bankDetails.accountType && (
+                    <>
+                      <span className="text-[var(--color-text-primary)] mx-2">|</span>
+                      <span className="text-[var(--color-text-secondary)]">{bankDetails.accountType}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions Section */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-end pt-4 border-t border-[var(--color-border)]">
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowPreviewModal(true)} 
-              className="min-w-[140px] px-4 py-2 text-sm border border-[var(--color-border)] rounded hover:bg-[var(--color-muted)]"
-            >
-              <FileText className="mr-2" size={16} />
-              {t('bill.preview')}
-            </Button>
-            <Button 
-              variant="primary" 
-              onClick={handleSaveBill} 
-              disabled={saving} 
-              className="min-w-[140px] px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <div className="mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></div>
-                  {t('bill.saving')}
-                </>
-              ) : (
-                <>
-                  {t('bill.saveBill')}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-        </>
+            {/* Actions Section */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-end pt-4 border-t border-[var(--color-border)]">
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowPreviewModal(true)} 
+                className="min-w-[140px] px-4 py-2 text-sm border border-[var(--color-border)] rounded hover:bg-[var(--color-muted)]"
+              >
+                <FileText className="mr-2" size={16} />
+                {t('bill.preview')}
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleSaveBill} 
+                disabled={saving} 
+                className="min-w-[140px] px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <div className="mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></div>
+                    {t('bill.saving')}
+                  </>
+                ) : (
+                  <>
+                    {t('bill.saveBill')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
         )}
 
         {/* Add Customer Modal */}
@@ -1927,7 +2074,6 @@ export default function GenerateBillPage() {
                   const upperValue = e.target.value.toUpperCase().slice(0, 15);
                   let updatedCustomer = { ...newCustomer, gstNumber: upperValue };
                   
-                  // Extract state code from first 2 characters
                   if (upperValue.length >= 2) {
                     const stateCode = getStateCodeFromGSTIN(upperValue);
                     if (stateCode) {
@@ -2134,7 +2280,7 @@ export default function GenerateBillPage() {
                   {/* Header Text Section - Centered */}
                   <div className="text-center max-w-5xl">
                     <h1 className="text-xl font-bold mb-4 leading-relaxed text-gray-800">
-                     {gstDetails?.gstName||''}
+                      {gstDetails?.gstName||''}
                     </h1>
                     <div className="space-y-2 text-gray-700">
                       <p className="text-base">{gstDetails?.address||''}</p>
@@ -2207,13 +2353,13 @@ export default function GenerateBillPage() {
               <div className="mb-8">
                 <table className="w-full border-collapse border-2 border-gray-400 mb-6 table-fixed shadow-lg">
                   <colgroup>
-                    <col style={{ width: '7%' }} /> {/* Serial No */}
-                    <col style={{ width: '38%' }} /> {/* Item Description - Bigger */}
-                    <col style={{ width: '10%' }} /> {/* HSN Code - Smaller */}
-                    <col style={{ width: '7%' }} /> {/* Qty - Smaller */}
-                    <col style={{ width: '7%' }} /> {/* Unit */}
-                    <col style={{ width: '15%' }} /> {/* Amount */}
-                    <col style={{ width: '16%' }} /> {/* Taxable Value */}
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '38%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '16%' }} />
                   </colgroup>
                   <thead>
                     <tr className="bg-[#2C5F2D] text-white">
@@ -2273,7 +2419,7 @@ export default function GenerateBillPage() {
                         </div>
                         <div>
                           <p className="font-semibold mb-2"><strong>{t('bill.totalInvoiceValueWords')}</strong></p>
-                          <p className="bg-white p-3 rounded border italic font-semibold min-h-[60px] leading-relaxed">{amountInWords(gstCalculation?.finalAmount || totalAmount)}</p>
+                          <p className="bg-white p-3 rounded border italic font-semibold min-h-[60px] leading-relaxed">{amountInWords(totalAdviceAmountReceivable)}</p>
                         </div>
                         {showRCMGST && (
                           <div>
@@ -2318,7 +2464,17 @@ export default function GenerateBillPage() {
                           </div>
                           <div className="flex justify-between items-center py-4 bg-[#2C5F2D] text-white rounded-lg px-4 -mx-4">
                             <span className="font-bold text-xl">{t('bill.totalInvoiceAmount')}</span>
-                            <span className="font-bold text-xl">{formatCurrency(gstCalculation?.finalAmount || totalAmount)}</span>
+                            <span className="font-bold text-xl">{formatCurrency(totalAdviceAmountReceivable)}</span>
+                          </div>
+                          <div className="mt-6 grid gap-4 sm:grid-cols-2 border-t border-white/40 pt-4 text-white">
+                            <div>
+                              <p className="text-xs uppercase tracking-wide opacity-75">{t('label.ddoName')}</p>
+                              <p className="mt-2 font-semibold text-lg">{ddoDetails?.fullName || '-'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-wide opacity-75">{t('bill.signatureOfDdo')}</p>
+                              <div className="mt-3 h-10 border-b border-dashed border-white/70"></div>
+                            </div>
                           </div>
                         </div>
                       </div>

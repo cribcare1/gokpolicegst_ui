@@ -6,7 +6,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t } from '@/lib/localization';
-import { FileText, CheckCircle, Clock, Plus, AlertCircle } from 'lucide-react';
+import { FileText, CheckCircle, Clock, Plus, AlertCircle, Building2, Users, CreditCard, ArrowRight } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 
 export default function DDODashboard() {
@@ -17,6 +17,36 @@ export default function DDODashboard() {
     recentBills: [],
   });
   const [loading, setLoading] = useState(true);
+  const quickActions = [
+    {
+      key: 'bank-details',
+      label: 'nav.bank',
+      href: '/ddo/profile',
+      icon: Building2,
+      bgClass: 'from-blue-500/80 to-cyan-500/80'
+    },
+    {
+      key: 'customer-master',
+      label: 'nav.customers',
+      href: '/ddo/customers',
+      icon: Users,
+      bgClass: 'from-amber-500/80 to-orange-500/80'
+    },
+    {
+      key: 'proforma-advice',
+      label: 'nav.generateBill',
+      href: '/ddo/generate-bill',
+      icon: FileText,
+      bgClass: 'from-purple-500/80 to-pink-500/80'
+    },
+    {
+      key: 'credit-note',
+      label: 'nav.creditNote',
+      href: '/ddo/invoices',
+      icon: CreditCard,
+      bgClass: 'from-emerald-500/80 to-green-500/80'
+    }
+  ];
 
   useEffect(() => {
     fetchDashboardData();
@@ -159,99 +189,68 @@ export default function DDODashboard() {
 
         {/* Stats Cards */}
         {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div className="premium-card p-4 sm:p-6 lg:p-8 group">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
-                    {t('dashboard.pendingBills')}
-                  </p>
-                  <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-amber-500 to-orange-600 bg-clip-text text-transparent">
-                    {stats.pendingBills.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
-                  <Clock className="text-amber-600 dark:text-amber-400" size={24} />
-                </div>
-              </div>
-            </div>
-
-            <div className="premium-card p-4 sm:p-6 lg:p-8 group">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
-                    {t('dashboard.submittedBills')}
-                  </p>
-                  <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-green-500 to-emerald-600 bg-clip-text text-transparent">
-                    {stats.submittedBills.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
-                  <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Recent Bills */}
-        <div className="premium-card p-4 sm:p-6 lg:p-8">
-          <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)] mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-[var(--color-border)]">
-            {t('dashboard.recentBills')}
-          </h2>
-          {stats.recentBills.length === 0 ? (
-            <div className="text-center py-8 sm:py-12">
-              <div className="inline-block p-4 sm:p-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl sm:rounded-3xl mb-4">
-                <FileText className="text-blue-600 dark:text-blue-400" size={32} />
-              </div>
-              <p className="text-[var(--color-text-secondary)] font-medium text-base sm:text-lg">
-                No bills generated yet
-              </p>
-              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm mt-2">
-                Click "Generate Bill" to create your first bill
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.recentBills.slice(0, 5).map((bill, index) => (
-                <div
-                  key={bill.id}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-5 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border border-[var(--color-border)] group"
-                  onClick={() => router.push(`/ddo/invoices?id=${bill.id}`)}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                    <div className="p-2 sm:p-3 bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 rounded-xl group-hover:scale-110 transition-transform flex-shrink-0">
-                      <FileText size={20} className="text-[var(--color-primary)]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[var(--color-text-primary)] text-base sm:text-lg mb-1 truncate">
-                        {bill.billNumber}
-                      </p>
-                      <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] truncate">
-                        {bill.customerName} • {new Date(bill.date).toLocaleDateString('en-IN')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:flex-col sm:items-end sm:text-right gap-2">
-                    <p className="font-bold text-lg sm:text-xl text-[var(--color-text-primary)]">
-                      ₹{bill.totalAmount?.toLocaleString('en-IN') || '0'}
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="premium-card p-4 sm:p-6 lg:p-8 group">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
+                      {t('dashboard.pendingBills')}
                     </p>
-                    <span
-                      className={`text-xs font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${
-                        bill.status === 'submitted'
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
-                          : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                      }`}
-                    >
-                      {bill.status === 'submitted' ? t('bill.status.submitted') : t('bill.status.pending')}
-                    </span>
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-amber-500 to-orange-600 bg-clip-text text-transparent">
+                      {stats.pendingBills.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                    <Clock className="text-amber-600 dark:text-amber-400" size={24} />
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="premium-card p-4 sm:p-6 lg:p-8 group">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2 sm:mb-3 truncate">
+                      {t('dashboard.submittedBills')}
+                    </p>
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-br from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                      {stats.submittedBills.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl sm:rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                    <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+
+            <div className="premium-card p-4 sm:p-6 lg:p-8">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
+                  {t('dashboard.quickActions')}
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                {quickActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.key}
+                      onClick={() => router.push(action.href)}
+                      className="flex items-center justify-between gap-3 sm:gap-4 px-4 py-4 sm:py-5 bg-gradient-to-br from-[var(--color-muted)] to-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] hover:shadow-xl hover:scale-[1.01] transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)]"
+                    >
+                      <div className={`p-3 rounded-2xl text-white bg-gradient-to-br ${action.bgClass} shadow-md`}>
+                        <Icon size={20} />
+                      </div>
+                      <span className="flex-1 font-semibold text-[var(--color-text-primary)]">{t(action.label)}</span>
+                      <ArrowRight className="text-[var(--color-text-secondary)]" size={18} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Submission Deadline Alert */}
         <div className="premium-card p-4 sm:p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
