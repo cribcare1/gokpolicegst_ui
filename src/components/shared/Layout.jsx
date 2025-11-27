@@ -5,12 +5,14 @@ import { t, getLanguage, setLanguage as setLang, translations } from '@/lib/loca
 import { applyTheme, getTheme, getMode, setTheme } from '@/lib/theme';
 import { Menu, X, LogOut, Settings, Moon, Sun, Languages } from 'lucide-react';
 import Link from 'next/link';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 const Layout = memo(function Layout({ children, role = 'admin' }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [language, setLanguage] = useState('en');
   const [darkMode, setDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [profileName, setProfileName] = useState('');
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,8 +25,26 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     if (typeof window !== 'undefined') {
       const theme = getTheme();
       applyTheme();
+
+      if (role === 'ddo') {
+        try {
+          const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+          if (storedProfile) {
+            const parsedProfile = JSON.parse(storedProfile);
+            const nameFromProfile = parsedProfile?.fullName || parsedProfile?.name || '';
+            if (nameFromProfile) {
+              setProfileName(nameFromProfile);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Failed to parse stored profile data', error);
+        }
+        const fallbackName = localStorage.getItem(LOGIN_CONSTANT.FULL_NAME) || '';
+        setProfileName(fallbackName);
+      }
     }
-  }, []);
+  }, [role]);
 
   const toggleLanguage = useCallback(() => {
     const newLang = language === 'en' ? 'kn' : 'en';
@@ -69,10 +89,10 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
 
   const ddoNavItems = [
     { href: '/ddo_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
-    { href: '/ddo/profile', label: 'Profile', icon: 'profile' },
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
+    { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
-    { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
+    { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'invoices' },
   ];
 
   const gstinNavItems = [
@@ -83,6 +103,14 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
   ];
 
   const navItems = role === 'admin' ? adminNavItems : role === 'gstin' ? gstinNavItems : ddoNavItems;
+
+  const profileInitial = useMemo(() => {
+    if (!profileName) return 'P';
+    return profileName.trim().charAt(0).toUpperCase();
+  }, [profileName]);
+
+  const profileDisplayName = profileName || 'Profile';
+  const isDdoProfileActive = pathname === '/ddo/profile';
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)]">
@@ -132,6 +160,29 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             >
               <LogOut size={18} className="sm:w-5 sm:h-5" />
             </button>
+            {role === 'ddo' && (
+              <Link
+                href="/ddo/profile"
+                className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-2xl transition-all duration-200 hover:scale-105 hover:shadow-md ${
+                  isDdoProfileActive ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-muted)] text-[var(--color-text-primary)]'
+                }`}
+                aria-label="DDO profile"
+              >
+                <div
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold ${
+                    isDdoProfileActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                  }`}
+                >
+                  {profileInitial}
+                </div>
+                <div className="hidden sm:flex flex-col leading-tight text-left">
+                  <span className="text-xs text-[var(--color-text-secondary)]">Profile</span>
+                  <span className="text-sm font-semibold truncate max-w-[120px]">{profileDisplayName}</span>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -149,7 +200,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             lg:translate-x-0 overflow-y-auto
           `}
         >
-          <nav className="p-3 sm:p-4 md:p-6 space-y-2">
+          <nav className="pt-4 sm:pt-6 md:pt-8 p-3 sm:p-4 md:p-6 space-y-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (

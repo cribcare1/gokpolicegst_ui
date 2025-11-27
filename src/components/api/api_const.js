@@ -64,7 +64,8 @@ export const API_ENDPOINTS = {
   
   // Bill/Invoice Endpoints
   BILL_LIST: `${API_BASE_URL}/bill/list`,
-  BILL_ADD: `${API_BASE_URL}/bill/add`,
+  INVOICE_DDO_LIST: `${API_BASE_URL}/invoices/list?ddoId=`,
+  BILL_ADD: `${API_BASE_URL}/invoices/save`,
   BILL_UPDATE: `${API_BASE_URL}/bill/update`,
   BILL_GET: `${API_BASE_URL}/bill/get/`,
   BILL_DETAIL: `${API_BASE_URL}/bill/detail/`,

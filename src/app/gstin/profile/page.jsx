@@ -57,6 +57,7 @@ export default function GstinProfilePage() {
     pinCode: '',
     mobile: '',
     email: '',
+    bankDetails: '',
     gstId: null,
     gstHolderName: '',
     userId: null,
@@ -159,6 +160,7 @@ export default function GstinProfilePage() {
       city: apiData.city || '',
       pinCode: apiData.pinCode || apiData.pin || '',
       mobileNumber: apiData.mobileNumber || apiData.mobileNumberNumber || '',
+      bankDetails: apiData.bankDetails || apiData.bank_details || apiData.bankName || apiData.bank || '',
       email: apiData.email || '',
       gstId: apiData.gstId || apiData.id || null,
       gstHolderName: apiData.gstHolderName || '',
@@ -319,21 +321,15 @@ export default function GstinProfilePage() {
                     <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
                       GSTIN Number
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="gstinNumber"
-                        value={formData.gstinNumber || ''}
-                        onChange={handleChange}
-                        maxLength={15}
-                        className="premium-input w-full px-4 py-3 text-base uppercase"
-                        placeholder="Enter GSTIN number"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.gstinNumber || '-'}</p>
-                      </div>
-                    )}
+                    <input
+                      type="text"
+                      name="gstinNumber"
+                      value={formData.gstinNumber || ''}
+                      readOnly
+                      disabled
+                      className="premium-input w-full px-4 py-3 text-base uppercase bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]"
+                      placeholder="GSTIN number"
+                    />
                   </div>
                 </div>
               </div>
@@ -362,6 +358,23 @@ export default function GstinProfilePage() {
                         <p className="text-[var(--color-text-primary)] font-medium">{formData.gstName || '-'}</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details (non-editable) */}
+              <div className="lg:col-span-2">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg mt-1">
+                    <Building2 className="text-sky-600 dark:text-sky-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      Bank Details
+                    </label>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{formData.bankDetails || '-'}</p>
+                    </div>
                   </div>
                 </div>
               </div>

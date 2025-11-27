@@ -528,14 +528,14 @@ export default function PANRecordsPage() {
           title={editingItem ? `Edit PAN Master` : `Add PAN Master`}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {getFormFields().map((field) => {
               const isPANNumberField = field.key === 'panNumber';
               const gstinCount = editingItem ? getGSTINCount(editingItem.panNumber) : 0;
               const isReadOnly = field.readOnly || (isPANNumberField && editingItem && gstinCount > 0);
-              
+
               return (
-                <div key={field.key}>
+                <div key={field.key} className={field.key === 'address' ? 'md:col-span-2' : ''}>
                   <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                     {isReadOnly && isPANNumberField && (
@@ -600,7 +600,7 @@ export default function PANRecordsPage() {
               );
             })}
 
-            <div className="flex items-center justify-end gap-3 pt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 md:col-span-2">
               <Button
                 type="button"
                 variant="secondary"
