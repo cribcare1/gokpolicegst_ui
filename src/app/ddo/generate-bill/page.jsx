@@ -61,16 +61,16 @@ export default function GenerateBillPage() {
   const [lineItems, setLineItems] = useState([
     { 
       serialNo: 1, 
-      description: 'Deployment of police personnel for Bandobast/Security duty is a supply of service by the Police Department for the Quarter June-2025 to Sept-2025', 
-      amount: 500000, 
-      hsnNumber: '999293',
+      description: '', 
+      amount: "", 
+      hsnNumber: '',
       quantity: 1
     },
     { 
       serialNo: 2, 
-      description: 'Deployment of police personnel for Bandobast/Security duty is a supply of service by the Police Department for the Quarter Oct-2025 to Oct-2025', 
-      amount: 200000, 
-      hsnNumber: '999293',
+      description: '', 
+      amount: "", 
+      hsnNumber: '',
       quantity: 1
     },
   ]);
@@ -81,13 +81,7 @@ export default function GenerateBillPage() {
   const [note, setNote] = useState('');
   const [notificationDetails, setNotificationDetails] = useState('');
   const [ddoDetails, setDdoDetails] = useState('');
-  const [bankDetails, setBankDetails] = useState({
-    bankName: 'Union Bank of India-Current Account',
-    bankBranch: 'Banaswadi',
-    ifscCode: 'UBIN0534567',
-    accountNumber: '1234567890123456',
-    accountType: 'Current Account'
-  });
+  const [bankDetails, setBankDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
@@ -101,7 +95,9 @@ export default function GenerateBillPage() {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
+    fetchProformaAdviceDetails();
     fetchGSTDetails();
+    fetchDdoBankData();
     getDdoDetails();
     fetchCustomers();
     fetchHSNList();
@@ -130,6 +126,7 @@ export default function GenerateBillPage() {
   }, []);
 
   useEffect(() => {
+    console.log('selectedCustomer changed:', selectedCustomer);
     if (selectedCustomer) {
       const isGovt = selectedCustomer.customerType === 'Govt' || 
                      selectedCustomer.customerType === 'Government' ||
@@ -145,12 +142,19 @@ export default function GenerateBillPage() {
   }, [selectedCustomer]);
 
   useEffect(() => {
+    console.log('=== useEffect for GST Calculation Triggered ===');
+    console.log('selectedCustomer:', selectedCustomer);
+    console.log('lineItems:', lineItems);
+    console.log('gstDetails:', gstDetails);
+    
     if (selectedCustomer && lineItems.length > 0) {
+      console.log('Calling calculateGSTAmount...');
       calculateGSTAmount();
     } else {
+      console.log('Conditions not met, clearing GST calculation');
       setGstCalculation(null);
     }
-  }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList]);
+  }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList, gstDetails]);
 
   useEffect(() => {
     if (lineItems.length === 0) return;
@@ -160,7 +164,7 @@ export default function GenerateBillPage() {
       const newItem = { ...item };
       
       if (hsnList.length === 1) {
-        const defaultHsn = hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '';
+        const defaultHsn =  hsnList[0].hsnCode  || '';
         if (item.hsnNumber !== defaultHsn) {
           newItem.hsnNumber = defaultHsn;
           needsUpdate = true;
@@ -253,7 +257,46 @@ export default function GenerateBillPage() {
     }
   };
 
-  const fetchGSTDetails = async () => {
+  const fetchDdoBankData = async () => {
+      try {
+        setLoading(true);
+        const url = `${API_ENDPOINTS.BANK_LIST}?ddoId=` + localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+        const response = await ApiService.handleGetRequest(url);
+        if (response && response.status === 'success') {
+          
+            setBankDetails(response.data[0] || null);
+
+        }
+      } catch (error) {
+        console.log('Error fetching bank data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+   const fetchProformaAdviceDetails = async () => { 
+    try {
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      
+      if (!ddoId) {
+        toast.error('DDO ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.INVOICE_DDO_LIST}${ddoId}`);
+      if (response) {
+        // setGstDetails(response || []);
+        setLoading(false);
+       
+      }
+    } catch (error) {
+      console.error('Error fetching GST details:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchGSTDetails = async () => { INVOICE_DDO_LIST
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
@@ -298,7 +341,8 @@ export default function GenerateBillPage() {
 
   const fetchHSNList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.HSN_LIST);
+      const url = `${API_ENDPOINTS.HSN_LIST}?gstId=` + localStorage.getItem(LOGIN_CONSTANT.GSTID);
+      const response = await ApiService.handleGetRequest(url);
       if (response && response.status === 'success') {
         setHsnList(response.data || []);
       }
@@ -393,18 +437,19 @@ export default function GenerateBillPage() {
   };
 
   const calculateGSTAmount = () => {
+    console.log('=== calculateGSTAmount called ===');  
     if (!selectedCustomer) {
       setGstCalculation(null);
       return;
     }
 
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-    
+    console.log('=== taxableValue called ===',lineItems);
     if (taxableValue <= 0) {
       setGstCalculation(null);
       return;
     }
-
+     
     const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
     const isRCMExempted = invoiceType === 'RCM' && hasExemption;
     const isFCMExempted = invoiceType === 'FCM' && hasExemption;
@@ -420,7 +465,35 @@ export default function GenerateBillPage() {
       h.code === firstHSN
     ) : null;
     
-    const gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
+    // Check if gstDetails stateCode matches selectedCustomer stateCode
+    const isSameState = gstDetails?.stateCode.toString() === selectedCustomer?.stateCode.toString();
+    
+    console.log('=== GST Calculation Debug ===');
+    console.log('gstDetails stateCode:', gstDetails?.stateCode);
+    console.log('selectedCustomer stateCode:', selectedCustomer?.stateCode);
+    console.log('isSameState:', isSameState);
+    console.log('invoiceType:', invoiceType);
+    console.log('taxableValue:', taxableValue);
+    console.log('hsnDetails:', hsnDetails);
+    
+    // Use CGST and SGST if same state, otherwise use IGST
+    let gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
+    let cgstRate = 0;
+    let sgstRate = 0;
+    
+    if (isSameState) {
+      // Same state - use CGST and SGST from hsnDetails
+      cgstRate = hsnDetails?.cgst || (hsnDetails?.gstRate || 18) / 2 || 9;
+      sgstRate = hsnDetails?.sgst || (hsnDetails?.gstRate || 18) / 2 || 9;
+      gstRate = 0; // No IGST for same state
+      console.log('Same State Calculation:');
+      console.log('cgstRate:', cgstRate, 'sgstRate:', sgstRate);
+    } else {
+      // Different state - use IGST from hsnDetails
+      gstRate = hsnDetails?.igst || hsnDetails?.gstRate || 18;
+      console.log('Different State Calculation:');
+      console.log('gstRate (IGST):', gstRate);
+    }
     
     if (invoiceType === 'EXEMPTED') {
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
@@ -445,12 +518,19 @@ export default function GenerateBillPage() {
         setNote('GST is Exempted with Notification');
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
       } else {
-        setNote('Forward Charge Mechanism - Taxable @18%');
-        setNotificationDetails('Section 7 of the CGST Act, 2017. Taxable @18% Refer: Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
+        if (isSameState) {
+          const totalRate = (cgstRate || 0) + (sgstRate || 0);
+          setNote('Forward Charge Mechanism - Taxable @' + totalRate + '% (CGST @' + cgstRate + '% + SGST @' + sgstRate + '%)');
+          setNotificationDetails('Same State - CGST and SGST applicable');
+        } else {
+          setNote('Forward Charge Mechanism - Taxable @' + gstRate + '% (IGST)');
+          setNotificationDetails('Different State - IGST applicable');
+        }
       }
     }
 
     if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
+      console.log('Exempted invoice type');
       setGstCalculation({
         taxableValue,
         gstAmount: 0,
@@ -468,27 +548,73 @@ export default function GenerateBillPage() {
       return;
     }
     
-    const calculation = calculateGST(
-      supplierGSTIN,
-      customerGSTIN,
-      customerPAN,
-      taxableValue,
-      gstRate,
-      invoiceType,
-      hsnDetails
-    );
+    // Calculate GST based on same state or different state
+    let calculation;
+    if (isSameState) {
+      // Same state - calculate CGST and SGST
+      const cgstAmount = (taxableValue * cgstRate) / 100;
+      const sgstAmount = (taxableValue * sgstRate) / 100;
+      const totalGST = cgstAmount + sgstAmount;
+      
+      calculation = {
+        taxableValue,
+        gstAmount: totalGST,
+        igst: 0,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        finalAmount: taxableValue + totalGST,
+        isGovernment: false,
+        isSameState: true,
+        gstApplicable: true,
+        invoiceType: invoiceType,
+        note: '',
+        taxPayableBy: 'supplier',
+        gstRate: 0,
+        cgstRate,
+        sgstRate,
+      };
+      
+      console.log('Same State GST Calculation:');
+      console.log('CGST Amount:', cgstAmount);
+      console.log('SGST Amount:', sgstAmount);
+      console.log('Total GST:', totalGST);
+      console.log('Final Amount:', calculation.finalAmount);
+    } else {
+      // Different state - use the existing calculateGST function with IGST
+      calculation = calculateGST(
+        supplierGSTIN,
+        customerGSTIN,
+        customerPAN,
+        taxableValue,
+        gstRate,
+        invoiceType,
+        hsnDetails
+      ) || {};
+      // attach rates so UI/print can show them
+      calculation.gstRate = gstRate;
+      calculation.cgstRate = cgstRate || 0;
+      calculation.sgstRate = sgstRate || 0;
+      
+      console.log('Different State GST Calculation:');
+      console.log('IGST Amount:', calculation.igst);
+      console.log('Final Amount:', calculation.finalAmount);
+    }
     
     setGstCalculation(calculation);
     
     if (invoiceType !== 'RCM' && invoiceType !== 'FCM' && invoiceType !== 'EXEMPTED') {
       if (calculation.isSameState) {
-        setNote('CGST @9% + SGST @9% = 18% (Karnataka Same State)');
+        setNote('CGST @' + cgstRate + '% + SGST @' + sgstRate + '% = ' + (cgstRate + sgstRate) + '%');
         setNotificationDetails('Same State - CGST and SGST applicable');
       } else {
-        setNote(`IGST @18% (Different State)`);
+        setNote(`IGST @${gstRate}% (Different State)`);
         setNotificationDetails('Different State - IGST applicable');
       }
     }
+    
+    console.log('=== Final Calculation ===');
+    console.log(calculation);
+    return calculation;
   };
 
   const handleNavigateToAddCustomer = () => {
@@ -639,7 +765,7 @@ export default function GenerateBillPage() {
   };
 
   const handleAddLineItem = () => {
-    const defaultHsn = hsnList.length === 1 ? (hsnList[0].hsnNumber || hsnList[0].hsnCode || hsnList[0].code || '') : '';
+    const defaultHsn = hsnList.length === 1 ? ( hsnList[0].hsnCode ||  '') : '';
     setLineItems([
       ...lineItems,
       { 
@@ -663,15 +789,19 @@ export default function GenerateBillPage() {
   };
 
   const handleLineItemChange = (index, field, value) => {
+    console.log('handleLineItemChange called:', { index, field, value });
+    
     if (field === 'quantity') {
       return;
     }
     const updated = [...lineItems];
     updated[index][field] = value;
+    console.log('Updated lineItems:', updated);
     setLineItems(updated);
   };
 
   const handleSaveBill = async () => {
+    console.log('=== handleSaveBill called ===');
     const validations = [
       validateGSTIN(billDetails.gstinNumber),
       { valid: billDetails.gstAddress?.trim(), message: t('bill.gstAddressRequired') },
@@ -685,6 +815,7 @@ export default function GenerateBillPage() {
     for (const validation of validations) {
       if (!validation.valid) {
         toast.error(validation.message);
+        console.log('Validation failed:', validation.message);
         return;
       }
     }
@@ -696,10 +827,12 @@ export default function GenerateBillPage() {
       
       if (!descValidation.valid) {
         toast.error(`${t('bill.lineItem')} ${i + 1}: ${descValidation.message}`);
+        console.log(`Validation failed for line item ${i + 1}: ${descValidation.message}`);
         return;
       }
       if (!amountValidation.valid) {
         toast.error(`${t('bill.lineItem')} ${i + 1}: ${amountValidation.message}`);
+        console.log(`Validation failed for line item ${i + 1}: ${amountValidation.message}`);
         return;
       }
     }
@@ -707,37 +840,87 @@ export default function GenerateBillPage() {
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     if (taxableValue <= 0) {
       toast.error(t('bill.totalTaxableValueGreater'));
+      console.log('Validation failed: Total taxable value must be greater than zero');
       return;
     }
 
     try {
       setSaving(true);
-      const billData = {
-        ...billDetails,
-        customerId: selectedCustomer.id,
-        customerType,
-        invoiceType,
-        taxPayableReverseCharge,
-        exemptionNo,
-        lineItems: lineItems.map((item, idx) => ({
-          serialNo: idx + 1,
-          description: item.description,
-          amount: parseFloat(item.amount) || 0,
-          hsnNumber: item.hsnNumber,
-          quantity: 1,
-        })),
-        taxableValue: gstCalculation?.taxableValue || 0,
-        gstAmount: gstCalculation?.gstAmount || 0,
-        igst: gstCalculation?.igst || 0,
-        cgst: gstCalculation?.cgst || 0,
-        sgst: gstCalculation?.sgst || 0,
-        finalAmount: invoiceType === 'RCM' ? taxableValue : (gstCalculation?.finalAmount || 0),
-        paidAmount: parseFloat(paidAmount) || 0,
-        note,
-        notificationDetails,
-        status: 'pending',
-      };
+      
+      // Get user ID for ddoId
+      const userIdStr = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      const ddoId = userIdStr ? parseInt(userIdStr, 10) : 0;
+      
+      const totalTaxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      const totalCgst = gstCalculation?.cgst || 0;
+      const totalSgst = gstCalculation?.sgst || 0;
+      const totalIgst = gstCalculation?.igst || 0;
+      const grandTotal = gstCalculation?.finalAmount || totalTaxableValue;
+      const balanceAmount = grandTotal - (parseFloat(paidAmount) || 0);
 
+      const billData = {
+        invoiceId: null,
+        ddoId: ddoId,
+        bankId: bankDetails?.id || null,
+        gstId: gstDetails?.gstId || gstDetails?.id || null,
+        customerId: selectedCustomer?.id || null,
+        invoiceNumber: invoiceNumber,
+        invoiceDate: billDetails.date,
+        gstType: invoiceType,
+        invoiceStatus: 'DRAFT',
+        remarks: note || '',
+        
+        totalAmount: totalTaxableValue,
+        totalCgst: totalCgst,
+        totalSgst: totalSgst,
+        totalIgst: totalIgst,
+        grandTotal: grandTotal,
+        
+        paidAmount: parseFloat(paidAmount) || 0,
+        balanceAmount: balanceAmount,
+        
+        items: lineItems.map((item) => {
+          const hsnData = hsnList.find(h => 
+            h.hsnNumber === item.hsnNumber || 
+            h.hsnCode === item.hsnNumber || 
+            h.code === item.hsnNumber
+          );
+          
+          return {
+            hsnId: hsnData?.id || null,
+            serviceName: item.description,
+            quantity: 1,
+            rate: parseFloat(item.amount) || 0,
+            amount: parseFloat(item.amount) || 0,
+            cgstRate: gstCalculation?.cgstRate || 0,
+            sgstRate: gstCalculation?.sgstRate || 0,
+            igstRate: gstCalculation?.gstRate || 0,
+          };
+        }),
+        
+        gstSnapshot: {
+          gstName: gstDetails?.gstName || '',
+          gstNumber: gstDetails?.gstNumber || billDetails.gstinNumber || '',
+          stateCode: gstDetails?.stateCode || '',
+          gstHolderName: ddoDetails?.fullName || '',
+        },
+        
+        bankSnapshot: bankDetails ? {
+          bankName: bankDetails.bankName || '',
+          branchName: bankDetails.branchName || bankDetails.bankBranch || '',
+          accountNumber: bankDetails.accountNumber || '',
+          ifscCode: bankDetails.ifscCode || '',
+        } : null,
+        
+        creditNote: {
+          creditNoteNumber: '',
+          creditNoteAmount: 0,
+          mismatchAmount: 0,
+          reason: '',
+        },
+      };
+      
+      console.log('Bill Data to be saved:', billData);
       const response = await ApiService.handlePostRequest(
         API_ENDPOINTS.BILL_ADD,
         billData
@@ -749,6 +932,7 @@ export default function GenerateBillPage() {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
+      console.error('Error saving bill:', error);
       toast.error(t('alert.error'));
     } finally {
       setSaving(false);
@@ -760,6 +944,41 @@ export default function GenerateBillPage() {
     const logoSrc = logoImg ? logoImg.src : '/1.png';
     
     const printWindow = window.open('', '_blank');
+    const latestCalculation = calculateGSTAmount() || gstCalculation;
+    console.log('handlePrintBill latestCalculation:', latestCalculation);
+
+    const gstSectionHTML = (function() {
+      const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
+      const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+      const isFCMExempted = invoiceType === 'FCM' && hasExemption;
+      const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
+      const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
+
+      let rcmGSTSection = '';
+      if (showRCMGST) {
+        rcmGSTSection = '<div class="calc-row"><strong>GST Payable Under RCM by the Recipient = </strong><span>IGST: ' + (latestCalculation?.igst ? formatCurrency(latestCalculation.igst) : '-') + '  CGST: ' + (latestCalculation?.cgst ? formatCurrency(latestCalculation.cgst) : '-') + ' SGST: ' + (latestCalculation?.sgst ? formatCurrency(latestCalculation.sgst) : '-') + '</span></div>';
+      }
+
+      let gstCalcSection = '';
+      if (showGSTCalculationUI) {
+        const displayGstRate = (latestCalculation && (latestCalculation.gstRate || (latestCalculation.cgstRate && latestCalculation.sgstRate && (latestCalculation.cgstRate + latestCalculation.sgstRate)))) || 18;
+        const displayCgstRate = (latestCalculation && (typeof latestCalculation.cgstRate === 'number' ? latestCalculation.cgstRate : undefined)) ?? (displayGstRate / 2);
+        const displaySgstRate = (latestCalculation && (typeof latestCalculation.sgstRate === 'number' ? latestCalculation.sgstRate : undefined)) ?? (displayGstRate / 2);
+
+        gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4>' +
+          '<div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div>' +
+          '<div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div>' +
+          '<div class="calc-row"><span><strong>IGST @ ' + displayGstRate + '%</strong></span><span>' + (latestCalculation?.igst ? formatCurrency(latestCalculation.igst) : '-') + '</span></div>' +
+          '<div class="calc-row"><span><strong>CGST @ ' + displayCgstRate + '%</strong></span><span><strong>' + (latestCalculation?.cgst ? formatCurrency(latestCalculation.cgst) : '-') + '</strong></span></div>' +
+          '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (latestCalculation?.sgst ? formatCurrency(latestCalculation.sgst) : '-') + '</strong></span></div>' +
+          '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(latestCalculation?.gstAmount || 0) + '</strong></span></div>' +
+          '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
+          '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+      }
+
+      return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
+    })();
+
     const printHTML = `
       <!DOCTYPE html>
       <html>
@@ -1145,7 +1364,20 @@ export default function GenerateBillPage() {
     
             let gstCalcSection = '';
             if (showGSTCalculationUI) {
-              gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4><div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div><div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div><div class="calc-row"><span><strong>IGST @ 18%</strong></span><span>' + (gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-') + '</span></div><div class="calc-row"><span><strong>CGST @ 9%</strong></span><span><strong>' + (gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-') + '</strong></span></div><div class="calc-row"><span><strong>SGST @ 9%</strong></span><span><strong>' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</strong></span></div><div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(gstCalculation?.gstAmount || 0) + '</strong></span></div><div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div><div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+              // derive display rates from calculation if available
+              const displayGstRate = (gstCalculation && (gstCalculation.gstRate || (gstCalculation.cgstRate && gstCalculation.sgstRate && (gstCalculation.cgstRate + gstCalculation.sgstRate)))) || 18;
+              const displayCgstRate = (gstCalculation && (typeof gstCalculation.cgstRate === 'number' ? gstCalculation.cgstRate : undefined)) ?? (displayGstRate / 2);
+              const displaySgstRate = (gstCalculation && (typeof gstCalculation.sgstRate === 'number' ? gstCalculation.sgstRate : undefined)) ?? (displayGstRate / 2);
+
+              gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4>' +
+                '<div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div>' +
+                '<div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div>' +
+                '<div class="calc-row"><span><strong>IGST @ ' + displayGstRate + '%</strong></span><span>' + (gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-') + '</span></div>' +
+                '<div class="calc-row"><span><strong>CGST @ ' + displayCgstRate + '%</strong></span><span><strong>' + (gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-') + '</strong></span></div>' +
+                '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</strong></span></div>' +
+                '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(gstCalculation?.gstAmount || 0) + '</strong></span></div>' +
+                '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
+                '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
             }
     
             return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';

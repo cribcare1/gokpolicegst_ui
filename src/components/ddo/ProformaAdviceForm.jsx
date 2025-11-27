@@ -76,6 +76,49 @@ export default function ProformaAdviceForm({
 }) {
   const router = useRouter();
 
+  // derive display GST rates from current calculation or HSN list (fallbacks)
+  const latestCalc = gstCalculation || null;
+  const firstHSN = lineItems?.[0]?.hsnNumber;
+  const currentHsnDetails = firstHSN ? hsnList.find(h => h.hsnNumber === firstHSN || h.hsnCode === firstHSN || h.code === firstHSN) : null;
+  const fallbackGst = currentHsnDetails?.igst ?? currentHsnDetails?.gstRate ?? 18;
+  const fallbackCgst = currentHsnDetails?.cgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
+  const fallbackSgst = currentHsnDetails?.sgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
+
+  const displayGstRate = (latestCalc && (
+    typeof latestCalc.gstRate === 'number' ? latestCalc.gstRate :
+    typeof latestCalc.igst === 'number' ? latestCalc.igst :
+    (typeof latestCalc.cgstRate === 'number' && typeof latestCalc.sgstRate === 'number' ? (latestCalc.cgstRate + latestCalc.sgstRate) : undefined)
+  )) ?? fallbackGst;
+
+  const computeRateFromAmounts = (amount, taxable) => {
+    if (typeof amount !== 'number' || typeof taxable !== 'number' || taxable === 0) return null;
+    return (amount / taxable) * 100;
+  };
+
+  const rawCgstRate = (typeof latestCalc?.cgstRate === 'number') ? latestCalc.cgstRate : computeRateFromAmounts(latestCalc?.cgst, latestCalc?.taxableValue);
+  const rawSgstRate = (typeof latestCalc?.sgstRate === 'number') ? latestCalc.sgstRate : computeRateFromAmounts(latestCalc?.sgst, latestCalc?.taxableValue);
+
+  const displayCgstRate = (rawCgstRate != null) ? rawCgstRate : fallbackCgst;
+  const displaySgstRate = (rawSgstRate != null) ? rawSgstRate : fallbackSgst;
+
+  const formatPercent = (val) => {
+    if (val === null || val === undefined) return '';
+    const num = Number(val);
+    if (Number.isNaN(num)) return String(val);
+    // Convert to string without forcing integer rounding; trim unnecessary trailing zeros
+    let s = num.toString();
+    // If exponential or too long, limit to 6 decimal places then trim
+    if (!/e/i.test(s) && s.includes('.')) {
+      // keep up to 6 decimals for readability, but avoid unnecessary rounding if already short
+      s = Number(num.toFixed(6)).toString();
+    }
+    // trim trailing zeros and trailing dot
+    s = s.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/, '');
+    return s;
+  };
+
+  const [showGstDebug, setShowGstDebug] = useState(false);
+
   return (
     <>
       {loading ? (
@@ -290,12 +333,31 @@ export default function ProformaAdviceForm({
                         />
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        <input
-                          type="text"
-                          value={item.hsnNumber || (hsnList[0]?.hsnNumber || hsnList[0]?.hsnCode || hsnList[0]?.code || '')}
-                          readOnly
-                          className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold"
-                        />
+                        {hsnList.length > 1 ? (
+                          <select
+                            value={item.hsnNumber || (hsnList[0]?.hsnCode || '')}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const selected = hsnList.find(h => (h.hsnCode || h.hsnNumber || h.code) === val) || null;
+                              console.log('HSN selected in form:', { index, value: val, selected });
+                              onLineItemChange(index, 'hsnNumber', val);
+                            }}
+                            className="w-full px-2 py-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                          >
+                            {hsnList.map((hsn) => (
+                              <option key={hsn.id || hsn.hsnCode || hsn.hsnNumber} value={hsn.hsnCode || hsn.hsnNumber || hsn.code}>
+                                {hsn.hsnCode || hsn.hsnNumber || hsn.code}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={hsnList[0]?.hsnCode || ''}
+                            readOnly
+                            className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold"
+                          />
+                        )}
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm text-center">
                         <div className="w-full px-2 py-1 bg-[var(--color-muted)]/50 border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-accent)] font-semibold">
@@ -594,17 +656,17 @@ export default function ProformaAdviceForm({
                         </div>
 
                         <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.igst18')}</span>
+                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{`IGST @ ${formatPercent(displayGstRate)}%`}</span>
                           <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
                         </div>
 
                         <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.cgst9')}</span>
+                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{`CGST @ ${formatPercent(displayCgstRate)}%`}</span>
                           <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
                         </div>
 
                         <div className="flex justify-between items-center py-1.5 border-b border-[var(--color-border)]">
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('bill.sgst9')}</span>
+                          <span className="text-sm font-medium text-[var(--color-text-primary)]">{`SGST @ ${formatPercent(displaySgstRate)}%`}</span>
                           <span className="text-sm font-semibold text-[var(--color-text-primary)]">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                         </div>
 
@@ -638,29 +700,29 @@ export default function ProformaAdviceForm({
             <div className="bg-[var(--color-muted)]/20 p-3 rounded border border-[var(--color-border)] space-y-2">
               <div className="text-sm">
                 <span className="font-medium text-[var(--color-text-primary)]">Bank Name: </span>
-                <span className="text-[var(--color-text-secondary)]">{bankDetails.bankName}</span>
-                {bankDetails.bankBranch && (
+                <span className="text-[var(--color-text-secondary)]">{bankDetails?.bankName}</span>
+                {bankDetails?.bankBranch && (
                   <>
                     <span className="text-[var(--color-text-primary)] mx-2">|</span>
                     <span className="font-medium text-[var(--color-text-primary)]">Branch: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.bankBranch}</span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails?.bankBranch}</span>
                   </>
                 )}
-                {bankDetails.ifscCode && (
+                {bankDetails?.ifscCode && (
                   <>
                     <span className="text-[var(--color-text-primary)] mx-2">|</span>
                     <span className="font-medium text-[var(--color-text-primary)]">IFSC: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.ifscCode}</span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails?.ifscCode}</span>
                   </>
                 )}
                 {bankDetails.accountNumber && (
                   <>
                     <span className="text-[var(--color-text-primary)] mx-2">|</span>
                     <span className="font-medium text-[var(--color-text-primary)]">Account No: </span>
-                    <span className="text-[var(--color-text-secondary)]">{bankDetails.accountNumber}</span>
+                    <span className="text-[var(--color-text-secondary)]">{bankDetails?.accountNumber}</span>
                   </>
                 )}
-                {bankDetails.accountType && (
+                {bankDetails?.accountType && (
                   <>
                     <span className="text-[var(--color-text-primary)] mx-2">|</span>
                     <span className="text-[var(--color-text-secondary)]">{bankDetails.accountType}</span>
@@ -1098,6 +1160,23 @@ export default function ProformaAdviceForm({
                           </p>
                         </div>
                       )}
+                      <div className="mt-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowGstDebug(!showGstDebug)}
+                          className="text-xs text-[var(--color-primary)] underline"
+                        >
+                          {showGstDebug ? 'Hide GST debug' : 'Show GST debug'}
+                        </button>
+                        {showGstDebug && (
+                          <div className="mt-2 bg-gray-100 p-3 rounded text-xs text-gray-700">
+                            <div><strong>firstHSN:</strong> {firstHSN || '-'}</div>
+                            <div><strong>currentHsnDetails:</strong> {currentHsnDetails ? JSON.stringify({ id: currentHsnDetails.id, hsnCode: currentHsnDetails.hsnCode || currentHsnDetails.hsnNumber || currentHsnDetails.code, igst: currentHsnDetails.igst, cgst: currentHsnDetails.cgst, sgst: currentHsnDetails.sgst, gstRate: currentHsnDetails.gstRate }) : '-'}</div>
+                            <div><strong>gstCalculation:</strong> {gstCalculation ? JSON.stringify({ gstRate: gstCalculation.gstRate, cgstRate: gstCalculation.cgstRate, sgstRate: gstCalculation.sgstRate, cgst: gstCalculation.cgst, sgst: gstCalculation.sgst, igst: gstCalculation.igst, taxableValue: gstCalculation.taxableValue }) : '-'}</div>
+                            <div className="mt-2 text-[var(--color-text-secondary)]">If SGST amount is present but SGST rate is missing, the panel computes rate = (sgst / taxableValue) * 100. If taxableValue is 0 or missing, rate can't be derived.</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1114,15 +1193,15 @@ export default function ProformaAdviceForm({
                           <span className="text-gray-500">-</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                          <span className="font-semibold">{t('bill.igst18')}</span>
+                          <span className="font-semibold">{`IGST @ ${formatPercent(displayGstRate)}%`}</span>
                           <span className="font-semibold">{gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                          <span className="font-semibold">{t('bill.cgst9')}</span>
+                          <span className="font-semibold">{`CGST @ ${formatPercent(displayCgstRate)}%`}</span>
                           <span className="font-bold text-lg">{gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                          <span className="font-semibold">{t('bill.sgst9')}</span>
+                          <span className="font-semibold">{`SGST @ ${formatPercent(displaySgstRate)}%`}</span>
                           <span className="font-bold text-lg">{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                         </div>
                         <div className="flex justify-between items-center py-3 border-t-2 border-[#2C5F2D]">

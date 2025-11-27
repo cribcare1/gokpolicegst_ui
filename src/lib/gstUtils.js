@@ -133,6 +133,7 @@ export const calculateGST = (
   let isSameStateFlag = false;
   if (supplierGSTIN && customerGSTIN) {
     isSameStateFlag = isSameState(supplierGSTIN, customerGSTIN);
+    console.log("isSameStateFlag",isSameStateFlag);
   }
 
   // Get GST rates from HSN details if available

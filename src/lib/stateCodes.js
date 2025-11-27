@@ -75,6 +75,8 @@ export const getStateCodeFromGSTIN = (gstin) => {
  * Check if two GSTINs are from same state
  */
 export const isSameState = (gstin1, gstin2) => {
+  console.log(gstin1,gstin1);
+  console.log(gstin2,gstin2);
   const code1 = getStateCodeFromGSTIN(gstin1);
   const code2 = getStateCodeFromGSTIN(gstin2);
   return code1 && code2 && code1 === code2;

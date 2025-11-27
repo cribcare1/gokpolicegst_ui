@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function BankDetailsPage() {
   const [data, setData] = useState([]);
@@ -29,8 +30,8 @@ export default function BankDetailsPage() {
 
   useEffect(() => {
     fetchData();
-    fetchGSTINList();
-    fetchBills();
+    // fetchGSTINList();
+    // fetchBills();
   }, []);
 
   useEffect(() => {
@@ -59,27 +60,7 @@ export default function BankDetailsPage() {
     setFilteredData(filtered);
   }, [searchTerm, statusFilter, data]);
 
-  const fetchGSTINList = async () => {
-    try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 2000);
-      if (response?.status === 'success' && response?.data) {
-        setGstinList(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching GSTIN list:', error);
-    }
-  };
-
-  const fetchBills = async () => {
-    try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 2000);
-      if (response?.status === 'success' && response?.data) {
-        setBills(response.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching bills:', error);
-    }
-  };
+ 
 
   // Check if invoices exist for this bank
   const hasInvoicesForBank = (bankId, gstinNumber) => {
@@ -99,7 +80,8 @@ export default function BankDetailsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BANK_LIST);
+      const url = `${API_ENDPOINTS.BANK_LIST}?ddoId=` + localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      const response = await ApiService.handleGetRequest(url);
       if (response && response.status === 'success') {
         const transformedData = (response.data || []).map(item => {
           const transformed = { ...item };
@@ -196,7 +178,7 @@ export default function BankDetailsPage() {
 
     const updatedItem = {
       ...item,
-      gstId: selectedGST?.gstId || selectedGST?.id || "",
+      gstId: 0,
       // Ensure status is set
       status: item.status || (item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : 'Active'),
     };
@@ -300,69 +282,55 @@ export default function BankDetailsPage() {
         return;
       }
     }
+    const userIdStr = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+    dataCopy.ddoId = userIdStr ? parseInt(userIdStr, 10) : 0;
 
     // Convert gstinNumber to gstId for API
-    if (dataCopy.gstinNumber && gstinList.length > 0) {
-      const selectedGST = gstinList.find(
-        (gst) => gst.value === dataCopy.gstinNumber || gst.gstNumber === dataCopy.gstinNumber || gst.gstinNumber === dataCopy.gstinNumber
-      );
-      if (selectedGST) {
-        dataCopy.gstId = selectedGST.gstId || selectedGST.id;
-      }
-    }
-
+    // if (dataCopy.gstinNumber && gstinList.length > 0) {
+    //   const selectedGST = gstinList.find(
+    //     (gst) => gst.value === dataCopy.gstinNumber || gst.gstNumber === dataCopy.gstinNumber || gst.gstinNumber === dataCopy.gstinNumber
+    //   );
+    //   if (selectedGST) {
+    //     dataCopy.gstId = selectedGST.gstId || selectedGST.id;
+    //   }
+    // }
+    console.log("Bank dataCopy data: ", dataCopy);
     try {
       if (editingItem) {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
-        const oldBankData = {
-          ...editingItem,
-          status: 'Inactive',
-          isActive: false
-        };
-
-        // Convert old GSTIN to gstId if needed
-        if (oldBankData.gstinNumber && gstinList.length > 0) {
-          const oldGST = gstinList.find(
-            (gst) => gst.value === oldBankData.gstinNumber || gst.gstNumber === oldBankData.gstinNumber
-          );
-          if (oldGST) {
-            oldBankData.gstId = oldGST.gstId || oldGST.id;
-          }
+        console.log("Bank editing called: ");
+        const editData = (originalItem, updatedFormData) => {
+              const delta = {};
+              const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
+              
+              // Only include fields that have changed
+              fieldsToCheck.forEach(field => {
+                if (updatedFormData[field] !== originalItem[field]) {
+                  delta[field] = updatedFormData[field];
+                }
+              });
+              
+              return {
+                ...delta,
+                //id: originalItem.id, // Include original id for update identification
+                ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
+                createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
+              };
+            };
+        if (!editingItem) {
+          toast.error('No bank record selected for editing');
+          return;
         }
-
-        // Inactivate old record
-        await ApiService.handlePostRequest(API_ENDPOINTS.BANK_UPDATE, oldBankData);
-
-        // Step 2: Create new active record with same GSTIN
-        const newBankData = {
-          ...dataCopy,
-          status: 'Active',
-          isActive: true,
-          // Ensure GSTIN matches the old one
-          gstinNumber: editingItem.gstinNumber,
-          // Remove id to create new record
-          id: undefined,
-          bankId: undefined
-        };
-
-        // Convert GSTIN to gstId for new record
-        if (newBankData.gstinNumber && gstinList.length > 0) {
-          const newGST = gstinList.find(
-            (gst) => gst.value === newBankData.gstinNumber || gst.gstNumber === newBankData.gstinNumber
-          );
-          if (newGST) {
-            newBankData.gstId = newGST.gstId || newGST.id;
-          }
-        }
-
-        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, newBankData);
-
+        const deltaPayload = editData(editingItem, formData);
+        console.log("Bank editing called with delta: ", deltaPayload);
+        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, deltaPayload);
+         console.log("Bank inactivate response: ", response);
         if (response && response.status === 'success') {
           toast.success('Bank details updated successfully. Old record inactivated, new record created.');
           setIsModalOpen(false);
           fetchData();
-          fetchBills();
+        
         } else {
           toast.error(response?.message || t('alert.error'));
         }
@@ -377,7 +345,7 @@ export default function BankDetailsPage() {
           toast.success(t('alert.success'));
           setIsModalOpen(false);
           fetchData();
-          fetchBills();
+          
         } else {
           toast.error(response?.message || t('alert.error'));
         }
@@ -455,7 +423,7 @@ export default function BankDetailsPage() {
   };
 
   const columns = [
-    { key: 'gstinNumber', label: t('label.gstin') },
+    // { key: 'gstinNumber', label: t('label.gstin') },
     { key: 'accountNumber', label: 'Account Number' },
     { key: 'accountHolderName', label: 'Account Holder Name' },
     { key: 'bankName', label: 'Bank Name' },
@@ -489,13 +457,13 @@ export default function BankDetailsPage() {
 
   const getFormFields = useCallback(() => {
     return [
-      {
-        key: 'gstinNumber',
-        label: t('label.gstin'),
-        required: true,
-        maxLength: 15,
-        readOnly: editingItem ? true : false // GSTIN cannot be changed when editing (must remain same)
-      },
+      // {
+      //   key: 'gstinNumber',
+      //   label: t('label.gstin'),
+      //   required: true,
+      //   maxLength: 15,
+      //   readOnly: editingItem ? true : false // GSTIN cannot be changed when editing (must remain same)
+      // },
       { key: 'accountNumber', label: 'Account Number', required: true },
       { key: 'accountHolderName', label: 'Account Holder Name', required: true },
       { key: 'bankName', label: 'Bank Name', required: true },

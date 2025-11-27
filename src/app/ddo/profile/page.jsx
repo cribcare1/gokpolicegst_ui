@@ -273,6 +273,7 @@ export default function DDOProfilePage() {
   };
 
   const formatBankDetails = (details) => {
+    console.log("Bank details to format: ", details);
     if (!details) return '-';
     if (typeof details === 'string') {
       return details.trim() || '-';
@@ -282,7 +283,11 @@ export default function DDOProfilePage() {
       return filtered.length ? filtered.join(' | ') : '-';
     }
     if (typeof details === 'object') {
-      const entries = Object.entries(details).filter(([, value]) => value);
+      // Exclude sensitive/metadata fields: id, gstId, gstName, gstNumber, status
+      const excludedKeys = ['id', 'gstId', 'gstName', 'gstNumber', 'status'];
+      const entries = Object.entries(details)
+        .filter(([key, value]) => !excludedKeys.includes(key) && value)
+        .filter(([, value]) => value);
       if (!entries.length) return '-';
       return entries
         .map(([key, value]) => `${formatLabel(key)}: ${value}`)
@@ -292,7 +297,7 @@ export default function DDOProfilePage() {
   };
 
   const gstinValue = formData.gstinNumber || formData.gstNumber || formData.gstin || '';
-  const gstinBankDetails = formatBankDetails(formData.gstinBankDetails || formData.bankDetails);
+  const gstinBankDetails = formatBankDetails(formData.bankDetailsResponse || formData.bankDetails);
 
   return (
     <Layout role="ddo">
