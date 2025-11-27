@@ -21,7 +21,7 @@ export default function DDODashboard() {
     {
       key: 'bank-details',
       label: 'nav.bank',
-      href: '/ddo/profile',
+      href: '/ddo/bank',
       icon: Building2,
       bgClass: 'from-blue-500/80 to-cyan-500/80'
     },

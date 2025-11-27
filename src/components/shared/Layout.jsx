@@ -90,9 +90,9 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
   const ddoNavItems = [
     { href: '/ddo_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
-    { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
-    { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
+    { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
+    { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'invoices' },
   ];
 
   const gstinNavItems = [
@@ -200,7 +200,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             lg:translate-x-0 overflow-y-auto
           `}
         >
-          <nav className="p-3 sm:p-4 md:p-6 space-y-2">
+          <nav className="pt-4 sm:pt-6 md:pt-8 p-3 sm:p-4 md:p-6 space-y-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (

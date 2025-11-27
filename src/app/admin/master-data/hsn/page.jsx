@@ -1179,7 +1179,7 @@ export default function HSNRecordsPage() {
           title={editingItem ? `Edit HSN Master` : `Add HSN Master`}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {getFormFields().map((field) => {
               const hasInvoices = editingItem ? hasInvoicesForHSN(
                 editingItem.id || editingItem.hsnId,
@@ -1297,7 +1297,7 @@ export default function HSNRecordsPage() {
               );
             })}
 
-            <div className="flex items-center justify-end gap-3 pt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 md:col-span-2">
               <Button
                 type="button"
                 variant="secondary"

@@ -419,10 +419,10 @@ function CustomersPageContent() {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 flex items-baseline gap-3 flex-wrap">
               <span className="gradient-text">{t('nav.customers')}</span>
               <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
-                {customerCount ?? 0} {customerCount === 1 ? 'Customer' : 'Customers'}
+                {customerCount ?? 0}
               </span>
             </h1>
             <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
