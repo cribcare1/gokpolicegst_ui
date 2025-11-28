@@ -118,6 +118,42 @@ export default function ProformaAdviceForm({
   };
 
   const [showGstDebug, setShowGstDebug] = useState(false);
+  const [lineItemErrors, setLineItemErrors] = useState({});
+
+  const handleLineItemChangeWithValidation = (index, field, value) => {
+    onLineItemChange(index, field, value);
+    
+    // Clear error for this field when user starts typing/entering value
+    if ((value || field === 'amount') && lineItemErrors[index]) {
+      const updatedErrors = { ...lineItemErrors };
+      delete updatedErrors[index];
+      setLineItemErrors(updatedErrors);
+    }
+  };
+
+  const validateAndSetErrors = (items) => {
+    const errors = {};
+    items.forEach((item, idx) => {
+      const descValidation = validateDescription(item.description);
+      const amountValidation = validateAmount(item.amount, `Line item ${idx + 1} amount`);
+      
+      if (!descValidation.valid) {
+        errors[`${idx}-desc`] = descValidation.message;
+      }
+      if (!amountValidation.valid) {
+        errors[`${idx}-amount`] = amountValidation.message;
+      }
+    });
+    setLineItemErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveWithValidation = () => {
+    const isValid = validateAndSetErrors(lineItems);
+    if (isValid) {
+      onSaveBill();
+    }
+  };
 
   return (
     <>
@@ -324,13 +360,24 @@ export default function ProformaAdviceForm({
                         {item.serialNo}
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm">
-                        <textarea
-                          value={item.description}
-                          onChange={(e) => onLineItemChange(index, 'description', e.target.value)}
-                          className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm resize-none bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                          rows="2"
-                          placeholder="Enter item description..."
-                        />
+                        <div>
+                          <textarea
+                            value={item.description}
+                            onChange={(e) => handleLineItemChangeWithValidation(index, 'description', e.target.value)}
+                            className={`w-full px-2 py-1 border rounded text-sm resize-none bg-[var(--color-background)] focus:outline-none focus:ring-1 ${
+                              lineItemErrors[`${index}-desc`]
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                            }`}
+                            rows="2"
+                            placeholder="Enter item description..."
+                          />
+                          {lineItemErrors[`${index}-desc`] && (
+                            <p className="text-xs text-red-600 mt-1 font-medium">
+                              {lineItemErrors[`${index}-desc`]}
+                            </p>
+                          )}
+                        </div>
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm text-center">
                         {hsnList.length > 1 ? (
@@ -368,15 +415,26 @@ export default function ProformaAdviceForm({
                         Nos
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm text-center">
-                        <input
-                          type="number"
-                          value={item.amount}
-                          onChange={(e) => onLineItemChange(index, 'amount', e.target.value)}
-                          className="w-full px-2 py-1 border border-[var(--color-border)] rounded text-sm bg-[var(--color-background)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-center"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                        />
+                        <div>
+                          <input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => handleLineItemChangeWithValidation(index, 'amount', e.target.value)}
+                            className={`w-full px-2 py-1 border rounded text-sm bg-[var(--color-background)] focus:outline-none focus:ring-1 text-center ${
+                              lineItemErrors[`${index}-amount`]
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                            }`}
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                          {lineItemErrors[`${index}-amount`] && (
+                            <p className="text-xs text-red-600 mt-1 font-medium">
+                              {lineItemErrors[`${index}-amount`]}
+                            </p>
+                          )}
+                        </div>
                       </td>
                       <td className="border border-[var(--color-border)] p-2 text-sm text-center font-semibold text-[var(--color-primary)]">
                         {formatCurrency(item.amount)}
@@ -752,7 +810,7 @@ export default function ProformaAdviceForm({
               </Button>
               <Button
                 variant="primary"
-                onClick={onSaveBill}
+                onClick={handleSaveWithValidation}
                 disabled={saving}
                 className="min-w-[140px] px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
               >
