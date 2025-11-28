@@ -6,6 +6,7 @@ import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
 import Button from '@/components/shared/Button';
+import SignaturePad from '@/components/shared/SignaturePad';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { t, getLanguage } from '@/lib/localization';
@@ -25,6 +26,8 @@ export default function GenerateBillPage() {
   const [hsnList, setHsnList] = useState([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [ddoSignature, setDdoSignature] = useState(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   
   // Bill Details
@@ -276,17 +279,18 @@ export default function GenerateBillPage() {
   
    const fetchProformaAdviceDetails = async () => { 
     try {
-      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-      
+      const ddoId = parseInt(localStorage.getItem(LOGIN_CONSTANT.USER_ID), 10);
+      const gstId = parseInt(localStorage.getItem(LOGIN_CONSTANT.GSTID), 10);
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
         setLoading(false);
         return;
       }
 
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.INVOICE_DDO_LIST}${ddoId}`);
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVE`);
       if (response) {
         // setGstDetails(response || []);
+        setProformaList(response.data || []);
         setLoading(false);
        
       }
@@ -296,7 +300,7 @@ export default function GenerateBillPage() {
     }
   };
 
-  const fetchGSTDetails = async () => { INVOICE_DDO_LIST
+  const fetchGSTDetails = async () => { 
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
@@ -385,7 +389,7 @@ export default function GenerateBillPage() {
       },
     ];
 
-    setProformaList(demoRecords);
+    // setProformaList(demoRecords);
     setFilteredProformaList(demoRecords);
     setProformaLoading(false);
 
@@ -412,7 +416,7 @@ export default function GenerateBillPage() {
           invoiceDate: item.invoiceDate || item.updatedAt || null,
         }));
 
-        setProformaList(mappedRecords);
+       // setProformaList(mappedRecords);
         setFilteredProformaList(mappedRecords);
       }
     } catch (error) {
@@ -918,12 +922,25 @@ export default function GenerateBillPage() {
           mismatchAmount: 0,
           reason: '',
         },
+
       };
       
+         let signatureFile = null;
+      if (ddoSignature) {
+        const base64String = ddoSignature.split(',')[1]; // Remove "data:image/png;base64," prefix
+        const byteCharacters = atob(base64String);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        signatureFile = new File([blob], `signature_${Date.now()}.png`, { type: 'image/png' });
+      }
       console.log('Bill Data to be saved:', billData);
-      const response = await ApiService.handlePostRequest(
+      const response = await ApiService.handlePostMultiPartFileRequest(
         API_ENDPOINTS.BILL_ADD,
-        billData
+        billData, signatureFile
       );
       
       if (response && response.status === 'success') {
@@ -1559,7 +1576,23 @@ export default function GenerateBillPage() {
           <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
             {t('bill.signatureOfDdo')}
           </p>
-          <div className="mt-2 h-16 border-2 border-solid border-[var(--color-border)]"></div>
+          <div className="mt-2 h-16 border-2 border-solid border-[var(--color-border)] rounded bg-white flex items-center justify-center">
+            {ddoSignature ? (
+              <img 
+                src={ddoSignature} 
+                alt="DDO Signature" 
+                className="max-h-full max-w-full object-contain p-1"
+              />
+            ) : (
+              <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowSignaturePad(true)}
+            className="mt-2 px-3 py-1.5 text-xs font-medium bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 transition-colors"
+          >
+            {ddoSignature ? 'Change Signature' : 'Add Signature'}
+          </button>
         </div>
       </div>
     </div>
@@ -1679,6 +1712,16 @@ export default function GenerateBillPage() {
           />
         )}
 
+        {showSignaturePad && (
+          <SignaturePad
+            onSignatureSave={(signatureData) => {
+              setDdoSignature(signatureData);
+              toast.success('Signature saved successfully');
+            }}
+            onClose={() => setShowSignaturePad(false)}
+            initialSignature={ddoSignature}
+          />
+        )}
       </div>
     </Layout>
   );
