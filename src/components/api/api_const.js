@@ -51,7 +51,7 @@ export const API_ENDPOINTS = {
   BANK_LIST: `${API_BASE_URL}/banks/activeBankDetails`,
   BANK_ADD: `${API_BASE_URL}/banks/saveOrUpdateBank`,
   BANK_UPDATE: `${API_BASE_URL}/banks/saveOrUpdateBank`,
-  BANK_DELETE: `${API_BASE_URL}/banks/delete/`,
+  BANK_DELETE: `${API_BASE_URL}/banks/deleteBank/`,
   
   // Customer Endpoints
   CUSTOMER_LIST: `${API_BASE_URL}/customer/list`,
