@@ -159,6 +159,7 @@ export default function LoginPage() {
         localStorage.setItem(LOGIN_CONSTANT.FORM_16A_COUNT, response.login_response.form16ACount);
         localStorage.setItem(LOGIN_CONSTANT.DDO_USER_NAME, response.login_response.fullName);
         localStorage.setItem(LOGIN_CONSTANT.DDO_TAN_NUMBER, response.login_response.userName); 
+        localStorage.setItem(LOGIN_CONSTANT.GSTID, response.login_response.gstId); 
         localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
         showToast("🎉 Login successful! Welcome back.", "success");
         router.push("/ddo_dashboard");

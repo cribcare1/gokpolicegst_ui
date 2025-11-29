@@ -51,29 +51,40 @@ export default function ProformaAdviceList({
 
         if (isEditing) {
           return (
-            <input
-              type="text"
-              inputMode="numeric"
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value.replace(/[^0-9]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value.replace(/[^0-9]/g, ''))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
+                    onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
+                    setEditingRowId(null);
+                  } else if (e.key === 'Escape') {
+                    setEditingRowId(null);
+                  }
+                }}
+                onBlur={() => {
                   const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
                   onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
                   setEditingRowId(null);
-                } else if (e.key === 'Escape') {
+                }}
+                className="w-28 px-2 py-1 border rounded text-right"
+              />
+              <button
+                onClick={() => {
+                  const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
+                  onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
                   setEditingRowId(null);
-                }
-              }}
-              onBlur={() => {
-                const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
-                onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
-                setEditingRowId(null);
-              }}
-              className="w-28 px-2 py-1 border rounded text-right"
-              autoFocus
-            />
+                }}
+                className="px-2 py-1 text-sm bg-[var(--color-primary)] text-white rounded"
+              >
+                Save
+              </button>
+            </div>
           );
         }
 

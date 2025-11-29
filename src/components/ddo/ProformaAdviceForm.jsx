@@ -328,7 +328,7 @@ export default function ProformaAdviceForm({
                     </div>
                   )}
                   {/* Editable Tax Invoice Amount (integer only) */}
-                  <div className="mt-2">
+                  {/* <div className="mt-2">
                     <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Tax Invoice Amount (Rs.)</label>
                     <input
                       type="text"
@@ -355,7 +355,7 @@ export default function ProformaAdviceForm({
                       }}
                       className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-background)] text-right font-semibold"
                     />
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
