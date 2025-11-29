@@ -85,7 +85,7 @@ export default function GenerateBillPage() {
   const [notificationDetails, setNotificationDetails] = useState('');
   const [ddoDetails, setDdoDetails] = useState('');
   const [bankDetails, setBankDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
@@ -104,7 +104,7 @@ export default function GenerateBillPage() {
     getDdoDetails();
     fetchCustomers();
     fetchHSNList();
-    fetchProformaRecords();
+    // fetchProformaRecords();
     setCurrentLang(getLanguage());
     
     const handleLanguageChange = (event) => {
@@ -233,7 +233,7 @@ export default function GenerateBillPage() {
       
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
-        setLoading(false);
+        // setLoading(false);
         return;
       }
 
@@ -252,17 +252,17 @@ export default function GenerateBillPage() {
         if (customersWithStateCode.length > 0) {
           setSelectedCustomer(customersWithStateCode[0]);
         }
-        setLoading(false);
+        // setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
   const fetchDdoBankData = async () => {
       try {
-        setLoading(true);
+        // setLoading(true);
         const url = `${API_ENDPOINTS.BANK_LIST}?ddoId=` + localStorage.getItem(LOGIN_CONSTANT.USER_ID);
         const response = await ApiService.handleGetRequest(url);
         if (response && response.status === 'success') {
@@ -273,30 +273,72 @@ export default function GenerateBillPage() {
       } catch (error) {
         console.log('Error fetching bank data:', error);
       } finally {
-        setLoading(false);
+       // setLoading(false);
       }
     };
   
-   const fetchProformaAdviceDetails = async () => { 
+  const fetchProformaAdviceDetails = async () => { 
     try {
+      setProformaLoading(true);
       const ddoId = parseInt(localStorage.getItem(LOGIN_CONSTANT.USER_ID), 10);
       const gstId = parseInt(localStorage.getItem(LOGIN_CONSTANT.GSTID), 10);
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
-        setLoading(false);
+        setProformaList([]);
+        setFilteredProformaList([]);
         return;
       }
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVE`);
-      if (response) {
-        // setGstDetails(response || []);
-        setProformaList(response.data || []);
-        setLoading(false);
-       
+
+      // Handle multiple possible shapes from backend
+      const okStatus = response && (response.status === 'success' || response.status === 'SUCCESS' || response.status === true);
+      let payloadArray = [];
+
+      if (okStatus) {
+        if (Array.isArray(response.data)) {
+          payloadArray = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          payloadArray = response.data.data;
+        } else if (response.data && typeof response.data === 'object') {
+          // single object -> wrap
+          payloadArray = [response.data];
+        }
+      } else {
+        // Some APIs may return the array directly (without status) or different structure
+        if (Array.isArray(response)) {
+          payloadArray = response;
+        } else if (response && Array.isArray(response.data)) {
+          payloadArray = response.data;
+        }
       }
+
+      const mappedRecords = (payloadArray || []).map((item) => {
+        const items = Array.isArray(item.items) ? item.items : [];
+        const proformaAmount = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0) || item.totalAmount || item.grandTotal || 0;
+
+        return {
+          id: item.invoiceId || item.id || item.proformaId || null,
+          proformaNumber: item.invoiceNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
+          proformaAmount: proformaAmount,
+          taxInvoiceAmount: item.paidAmount || item.invoiceAmount || item.paidAmount || 0,
+          customerName: item.customerResponse && (item.customerResponse.name ) || '-',
+          serviceType: item.serviceType || item.invoiceType || '-',
+          proformaDate: item.invoiceDate || item.createdAt || item.proformaDate || null,
+          invoiceDate:  new Date().toISOString(),
+          raw: item,
+        };
+      });
+
+      setProformaList(mappedRecords);
+      setFilteredProformaList(mappedRecords);
+      setProformaLoading(false);
     } catch (error) {
-      console.error('Error fetching GST details:', error);
-      setLoading(false);
+      console.error('Error fetching proforma advice details:', error);
+      setProformaList([]);
+      setFilteredProformaList([]);
+    } finally {
+      setProformaLoading(false);
     }
   };
 
@@ -306,19 +348,19 @@ export default function GenerateBillPage() {
       
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
-        setLoading(false);
+        // setLoading(false);
         return;
       }
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GET_CURRENT_GST_OF_DDO}?ddoId=${ddoId}`);
       if (response) {
         setGstDetails(response || []);
-        setLoading(false);
+        // setLoading(false);
         fetchInvoiceNumber(response.gstId);
       }
     } catch (error) {
       console.error('Error fetching GST details:', error);
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -328,18 +370,18 @@ export default function GenerateBillPage() {
       
       if (!ddoId) {
         toast.error('DDO ID not found. Please login again.');
-        setLoading(false);
+        // setLoading(false);
         return;
       }
 
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`);
       if (response && response.status === 'success') {
         setInvoiceNumber(response?.invoiceNumber || '');
-        setLoading(false);
+        // setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching invoice number:', error);
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -356,42 +398,11 @@ export default function GenerateBillPage() {
   };
 
   const fetchProformaRecords = async () => {
-    const demoRecords = [
-      {
-        id: 'PA-2025-0001',
-        proformaNumber: 'PA-2025-0001',
-        proformaAmount: 500000,
-        taxInvoiceAmount: 0,
-        customerName: 'M/s Pradeep',
-        serviceType: 'Exempted',
-        proformaDate: '2025-11-20T00:00:00.000Z',
-        invoiceDate: null,
-      },
-      {
-        id: 'PA-2025-0002',
-        proformaNumber: 'PA-2025-0002',
-        proformaAmount: 200000,
-        taxInvoiceAmount: 0,
-        customerName: 'Metro Constructions',
-        serviceType: 'RCM',
-        proformaDate: '2025-11-18T00:00:00.000Z',
-        invoiceDate: null,
-      },
-      {
-        id: 'PA-2025-0003',
-        proformaNumber: 'PA-2025-0003',
-        proformaAmount: 345000,
-        taxInvoiceAmount: 125000,
-        customerName: 'Global Industries',
-        serviceType: 'FCM',
-        proformaDate: '2025-11-10T00:00:00.000Z',
-        invoiceDate: '2025-11-15T00:00:00.000Z',
-      },
-    ];
+    
 
     // setProformaList(demoRecords);
-    setFilteredProformaList(demoRecords);
-    setProformaLoading(false);
+    // setFilteredProformaList(demoRecords);
+    // setProformaLoading(false);
 
     try {
       if (typeof window === 'undefined') {
@@ -417,7 +428,7 @@ export default function GenerateBillPage() {
         }));
 
        // setProformaList(mappedRecords);
-        setFilteredProformaList(mappedRecords);
+        // setFilteredProformaList(mappedRecords);
       }
     } catch (error) {
       console.error('Error fetching proforma advices:', error);
@@ -436,8 +447,47 @@ export default function GenerateBillPage() {
 
   const handleCreateInvoiceFromProforma = (record) => {
     if (!record) return;
+    // Validate that tax invoice amount (paidAmount) is present and non-zero
+    const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
+      ? Number(record.taxInvoiceAmount)
+      : (record.paidAmount != null ? Number(record.paidAmount) : (record.raw && (record.raw.paidAmount || record.raw.invoiceAmount) ? Number(record.raw.paidAmount || record.raw.invoiceAmount) : 0));
+
+    if (!taxInvoiceAmount || Number.isNaN(taxInvoiceAmount) || taxInvoiceAmount <= 0) {
+      toast.error('Tax Invoice Amount is required to create an invoice');
+      return;
+    }
+
     const reference = record.id || record.proformaNumber;
     router.push(`/ddo/invoices?fromProforma=${encodeURIComponent(reference)}`);
+  };
+
+  const handleOpenEditProforma = (record) => {
+    if (!record) return;
+    // Prefill paidAmount (tax invoice amount) so the field becomes editable in the form
+    const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
+      ? Number(record.taxInvoiceAmount)
+      : (record.paidAmount != null ? Number(record.paidAmount) : (record.raw && (record.raw.paidAmount || record.raw.invoiceAmount) ? Number(record.raw.paidAmount || record.raw.invoiceAmount) : 0));
+
+    setPaidAmount(Number.isFinite(taxInvoiceAmount) ? Math.floor(taxInvoiceAmount) : 0);
+    // Optionally, try to set selected customer if available in raw payload
+    if (record.raw && (record.raw.customer || record.raw.customerResponse)) {
+      const c = record.raw.customer || record.raw.customerResponse;
+      // Minimal mapping: try to find in customers list by GST or name, else set a simple object
+      const found = customers.find(x => (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) || (x.customerName && c.customerName && x.customerName === c.customerName));
+      if (found) {
+        setSelectedCustomer(found);
+      } else {
+        // create a lightweight customer object to show in the form
+        setSelectedCustomer({ id: record.id || null, customerName: c.customerName || c.name || record.customerName || '-', gstNumber: c.gstNumber || '', address: c.address || '' });
+      }
+    }
+
+    setShowForm(true);
+  };
+
+  const handleUpdateProformaInline = (id, updatedFields) => {
+    setProformaList(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
+    setFilteredProformaList(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
   };
 
   const calculateGSTAmount = () => {
@@ -1642,7 +1692,7 @@ export default function GenerateBillPage() {
 
         {showForm ? (
           <ProformaAdviceForm
-            loading={loading}
+            loading={proformaLoading}
             isNavigatingToCustomer={isNavigatingToCustomer}
             setIsNavigatingToCustomer={setIsNavigatingToCustomer}
             customers={customers}
@@ -1708,7 +1758,8 @@ export default function GenerateBillPage() {
             filteredProformaList={filteredProformaList}
             proformaLoading={proformaLoading}
             onCreateInvoiceFromProforma={handleCreateInvoiceFromProforma}
-            onShowForm={() => setShowForm(true)}
+            onShowForm={handleOpenEditProforma}
+            onUpdateProforma={handleUpdateProformaInline}
           />
         )}
 

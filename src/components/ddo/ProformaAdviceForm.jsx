@@ -119,6 +119,12 @@ export default function ProformaAdviceForm({
 
   const [showGstDebug, setShowGstDebug] = useState(false);
   const [lineItemErrors, setLineItemErrors] = useState({});
+  const [localTaxInvoice, setLocalTaxInvoice] = useState('');
+
+  // keep localTaxInvoice in sync with paidAmount prop
+  useState(() => {
+    setLocalTaxInvoice(Number.isFinite(paidAmount) ? String(Math.floor(Number(paidAmount) || 0)) : '');
+  });
 
   const handleLineItemChangeWithValidation = (index, field, value) => {
     onLineItemChange(index, field, value);
@@ -321,6 +327,35 @@ export default function ProformaAdviceForm({
                       <span className="text-[var(--color-text-secondary)]">{notificationDetails}</span>
                     </div>
                   )}
+                  {/* Editable Tax Invoice Amount (integer only) */}
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Tax Invoice Amount (Rs.)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={localTaxInvoice}
+                      onChange={(e) => {
+                        const raw = e.target.value || '';
+                        const digits = raw.toString().replace(/[^0-9]/g, '');
+                        setLocalTaxInvoice(digits);
+                      }}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) e.preventDefault();
+                      }}
+                      onBlur={() => {
+                        const intVal = localTaxInvoice === '' ? 0 : parseInt(localTaxInvoice, 10);
+                        setPaidAmount(Number.isFinite(intVal) ? intVal : 0);
+                      }}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
+                        setLocalTaxInvoice(pasted);
+                        const intVal = pasted === '' ? 0 : parseInt(pasted, 10);
+                        setPaidAmount(intVal);
+                      }}
+                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-background)] text-right font-semibold"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
