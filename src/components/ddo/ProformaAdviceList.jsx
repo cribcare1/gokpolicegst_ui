@@ -1,8 +1,9 @@
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import Button from '@/components/shared/Button';
 import Table from '@/components/shared/Table';
-import LoadingProgressBar from '@/components/shared/ProgressBar';
+import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 
@@ -12,9 +13,12 @@ export default function ProformaAdviceList({
   filteredProformaList,
   proformaLoading,
   onCreateInvoiceFromProforma,
-  onShowForm
+  onShowForm,
+  onUpdateProforma
 }) {
   const router = useRouter();
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [inlineValue, setInlineValue] = useState('');
 
   const proformaColumns = [
     { key: 'customerName', label: 'Customer Name' },
@@ -37,7 +41,56 @@ export default function ProformaAdviceList({
     {
       key: 'taxInvoiceAmount',
       label: 'Tax Invoice',
-      render: (value) => value ? formatCurrency(value) : '-',
+      render: (value, row) => {
+        // Inline editable cell for tax invoice amount
+        const isEditing = editingRowId === row.id;
+        const display = (value || value === 0) ? formatCurrency(value) : '-';
+        if (!onUpdateProforma) {
+          return display;
+        }
+
+        if (isEditing) {
+          return (
+            <input
+              type="text"
+              inputMode="numeric"
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value.replace(/[^0-9]/g, ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
+                  onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
+                  setEditingRowId(null);
+                } else if (e.key === 'Escape') {
+                  setEditingRowId(null);
+                }
+              }}
+              onBlur={() => {
+                const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
+                onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
+                setEditingRowId(null);
+              }}
+              className="w-28 px-2 py-1 border rounded text-right"
+              autoFocus
+            />
+          );
+        }
+
+        return (
+          <div
+            className="cursor-pointer select-none"
+            onClick={() => {
+              setEditingRowId(row.id);
+              const v = (row.taxInvoiceAmount != null && row.taxInvoiceAmount !== '') ? String(Math.floor(Number(row.taxInvoiceAmount) || 0)) : ((row.paidAmount != null) ? String(Math.floor(Number(row.paidAmount) || 0)) : '');
+              setInlineValue(v);
+            }}
+            title="Click to edit"
+          >
+            {display}
+          </div>
+        );
+      },
     },
     {
       key: 'invoiceDate',
@@ -61,7 +114,7 @@ export default function ProformaAdviceList({
         size="sm"
         onClick={(e) => {
           e.stopPropagation();
-          onShowForm();
+          onShowForm && onShowForm(row);
         }}
         className="px-3 py-1.5 text-xs sm:text-sm"
       >
