@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, Printer, FileText } from 'lucide-react';
 import Button from '@/components/shared/Button';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -22,14 +22,241 @@ export default function ProformaAdviceList({
   const [inlineValue, setInlineValue] = useState('');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [printOptimizedView, setPrintOptimizedView] = useState(false);
 
   const handleProformaClick = (row) => {
     setPreviewData(row);
     setShowPreviewModal(true);
   };
 
+  const handlePrintPreview = () => {
+    const printContent = document.getElementById('proforma-preview-content');
+    const printWindow = window.open('', '_blank');
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Proforma Advice - ${previewData?.proformaNumber || ''}</title>
+          <style>
+            @media print {
+              @page {
+                margin: 8mm;
+                size: A4 portrait;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Arial', sans-serif;
+                font-size: 11px;
+                line-height: 1.1;
+                color: black;
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .print-container {
+                width: 100%;
+                height: 100%;
+                padding: 0;
+                margin: 0;
+              }
+              .print-header {
+                border-bottom: 1.5px solid #000;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+              }
+              .print-section {
+                margin-bottom: 8px;
+                page-break-inside: avoid;
+              }
+              table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 9px;
+                margin-bottom: 6px;
+              }
+              th, td {
+                border: 1px solid #000;
+                padding: 3px 4px;
+                text-align: left;
+              }
+              th {
+                background-color: #2C5F2D !important;
+                color: white !important;
+                font-weight: bold;
+              }
+              .bg-primary {
+                background-color: #2C5F2D !important;
+                color: white !important;
+              }
+              .text-primary {
+                color: #2C5F2D !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+              .compact-view {
+                transform: scale(0.95);
+                transform-origin: top center;
+              }
+            }
+            
+            /* Base styles */
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.1;
+              color: black;
+              background: white;
+              margin: 0;
+              padding: 8mm;
+            }
+            .print-container {
+              width: 194mm;
+              min-height: 277mm;
+            }
+            .print-header {
+              border-bottom: 1.5px solid #000;
+              margin-bottom: 8px;
+              padding-bottom: 6px;
+            }
+            .print-section {
+              margin-bottom: 8px;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              font-size: 9px;
+              margin-bottom: 6px;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 3px 4px;
+              text-align: left;
+            }
+            th {
+              background-color: #2C5F2D;
+              color: white;
+              font-weight: bold;
+            }
+            .bg-primary {
+              background-color: #2C5F2D;
+              color: white;
+              padding: 4px 6px;
+            }
+            .text-primary {
+              color: #2C5F2D;
+            }
+            .border-section {
+              border: 1px solid #ccc;
+              padding: 6px;
+              margin-bottom: 6px;
+              border-radius: 2px;
+            }
+            .signature-line {
+              border-top: 1px solid #000;
+              width: 180px;
+              margin-top: 30px;
+            }
+            
+            /* Signature image styles for print window */
+            .signature-image {
+              max-height: 60px !important;
+              max-width: 200px !important;
+              object-fit: contain !important;
+              image-rendering: -webkit-optimize-contrast !important;
+              image-rendering: crisp-edges !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container compact-view">
+            ${printContent.innerHTML.replace(
+              /<div class="signature-line"><\/div>/g,
+              (previewData.signature || (previewData.raw && previewData.raw.signature)) 
+                ? `<div class="mb-2">
+                     <img 
+                       src="${previewData.signature || previewData.raw.signature}" 
+                       alt="DDO Signature" 
+                       class="signature-image"
+                       style="image-rendering: crisp-edges"
+                     />
+                   </div>`
+                : `<div class="signature-line"></div>`
+            )}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 100);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+  };
+
+  // Print-specific styles for modal preview
+  const PrintStyles = () => (
+    <style jsx global>{`
+      @media print {
+        body * {
+          visibility: hidden;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        #proforma-preview-content,
+        #proforma-preview-content * {
+          visibility: visible;
+        }
+        #proforma-preview-content {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          height: auto !important;
+          background: white !important;
+          color: black !important;
+          font-size: 11px !important;
+          line-height: 1.1 !important;
+          padding: 8mm !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-optimized {
+          transform: scale(0.9);
+          transform-origin: top center;
+        }
+        .print-optimized table {
+          font-size: 8px !important;
+        }
+        .print-optimized .print-header {
+          margin-bottom: 6px !important;
+          padding-bottom: 4px !important;
+        }
+        .print-optimized .print-section {
+          margin-bottom: 6px !important;
+        }
+      }
+    `}</style>
+  );
+
   const proformaColumns = [
-    { key: 'customerName', label: 'Customer Name' },
+    { 
+      key: 'customerName', 
+      label: 'Customer Name' 
+    },
     {
       key: 'serviceType',
       label: 'Service Type',
@@ -47,12 +274,11 @@ export default function ProformaAdviceList({
           }}
           title="Click to preview details"
         >
-          <Eye size={16} />
+          <Eye size={24} />
           {value}
         </div>
       ),
     },
-    { key: 'invoiceNumber', label: 'Invoice No' },
     {
       key: 'proformaAmount',
       label: 'Proforma Advice Amount',
@@ -67,9 +293,9 @@ export default function ProformaAdviceList({
       key: 'taxInvoiceAmount',
       label: 'Tax Invoice',
       render: (value, row) => {
-        // Inline editable cell for tax invoice amount
         const isEditing = editingRowId === row.id;
         const display = (value || value === 0) ? formatCurrency(value) : '-';
+        
         if (!onUpdateProforma) {
           return display;
         }
@@ -85,7 +311,11 @@ export default function ProformaAdviceList({
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
-                  onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
+                  onUpdateProforma(row.id, { 
+                    taxInvoiceAmount: intVal, 
+                    paidAmount: intVal, 
+                    raw: { ...(row.raw || {}), paidAmount: intVal } 
+                  });
                   setEditingRowId(null);
                 } else if (e.key === 'Escape') {
                   setEditingRowId(null);
@@ -93,7 +323,11 @@ export default function ProformaAdviceList({
               }}
               onBlur={() => {
                 const intVal = inlineValue === '' ? 0 : parseInt(inlineValue, 10);
-                onUpdateProforma(row.id, { taxInvoiceAmount: intVal, paidAmount: intVal, raw: { ...(row.raw || {}), paidAmount: intVal } });
+                onUpdateProforma(row.id, { 
+                  taxInvoiceAmount: intVal, 
+                  paidAmount: intVal, 
+                  raw: { ...(row.raw || {}), paidAmount: intVal } 
+                });
                 setEditingRowId(null);
               }}
               className="w-28 px-3 py-2 border-2 border-[var(--color-primary)] rounded-lg text-right bg-[var(--color-primary)]/5 shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
@@ -108,7 +342,11 @@ export default function ProformaAdviceList({
             className="cursor-pointer select-none"
             onClick={() => {
               setEditingRowId(row.id);
-              const v = (row.taxInvoiceAmount != null && row.taxInvoiceAmount !== '') ? String(Math.floor(Number(row.taxInvoiceAmount) || 0)) : ((row.paidAmount != null) ? String(Math.floor(Number(row.paidAmount) || 0)) : '');
+              const v = (row.taxInvoiceAmount != null && row.taxInvoiceAmount !== '') 
+                ? String(Math.floor(Number(row.taxInvoiceAmount) || 0)) 
+                : ((row.paidAmount != null) 
+                    ? String(Math.floor(Number(row.paidAmount) || 0)) 
+                    : '');
               setInlineValue(v);
             }}
             title="Click to edit"
@@ -233,87 +471,219 @@ export default function ProformaAdviceList({
         )}
       </div>
 
-      {/* Preview Modal */}
+      {/* Print Styles */}
+      <PrintStyles />
+
+      {/* Enhanced Preview Modal */}
       <Modal
         isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        title={`Proforma Advice Details - ${previewData?.proformaNumber || ''}`}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setPrintOptimizedView(false);
+        }}
+        title="Proforma Advice Preview"
+        size="full"
       >
-        {previewData && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Customer Name
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">{previewData.customerName || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Service Type
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">{previewData.serviceType || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Proforma Advice Number
-                </label>
-                <p className="text-[var(--color-primary)] font-bold">{previewData.proformaNumber}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Invoice Number
-                </label>
-                <p className="text-[var(--color-primary)] font-bold">{previewData.invoiceNumber || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Proforma Amount
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">{formatCurrency(previewData.proformaAmount || 0)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Tax Invoice Amount
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">{formatCurrency(previewData.taxInvoiceAmount || 0)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Proforma Date
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">
-                  {previewData.proformaDate ? new Date(previewData.proformaDate).toLocaleDateString('en-IN') : '-'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Invoice Date
-                </label>
-                <p className="text-[var(--color-text-primary)] font-medium">
-                  {previewData.invoiceDate ? new Date(previewData.invoiceDate).toLocaleDateString('en-IN') : '-'}
-                </p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                Difference Amount
-              </label>
-              <p className="text-lg font-bold text-[var(--color-accent)]">
-                {formatCurrency(Math.max((previewData.proformaAmount || 0) - (previewData.taxInvoiceAmount || 0), 0))}
-              </p>
-            </div>
-            <div className="flex justify-end pt-4 border-t border-[var(--color-border)]">
+        <div className="flex flex-col h-full">
+          {/* Preview Controls */}
+          <div className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20 p-4 flex justify-between items-center no-print">
+            <div className="flex items-center gap-3">
               <Button
-                onClick={() => setShowPreviewModal(false)}
-                variant="secondary"
+                variant={printOptimizedView ? "primary" : "outline"}
                 size="sm"
+                onClick={() => setPrintOptimizedView(!printOptimizedView)}
+                className="px-4 py-2"
               >
-                Close
+                {printOptimizedView ? 'Normal View' : 'Compact View'}
               </Button>
+              <span className="text-sm text-[var(--color-text-secondary)]">
+                {printOptimizedView ? 'Optimized for one-page printing' : 'Normal preview'}
+              </span>
+            </div>
+            <div className="text-sm text-[var(--color-text-secondary)]">
+              Click Print for best results
             </div>
           </div>
-        )}
+
+          {/* Preview Content */}
+          {previewData && (
+            <div 
+              id="proforma-preview-content" 
+              className={`flex-1 overflow-auto bg-white text-black p-4 print-content ${
+                printOptimizedView ? 'print-optimized' : ''
+              }`}
+              style={{ 
+                maxWidth: '210mm', 
+                margin: '0 auto',
+                minHeight: '297mm'
+              }}
+            >
+              {/* Print Header - More Compact */}
+              <div className="print-header mb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-2 flex-1">
+                    <div className="relative w-12 h-12 mt-1">
+                      <img
+                        src="/1.png"
+                        alt="Organization Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h1 className="text-sm font-bold text-gray-800 leading-tight">
+                        Government of Karnataka Police Department
+                      </h1>
+                      <p className="text-xs text-gray-600 leading-tight">Police Headquarters, Bangalore</p>
+                      <p className="text-xs text-gray-600">GSTIN: 29AAAAA0000A1Z5</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-lg font-bold text-[#2C5F2D]">PROFORMA NUMBER</h2>
+                    <p className="text-sm font-semibold">Advice No: {previewData.proformaNumber}</p>
+                    <p className="text-sm">Date: {previewData.proformaDate ? new Date(previewData.proformaDate).toLocaleDateString('en-IN') : '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer and Invoice Details - More Compact */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+                <div className="border-section">
+                  <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Service Receiver Details</h3>
+                  <div className="space-y-1 text-xs">
+                    <p><strong>Name:</strong> M/s {previewData.customerName || ''}</p>
+                    <p><strong>Service Type:</strong> {previewData.serviceType || 'Not specified'}</p>
+                    <p><strong>Advice Number:</strong> {previewData.proformaNumber}</p>
+                  </div>
+                </div>
+
+                <div className="border-section">
+                  <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Advice Details</h3>
+                  <div className="space-y-1 text-xs">
+                    <p><strong>DDO Code:</strong> DDO001</p>
+                    <p><strong>Department:</strong> Karnataka Police Department</p>
+                    <p><strong>Place of Supply:</strong> Bengaluru</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Details Table - More Compact */}
+              <div className="mb-3 print-section">
+                <table>
+                  <thead>
+                    <tr className="bg-primary">
+                      <th className="text-xs p-1">Description</th>
+                      <th className="text-xs p-1 text-right">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="text-xs p-1">Proforma Advice Amount</td>
+                      <td className="text-xs p-1 text-right">{formatCurrency(previewData.proformaAmount || 0)}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-xs p-1">Tax Invoice Amount</td>
+                      <td className="text-xs p-1 text-right">{formatCurrency(previewData.taxInvoiceAmount || 0)}</td>
+                    </tr>
+                    <tr className="bg-gray-100 font-bold">
+                      <td className="text-xs p-1">Difference Amount</td>
+                      <td className="text-xs p-1 text-right">
+                        {formatCurrency(Math.max((previewData.proformaAmount || 0) - (previewData.taxInvoiceAmount || 0), 0))}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Additional Information - More Compact */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+                <div className="border-section">
+                  <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Date Information</h3>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span>Proforma Date:</span>
+                      <span className="font-semibold">
+                        {previewData.proformaDate ? new Date(previewData.proformaDate).toLocaleDateString('en-IN') : '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Invoice Date:</span>
+                      <span className="font-semibold">
+                        {previewData.invoiceDate ? new Date(previewData.invoiceDate).toLocaleDateString('en-IN') : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-section">
+                  <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Summary</h3>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span>Total Advice Amount:</span>
+                      <span className="font-semibold">{formatCurrency(previewData.proformaAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax Invoice Amount:</span>
+                      <span className="font-semibold">{formatCurrency(previewData.taxInvoiceAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 bg-primary rounded px-2 mt-1 font-bold text-xs">
+                      <span>Pending Amount:</span>
+                      <span>{formatCurrency(Math.max((previewData.proformaAmount || 0) - (previewData.taxInvoiceAmount || 0), 0))}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details - More Compact */}
+              <div className="border-section mb-3 print-section">
+                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Bank Details</h3>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><strong>Bank:</strong> State Bank of India</div>
+                  <div><strong>Branch:</strong> Bangalore Main</div>
+                  <div><strong>IFSC:</strong> SBIN0001234</div>
+                  <div><strong>Account No:</strong> 1234567890</div>
+                </div>
+              </div>
+
+              {/* Signature Section */}
+              <div className="signature-section print-section mt-4">
+                <div className="flex justify-end">
+                  <div className="text-center">
+                    {/* Display actual signature if available, otherwise show signature line */}
+                    {(previewData.signature || (previewData.raw && previewData.raw.signature)) ? (
+                      <div className="mb-2">
+                        <img 
+                          src={previewData.signature || previewData.raw.signature} 
+                          alt="DDO Signature" 
+                          className="h-12 max-w-36 object-contain mx-auto"
+                          style={{ imageRendering: 'crisp-edges' }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-12 border-b border-gray-400 mb-2 w-36"></div>
+                    )}
+                    <p className="text-xs font-semibold mt-1">Signature of DDO</p>
+                    <p className="text-xs">Karnataka Police Department</p>
+                  </div>
+                </div>
+
+                <div className="text-center mt-4 pt-2 border-t border-gray-300">
+                  <p className="text-xs text-gray-600 italic">This is a computer generated document</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-background)] p-4 flex justify-end gap-3 no-print">
+            <Button variant="outline" onClick={() => setShowPreviewModal(false)}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={handlePrintPreview} className="bg-[#2C5F2D] hover:bg-[#1e4d1f]">
+              <Printer className="mr-2 inline" size={14} />
+              Print
+            </Button>
+          </div>
+        </div>
       </Modal>
     </section>
   );
