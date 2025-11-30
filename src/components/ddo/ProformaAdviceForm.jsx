@@ -224,52 +224,9 @@ export default function ProformaAdviceForm({
           width: 100%;
           background: white;
           color: black;
-          font-size: 12px;
-          line-height: 1.2;
-          padding: 0;
-          margin: 0;
         }
         .no-print {
           display: none !important;
-        }
-        .page-break {
-          page-break-after: always;
-        }
-        table {
-          border-collapse: collapse;
-          width: 100%;
-          font-size: 10px;
-        }
-        th, td {
-          border: 1px solid #000;
-          padding: 4px;
-          text-align: left;
-        }
-        th {
-          background-color: #f0f0f0;
-          font-weight: bold;
-        }
-        .print-header {
-          border-bottom: 2px solid #000;
-          margin-bottom: 10px;
-          padding-bottom: 10px;
-        }
-        .print-section {
-          margin-bottom: 15px;
-        }
-        .print-total {
-          font-weight: bold;
-          background-color: #f8f8f8;
-        }
-        .compact-print {
-          font-size: 10px;
-        }
-        .compact-print table {
-          font-size: 9px;
-        }
-        .compact-print .print-header {
-          margin-bottom: 5px;
-          padding-bottom: 5px;
         }
       }
       

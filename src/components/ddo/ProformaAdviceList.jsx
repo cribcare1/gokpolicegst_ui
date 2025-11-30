@@ -209,44 +209,13 @@ export default function ProformaAdviceList({
       @media print {
         body * {
           visibility: hidden;
-          margin: 0 !important;
-          padding: 0 !important;
         }
         #proforma-preview-content,
         #proforma-preview-content * {
           visibility: visible;
         }
-        #proforma-preview-content {
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
-          width: 100% !important;
-          height: auto !important;
-          background: white !important;
-          color: black !important;
-          font-size: 11px !important;
-          line-height: 1.1 !important;
-          padding: 8mm !important;
-          margin: 0 !important;
-          border: none !important;
-          box-shadow: none !important;
-        }
         .no-print {
           display: none !important;
-        }
-        .print-optimized {
-          transform: scale(0.9);
-          transform-origin: top center;
-        }
-        .print-optimized table {
-          font-size: 8px !important;
-        }
-        .print-optimized .print-header {
-          margin-bottom: 6px !important;
-          padding-bottom: 4px !important;
-        }
-        .print-optimized .print-section {
-          margin-bottom: 6px !important;
         }
       }
     `}</style>
