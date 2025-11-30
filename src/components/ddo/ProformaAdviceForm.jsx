@@ -230,7 +230,7 @@ export default function ProformaAdviceForm({
           {/* Bill To Section */}
           <div className="border border-[var(--color-border)] rounded p-4 space-y-4">
             <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">
-              {t('bill.serviceReceiver')} (BILL TO)
+              {t('bill.serviceReceiver')} 
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

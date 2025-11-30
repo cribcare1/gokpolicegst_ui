@@ -249,9 +249,7 @@ export default function GenerateBillPage() {
           return customer;
         });
         setCustomers(customersWithStateCode);
-        if (customersWithStateCode.length > 0) {
-          setSelectedCustomer(customersWithStateCode[0]);
-        }
+        // Don't auto-select any customer - let user choose manually
         // setLoading(false);
       }
     } catch (error) {
@@ -386,6 +384,7 @@ export default function GenerateBillPage() {
   };
 
   const fetchHSNList = async () => {
+    console.log('hsn code...........')
     try {
       const url = `${API_ENDPOINTS.HSN_LIST}?gstId=` + localStorage.getItem(LOGIN_CONSTANT.GSTID);
       const response = await ApiService.handleGetRequest(url);

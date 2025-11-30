@@ -364,20 +364,9 @@ export default function DDOProfilePage() {
                     <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
                       DDO Code
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="ddoCode"
-                        value={formData.ddoCode}
-                        onChange={handleChange}
-                        className="premium-input w-full px-4 py-3 text-base"
-                        placeholder="Enter DDO code"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.ddoCode}</p>
-                      </div>
-                    )}
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.ddoCode}</p>
+                    </div>
                   </div>
                 </div>
               </div>
