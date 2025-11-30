@@ -289,7 +289,7 @@ export default function GenerateBillPage() {
         return;
       }
 
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVE`);
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVED`);
 
       // Handle multiple possible shapes from backend
       const okStatus = response && (response.status === 'success' || response.status === 'SUCCESS' || response.status === true);

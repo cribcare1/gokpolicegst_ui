@@ -64,7 +64,7 @@ export default function GSTMasterPage() {
 
   const fetchPANList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST, 2000);
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST);
       if (response?.status === 'success' && response?.data) {
         setPanList(response.data);
       } else {
