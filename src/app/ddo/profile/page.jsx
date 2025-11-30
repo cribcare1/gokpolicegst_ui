@@ -61,7 +61,7 @@ export default function DDOProfilePage() {
     try {
       const ddoCode = localStorage.getItem('ddoCode');
       const ddoId = localStorage.getItem('ddoId');
-      
+       
       if (!ddoCode && !ddoId) {
         toast.error('DDO information not found. Please login again.');
         setFetching(false);
@@ -69,7 +69,7 @@ export default function DDOProfilePage() {
       }
 
       let response;
-      
+       
       // Try to fetch using DDO ID first (if available)
       if (ddoId) {
         try {
@@ -118,7 +118,7 @@ export default function DDOProfilePage() {
             }
           }
         }
-        
+         
         // Try direct DDO profile endpoint if available
         try {
           response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFILE_GET}?ddoCode=${ddoCode}`);
