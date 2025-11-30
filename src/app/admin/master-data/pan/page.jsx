@@ -32,7 +32,7 @@ export default function PANRecordsPage() {
 
   useEffect(() => {
     fetchData();
-    fetchGSTINList();
+    // fetchGSTINList();
   }, []);
 
   useEffect(() => {
@@ -48,16 +48,6 @@ export default function PANRecordsPage() {
     }
   }, [searchTerm, data]);
 
-  const fetchGSTINList = async () => {
-    try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
-      if (response?.status === 'success' && response?.data) {
-        setGstinList(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching GSTIN list:', error);
-    }
-  };
 
   // Calculate GSTIN count for each PAN
   const getGSTINCount = (panNumber) => {
@@ -258,7 +248,7 @@ export default function PANRecordsPage() {
         toast.success(t('alert.success'));
         setIsModalOpen(false);
         fetchData();
-        fetchGSTINList(); // Refresh GSTIN list to update counts
+        // fetchGSTINList(); // Refresh GSTIN list to update counts
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -446,10 +436,7 @@ export default function PANRecordsPage() {
   }, [editingItem, gstinList]);
 
   const tableActions = (row) => {
-    const gstinCount = getGSTINCount(row.panNumber);
-    // const isEditable = gstinCount === 0;
     const isEditable = row.isEditable;
-    console.log('Row GSTIN Count:', gstinCount, 'Is Editable:', isEditable);
     return (
       <>
         <button

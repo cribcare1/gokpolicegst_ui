@@ -19,6 +19,8 @@ export const API_ENDPOINTS = {
   DDO_REFRESH_COUNT: `${API_BASE_URL}/user/viewDashboardData?tanNumber=`,
   DDO_DETAILS_EDITBUTTON: `${API_BASE_URL}/user/editDdo/`,
   
+  IMAGE_BASE_URL: `${API_BASE_URL}/auth/getImage/gst/`,
+
   // GST Master Data Endpoints
   GST_LIST: `${API_BASE_URL}/gst/activeGSTDetails`,
   GST_ADD: `${API_BASE_URL}/gst/saveOrUpdateGST`,
