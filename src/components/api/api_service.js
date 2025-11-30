@@ -10,7 +10,7 @@ static  getToken = () => {
 };
 
 // **1️⃣ GET Request Handler**
-static async handleGetRequest(url, timeoutMs = 4000) {
+static async handleGetRequest(url, timeoutMs = 7000) {
   console.log("GET Call URL:", url);
 
   try {

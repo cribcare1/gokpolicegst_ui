@@ -320,7 +320,7 @@ export default function HSNRecordsPage() {
   }, [gstinList.length, gstinListHook?.length]);
 const fetchGSTINList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 2000);
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
       if (response?.status === 'success' && response?.data) {
         // Ensure gstId is preserved in the GSTIN list
         const processedGstinList = response.data.map(item => ({
