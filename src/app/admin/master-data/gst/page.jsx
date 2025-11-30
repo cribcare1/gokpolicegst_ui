@@ -129,7 +129,7 @@ export default function GSTMasterPage() {
 
   const handleDelete = async (item) => {
     const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
-    
+    console.log("Deleting item:", item);
     if (ddoCount > 0) {
       toast.error(`GSTIN is protected - dependent records found`);
       return;
@@ -139,9 +139,7 @@ export default function GSTMasterPage() {
     
     try {
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.GST_DELETE}${item.id}`,
-        {}
-      );
+        `${API_ENDPOINTS.GST_DELETE}${item.gstId}`,{} );
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
