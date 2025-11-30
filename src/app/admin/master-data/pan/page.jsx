@@ -26,6 +26,7 @@ export default function PANRecordsPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -246,6 +247,9 @@ export default function PANRecordsPage() {
       }
     }
 
+    // Set loading state
+    setIsSubmitting(true);
+
     try {
       const url = editingItem ? API_ENDPOINTS.PAN_UPDATE : API_ENDPOINTS.PAN_ADD;
       const response = await ApiService.handlePostRequest(url, dataCopy);
@@ -260,6 +264,8 @@ export default function PANRecordsPage() {
       }
     } catch (error) {
       toast.error(t('alert.error'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -605,11 +611,23 @@ export default function PANRecordsPage() {
                 type="button"
                 variant="secondary"
                 onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
               >
                 {t('btn.cancel')}
               </Button>
-              <Button type="submit" variant="primary">
-                {t('btn.save')}
+              <Button 
+                type="submit" 
+                variant="primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  t('btn.save')
+                )}
               </Button>
             </div>
           </form>

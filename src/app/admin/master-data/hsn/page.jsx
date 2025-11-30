@@ -989,6 +989,7 @@ export default function HSNRecordsPage() {
         key: 'hsnCode', 
         label: 'HSN/SSC Code', 
         required: true,
+        maxLength: 8,
         readOnly: editingItem && hasInvoices
       },
       { 
