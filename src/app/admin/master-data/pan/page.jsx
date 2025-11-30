@@ -26,12 +26,13 @@ export default function PANRecordsPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     fetchData();
-    fetchGSTINList();
+    // fetchGSTINList();
   }, []);
 
   useEffect(() => {
@@ -47,16 +48,6 @@ export default function PANRecordsPage() {
     }
   }, [searchTerm, data]);
 
-  const fetchGSTINList = async () => {
-    try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
-      if (response?.status === 'success' && response?.data) {
-        setGstinList(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching GSTIN list:', error);
-    }
-  };
 
   // Calculate GSTIN count for each PAN
   const getGSTINCount = (panNumber) => {
@@ -246,6 +237,9 @@ export default function PANRecordsPage() {
       }
     }
 
+    // Set loading state
+    setIsSubmitting(true);
+
     try {
       const url = editingItem ? API_ENDPOINTS.PAN_UPDATE : API_ENDPOINTS.PAN_ADD;
       const response = await ApiService.handlePostRequest(url, dataCopy);
@@ -254,12 +248,14 @@ export default function PANRecordsPage() {
         toast.success(t('alert.success'));
         setIsModalOpen(false);
         fetchData();
-        fetchGSTINList(); // Refresh GSTIN list to update counts
+        // fetchGSTINList(); // Refresh GSTIN list to update counts
       } else {
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
       toast.error(t('alert.error'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -440,10 +436,7 @@ export default function PANRecordsPage() {
   }, [editingItem, gstinList]);
 
   const tableActions = (row) => {
-    const gstinCount = getGSTINCount(row.panNumber);
-    // const isEditable = gstinCount === 0;
     const isEditable = row.isEditable;
-    console.log('Row GSTIN Count:', gstinCount, 'Is Editable:', isEditable);
     return (
       <>
         <button
@@ -605,11 +598,23 @@ export default function PANRecordsPage() {
                 type="button"
                 variant="secondary"
                 onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
               >
                 {t('btn.cancel')}
               </Button>
-              <Button type="submit" variant="primary">
-                {t('btn.save')}
+              <Button 
+                type="submit" 
+                variant="primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  t('btn.save')
+                )}
               </Button>
             </div>
           </form>
