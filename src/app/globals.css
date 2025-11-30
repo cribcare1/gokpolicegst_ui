@@ -447,6 +447,25 @@ html[lang="kn"] {
     height: 1cm !important;
   }
 
+  /* Ensure signature images display properly in print */
+  .print-content img[alt="DDO Signature"],
+  .print-content img[alt="Signature"] {
+    max-height: 1.5cm !important;
+    max-width: 4cm !important;
+    object-fit: contain !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Signature fallback line styling */
+  .print-content .signature-line {
+    border-top: 1px solid #000 !important;
+    width: 180px !important;
+    margin-top: 30px !important;
+  }
+
   /* Optimize bank details section */
   .print-content .bank-section {
     margin-top: 0.3cm !important;

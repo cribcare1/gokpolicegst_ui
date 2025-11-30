@@ -1077,7 +1077,20 @@ export default function GenerateBillPage() {
     
     const printWindow = window.open('', '_blank');
     const latestCalculation = calculateGSTAmount() || gstCalculation;
-    console.log('handlePrintBill latestCalculation:', latestCalculation);
+    
+    // Prepare signature for print - ensure it's properly formatted
+    let signatureForPrint = '';
+    if (ddoSignature) {
+      // Verify the signature is a valid base64 data URL
+      if (ddoSignature.startsWith('data:image/')) {
+        signatureForPrint = ddoSignature;
+      } else {
+        // If it's not a data URL, convert it to one
+        signatureForPrint = `data:image/png;base64,${ddoSignature}`;
+      }
+    }
+    
+    console.log('Signature for print:', signatureForPrint ? 'Available' : 'Not available');
 
     const gstSectionHTML = (function() {
       const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
@@ -1105,7 +1118,7 @@ export default function GenerateBillPage() {
           '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (latestCalculation?.sgst ? formatCurrency(latestCalculation.sgst) : '-') + '</strong></span></div>' +
           '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(latestCalculation?.gstAmount || 0) + '</strong></span></div>' +
           '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
-          '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+          '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
       }
 
       return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
@@ -1648,7 +1661,7 @@ export default function GenerateBillPage() {
                 '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</strong></span></div>' +
                 '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(gstCalculation?.gstAmount || 0) + '</strong></span></div>' +
                 '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
-                '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+                '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
             }
     
             return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
@@ -1820,94 +1833,111 @@ export default function GenerateBillPage() {
 
   const renderDDOSignatureSection = () => (
     <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)]">
-      <div className="flex flex-row gap-4">
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Left side - Instructions */}
+        <div className="lg:flex-1 lg:max-w-xs">
           <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
             Digital Signature Required
           </p>
-          <p className="text-xs text-[var(--color-text-secondary)]">
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
             Your digital signature is required to authenticate this Proforma Advice document. 
             {ddoSignature ? ' You can change your signature if needed.' : ' Please add your signature to proceed.'}
           </p>
         </div>
-        <div className="flex-1 flex flex-col gap-3">
-          <div className="text-right">
-            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-              {ddoDetails?.fullName || 'DDO Name'}
-            </p>
-            <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
-              {t('bill.signatureOfDdo')}
-            </p>
-          </div>
-          
-          <div className="relative">
-            <div className={`h-20 border-2 border-dashed rounded-lg bg-white flex items-center justify-center transition-all duration-200 ${
-              ddoSignature 
-                ? 'border-green-300 bg-green-50/30' 
-                : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-muted)]/20'
-            }`}>
-              {ddoSignature ? (
-                <div className="relative group">
-                  <img 
-                    src={ddoSignature} 
-                    alt="DDO Signature" 
-                    className="max-h-full max-w-full object-contain p-2"
-                  />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-xs font-medium">Click to change</span>
+        
+        {/* Right side - Signature area */}
+        <div className="lg:flex-1 lg:flex lg:flex-col lg:items-end">
+          <div className="w-full lg:max-w-sm">
+            {/* Name and Title */}
+            <div className="text-center lg:text-right mb-3">
+              <p className="text-sm font-semibold text-[var(--color-text-primary)] break-words">
+                {ddoDetails?.fullName || 'DDO Name'}
+              </p>
+              <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
+                {t('bill.signatureOfDdo')}
+              </p>
+            </div>
+            
+            {/* Signature Display Area */}
+            <div className="relative">
+              <div 
+                className={`h-20 border-2 border-dashed rounded-lg bg-white flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                  ddoSignature 
+                    ? 'border-green-300 bg-green-50/30' 
+                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-muted)]/20'
+                }`}
+                onClick={() => setShowSignaturePad(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setShowSignaturePad(true)}
+              >
+                {ddoSignature ? (
+                  <div className="relative group w-full h-full">
+                    <img 
+                      src={ddoSignature} 
+                      alt="DDO Signature" 
+                      className="max-h-full max-w-full object-contain mx-auto p-2 w-full h-full"
+                      style={{ imageRendering: 'crisp-edges' }}
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Click to change</span>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <svg className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
+                ) : (
+                  <div className="text-center p-2">
+                    <svg className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Success indicator */}
+              {ddoSignature && (
+                <div className="absolute top-1 right-1">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
               )}
             </div>
             
-            {ddoSignature && (
-              <div className="absolute top-1 right-1">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            {/* Action Button */}
+            <button
+              onClick={() => setShowSignaturePad(true)}
+              className={`w-full mt-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                ddoSignature
+                  ? 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90 border border-[var(--color-accent)]'
+                  : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90'
+              }`}
+            >
+              {ddoSignature ? (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
+                  Change Signature
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Add Signature
+                </div>
+              )}
+            </button>
+            
+            {/* Warning message */}
+            {!ddoSignature && (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
+                ⚠️ Signature is required to save this Proforma Advice
+              </p>
             )}
           </div>
-          
-          <button
-            onClick={() => setShowSignaturePad(true)}
-            className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-              ddoSignature
-                ? 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90 border border-[var(--color-accent)]'
-                : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90'
-            }`}
-          >
-            {ddoSignature ? (
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Change Signature
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Add Signature
-              </div>
-            )}
-          </button>
-          
-          {!ddoSignature && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              ⚠️ Signature is required to save this Proforma Advice
-            </p>
-          )}
         </div>
       </div>
     </div>

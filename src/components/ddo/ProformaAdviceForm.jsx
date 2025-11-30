@@ -1021,7 +1021,7 @@ export default function ProformaAdviceForm({
                   </div>
                 </div>
                 <div className="text-right mobile-text-center mobile-full">
-                  <h2 className="text-2xl font-bold text-[#2C5F2D] mobile-text-xl">TAX INVOICE</h2>
+                  <h2 className="text-2xl font-bold text-[#2C5F2D] mobile-text-xl">PROFORMA NUMBER</h2>
                   <p className="text-sm font-semibold mobile-text-xs">Invoice No: {invoiceNumber}</p>
                   <p className="text-sm mobile-text-xs">Date: {formatDate(billDetails.date)}</p>
                 </div>
@@ -1159,9 +1159,20 @@ export default function ProformaAdviceForm({
               </div>
 
               {/* Signature Section */}
-              <div className="flex justify-end mt-8">
+              <div className="signature-section flex justify-end mt-8">
                 <div className="text-center">
-                  <div className="h-16 border-b border-gray-400 mb-2 w-48 mobile-w-32"></div>
+                  {ddoSignature ? (
+                    <div className="mb-2">
+                      <img 
+                        src={ddoSignature} 
+                        alt="DDO Signature" 
+                        className="h-16 max-w-48 object-contain mx-auto mobile-w-32"
+                        style={{ imageRendering: 'crisp-edges' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-16 border-b border-gray-400 mb-2 w-48 mobile-w-32"></div>
+                  )}
                   <p className="text-sm font-semibold mobile-text-xs">Signature of DDO</p>
                   <p className="text-sm mobile-text-xs">{ddoDetails?.fullName || ''}</p>
                 </div>
