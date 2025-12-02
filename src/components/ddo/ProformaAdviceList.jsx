@@ -8,6 +8,7 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import Image from 'next/image';
+import { API_ENDPOINTS } from '@/components/api/api_const';
 
 export default function ProformaAdviceList({
   proformaSearchTerm,
@@ -665,11 +666,13 @@ export default function ProformaAdviceList({
       label: 'Signature',
       render: (_, row) => {
         const hasSignature = row.signature || (row.raw && row.raw.signature);
+          const imageUrl = API_ENDPOINTS.IMAGE_BASE_URL + row.signature;
+          //console.log('Rendering signature for row:', row, 'Has signature:', hasSignature, 'Image URL:', imageUrl);
         return hasSignature ? (
           <div className="flex flex-col items-center gap-1">
             <div className="w-20 h-12 border border-gray-300 bg-white flex items-center justify-center overflow-hidden">
               <img 
-                src={row.signature || row.raw.signature} 
+                src={imageUrl || row.raw.signature} 
                 alt="DDO Signature" 
                 className="max-h-full max-w-full object-contain"
                 onError={(e) => {

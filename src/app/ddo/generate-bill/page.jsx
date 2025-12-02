@@ -151,10 +151,6 @@ export default function GenerateBillPage() {
   }, [selectedCustomer]);
 
   useEffect(() => {
-    console.log('=== useEffect for GST Calculation Triggered ===');
-    console.log('selectedCustomer:', selectedCustomer);
-    console.log('lineItems:', lineItems);
-    console.log('gstDetails:', gstDetails);
     
     if (selectedCustomer && lineItems.length > 0) {
       console.log('Calling calculateGSTAmount...');
@@ -341,7 +337,7 @@ export default function GenerateBillPage() {
 
         // Extract complete customer information
         const customerResponse = item.customerResponse || item.customer || {};
-        console.log('📊 Raw customer data from API:', customerResponse);
+        
         
         const customerData = {
           id: customerResponse.id || null,
@@ -357,7 +353,7 @@ export default function GenerateBillPage() {
           exemptionNumber: customerResponse.exemptionNumber || customerResponse.exemptionCertNumber || ''
         };
         
-        console.log('🔧 Mapped customer data:', customerData);
+        
 
         return {
           id: item.invoiceId || item.id || item.proformaId || null,
@@ -365,11 +361,11 @@ export default function GenerateBillPage() {
           invoiceNumber: item.invoiceNumber || item.billNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
           proformaAmount: proformaAmount,
           taxInvoiceAmount: item.paidAmount || item.invoiceAmount || item.paidAmount || 0,
-          customerName: customerData.customerName,
-          serviceType: item.serviceType || item.invoiceType || '-',
+          customerName: item?.customerResponse?.name || '-',
+          serviceType: item?.customerResponse?.type  || '-',
           proformaDate: item.invoiceDate || item.createdAt || item.proformaDate || null,
           invoiceDate: new Date().toISOString(),
-          signature: item.signature || (item.ddoSignature && item.ddoSignature.signatureUrl) || null,
+          signature: item.signImage || (item.ddoSignature && item.ddoSignature.signatureUrl) || null,
           raw: {
             ...item,
             // Ensure customer data is preserved in raw for edit functionality
@@ -1045,7 +1041,6 @@ export default function GenerateBillPage() {
         invoiceNumber: invoiceNumber,
         invoiceDate: billDetails.date,
         gstType: invoiceType,
-        invoiceStatus: 'DRAFT',
         remarks: note || '',
         
         totalAmount: totalTaxableValue,
@@ -1054,11 +1049,7 @@ export default function GenerateBillPage() {
         totalIgst: totalIgst,
         grandTotal: grandTotal,
         
-        // RCM specific fields
-        rcmIgst: invoiceType === 'RCM' ? rcmIgst : 0,
-        rcmCgst: invoiceType === 'RCM' ? rcmCgst : 0,
-        rcmSgst: invoiceType === 'RCM' ? rcmSgst : 0,
-        
+
         paidAmount: parseFloat(paidAmount) || 0,
         balanceAmount: balanceAmount,
         
