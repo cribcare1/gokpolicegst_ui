@@ -41,8 +41,8 @@ export default function DDODashboard() {
     },
     {
       key: 'credit-note',
-      label: 'nav.creditNote',
-      href: '/ddo/invoices',
+      label: 'nav.invoiceList',
+      href: '/ddo/credit-notes',
       icon: CreditCard,
       bgClass: 'from-emerald-500/80 to-green-500/80'
     }

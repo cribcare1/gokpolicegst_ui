@@ -85,6 +85,11 @@ export default function GenerateBillPage() {
   const [notificationDetails, setNotificationDetails] = useState('');
   const [ddoDetails, setDdoDetails] = useState('');
   const [bankDetails, setBankDetails] = useState(null);
+  
+  // RCM specific fields
+  const [rcmIgst, setRcmIgst] = useState(0);
+  const [rcmCgst, setRcmCgst] = useState(0);
+  const [rcmSgst, setRcmSgst] = useState(0);
   // const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
@@ -96,6 +101,7 @@ export default function GenerateBillPage() {
   const [proformaLoading, setProformaLoading] = useState(true);
   const [isProformaFormOpen, setIsProformaFormOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [isInvoiceCreation, setIsInvoiceCreation] = useState(false);
 
   useEffect(() => {
     fetchProformaAdviceDetails();
@@ -209,6 +215,24 @@ export default function GenerateBillPage() {
     setFilteredProformaList(filtered);
   }, [proformaSearchTerm, proformaList]);
 
+  // Update RCM IGST, CGST, and SGST fields when gstCalculation changes
+  useEffect(() => {
+    if (invoiceType === 'RCM' && gstCalculation) {
+      setRcmIgst(gstCalculation.igst || 0);
+      setRcmCgst(gstCalculation.cgst || 0);
+      setRcmSgst(gstCalculation.sgst || 0);
+      console.log('RCM Fields Updated:', {
+        igst: gstCalculation.igst || 0,
+        cgst: gstCalculation.cgst || 0,
+        sgst: gstCalculation.sgst || 0
+      });
+    } else if (invoiceType !== 'RCM') {
+      setRcmIgst(0);
+      setRcmCgst(0);
+      setRcmSgst(0);
+    }
+  }, [gstCalculation, invoiceType]);
+
   function getDdoDetails() {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
     if (storedProfile) {
@@ -315,16 +339,43 @@ export default function GenerateBillPage() {
         const items = Array.isArray(item.items) ? item.items : [];
         const proformaAmount = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0) || item.totalAmount || item.grandTotal || 0;
 
+        // Extract complete customer information
+        const customerResponse = item.customerResponse || item.customer || {};
+        console.log('📊 Raw customer data from API:', customerResponse);
+        
+        const customerData = {
+          id: customerResponse.id || null,
+          customerName: customerResponse.name || customerResponse.customerName || customerResponse.customerName || '-',
+          gstNumber: customerResponse.gstNumber || customerResponse.gstinNumber || '',
+          address: customerResponse.address || '',
+          city: customerResponse.city || '',
+          stateCode: customerResponse.stateCode || '',
+          pin: customerResponse.pinCode || customerResponse.pin || '',
+          customerType: customerResponse.customerType || customerResponse.type || 'Govt',
+          mobile: customerResponse.mobile || '',
+          email: customerResponse.customerEmail || customerResponse.email || '',
+          exemptionNumber: customerResponse.exemptionNumber || customerResponse.exemptionCertNumber || ''
+        };
+        
+        console.log('🔧 Mapped customer data:', customerData);
+
         return {
           id: item.invoiceId || item.id || item.proformaId || null,
           proformaNumber: item.invoiceNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
+          invoiceNumber: item.invoiceNumber || item.billNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
           proformaAmount: proformaAmount,
           taxInvoiceAmount: item.paidAmount || item.invoiceAmount || item.paidAmount || 0,
-          customerName: item.customerResponse && (item.customerResponse.name ) || '-',
+          customerName: customerData.customerName,
           serviceType: item.serviceType || item.invoiceType || '-',
           proformaDate: item.invoiceDate || item.createdAt || item.proformaDate || null,
-          invoiceDate:  new Date().toISOString(),
-          raw: item,
+          invoiceDate: new Date().toISOString(),
+          signature: item.signature || (item.ddoSignature && item.ddoSignature.signatureUrl) || null,
+          raw: {
+            ...item,
+            // Ensure customer data is preserved in raw for edit functionality
+            customer: customerData,
+            customerResponse: customerData
+          },
         };
       });
 
@@ -446,6 +497,7 @@ export default function GenerateBillPage() {
 
   const handleCreateInvoiceFromProforma = (record) => {
     if (!record) return;
+    
     // Validate that tax invoice amount (paidAmount) is present and non-zero
     const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
       ? Number(record.taxInvoiceAmount)
@@ -456,29 +508,94 @@ export default function GenerateBillPage() {
       return;
     }
 
-    const reference = record.id || record.proformaNumber;
-    router.push(`/ddo/invoices?fromProforma=${encodeURIComponent(reference)}`);
+    // Set invoice creation flag first
+    setIsInvoiceCreation(true);
+    
+    // Open the Proforma Advice form with data
+    handleOpenEditProforma(record);
+    
+    toast.success('Opening Proforma Advice form for invoice creation');
   };
 
   const handleOpenEditProforma = (record) => {
     if (!record) return;
+    
     // Prefill paidAmount (tax invoice amount) so the field becomes editable in the form
     const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
       ? Number(record.taxInvoiceAmount)
       : (record.paidAmount != null ? Number(record.paidAmount) : (record.raw && (record.raw.paidAmount || record.raw.invoiceAmount) ? Number(record.raw.paidAmount || record.raw.invoiceAmount) : 0));
 
     setPaidAmount(Number.isFinite(taxInvoiceAmount) ? Math.floor(taxInvoiceAmount) : 0);
-    // Optionally, try to set selected customer if available in raw payload
+    
+    // Set signature data if available
+    const signatureData = record.signature || (record.raw && (record.raw.signature || (record.raw.ddoSignature && record.raw.ddoSignature.signatureUrl)));
+    if (signatureData) {
+      setDdoSignature(signatureData);
+    }
+    
+    // Try to set selected customer if available in raw payload
     if (record.raw && (record.raw.customer || record.raw.customerResponse)) {
       const c = record.raw.customer || record.raw.customerResponse;
-      // Minimal mapping: try to find in customers list by GST or name, else set a simple object
-      const found = customers.find(x => (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) || (x.customerName && c.customerName && x.customerName === c.customerName));
+      
+      console.log('🔍 Customer data found in record:', c);
+      console.log('🔍 Available customers list:', customers.length, 'customers');
+      
+      // First, try to find in customers list by GST or name
+      const found = customers.find(x => 
+        (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) || 
+        (x.customerName && c.customerName && x.customerName === c.customerName) ||
+        (x.name && c.name && x.name === c.name)
+      );
+      
       if (found) {
+        console.log('✅ Found customer in customers list:', found);
         setSelectedCustomer(found);
       } else {
-        // create a lightweight customer object to show in the form
-        setSelectedCustomer({ id: record.id || null, customerName: c.customerName || c.name || record.customerName || '-', gstNumber: c.gstNumber || '', address: c.address || '' });
+        // Create a complete customer object from the preserved data
+        const customerObj = { 
+          id: c.id || record.id || null, 
+          customerName: c.customerName || c.name || record.customerName || '-', 
+          gstNumber: c.gstNumber || '', 
+          address: c.address || '',
+          city: c.city || '',
+          stateCode: c.stateCode || '',
+          pin: c.pinCode || c.pin || '',
+          customerType: c.customerType || c.type || 'Govt',
+          mobile: c.mobile || '',
+          email: c.email || c.customerEmail || '',
+          exemptionNumber: c.exemptionNumber || c.exemptionCertNumber || ''
+        };
+        console.log('🏗️ Created customer object from raw data:', customerObj);
+        setSelectedCustomer(customerObj);
       }
+    } else {
+      console.log('⚠️ No customer data found in record.raw');
+      console.log('🔍 Record raw keys:', Object.keys(record.raw || {}));
+    }
+    
+    // Set line items from raw data if available
+    if (record.raw && record.raw.items && Array.isArray(record.raw.items) && record.raw.items.length > 0) {
+      const lineItemsData = record.raw.items.map((item, index) => ({
+        serialNo: index + 1,
+        description: item.serviceName || item.description || '',
+        amount: item.amount || item.rate || 0,
+        hsnNumber: item.hsnCode || item.hsnNumber || (hsnList.length > 0 ? hsnList[0].hsnCode : ''),
+        quantity: item.quantity || 1
+      }));
+      setLineItems(lineItemsData);
+    }
+    
+    // Set other form data
+    if (record.raw) {
+      if (record.raw.remarks) setNote(record.raw.remarks);
+      if (record.raw.invoiceNumber) setInvoiceNumber(record.raw.invoiceNumber);
+      if (record.raw.invoiceDate) {
+        setBillDetails(prev => ({
+          ...prev,
+          date: record.raw.invoiceDate
+        }));
+      }
+      if (record.raw.gstType) setInvoiceType(record.raw.gstType);
     }
 
     setShowForm(true);
@@ -564,6 +681,13 @@ export default function GenerateBillPage() {
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
       } else {
         setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
+      }
+      
+      // Ensure RCM fields are populated for display
+      if (!isRCMExempted) {
+        // The calculation below will populate rcmIgst and rcmCgst via useEffect
+        // Make sure the calculation includes all tax components
+        console.log('RCM Calculation - will be handled by the calculation logic below');
       }
     } else if (invoiceType === 'FCM') {
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
@@ -862,7 +986,8 @@ export default function GenerateBillPage() {
       validateBillNumber(invoiceNumber),
       validateBillDate(billDetails.date),
       { valid: selectedCustomer, message: t('bill.selectCustomerRequired') },
-      { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') }
+      { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') },
+      { valid: ddoSignature, message: 'Digital signature is required to save Proforma Advice. Please add your signature.' }
     ];
 
     for (const validation of validations) {
@@ -929,6 +1054,11 @@ export default function GenerateBillPage() {
         totalIgst: totalIgst,
         grandTotal: grandTotal,
         
+        // RCM specific fields
+        rcmIgst: invoiceType === 'RCM' ? rcmIgst : 0,
+        rcmCgst: invoiceType === 'RCM' ? rcmCgst : 0,
+        rcmSgst: invoiceType === 'RCM' ? rcmSgst : 0,
+        
         paidAmount: parseFloat(paidAmount) || 0,
         balanceAmount: balanceAmount,
         
@@ -994,6 +1124,14 @@ export default function GenerateBillPage() {
       
       if (response && response.status === 'success') {
         toast.success(t('bill.savedSuccessfully'));
+        
+        // Auto-redirect to Proforma Advice list after successful save
+        setTimeout(() => {
+          setShowForm(false);
+          // Refresh the proforma list to show the newly saved entry
+          fetchProformaAdviceDetails();
+        }, 1500); // Give user time to see the success message
+        
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -1011,7 +1149,20 @@ export default function GenerateBillPage() {
     
     const printWindow = window.open('', '_blank');
     const latestCalculation = calculateGSTAmount() || gstCalculation;
-    console.log('handlePrintBill latestCalculation:', latestCalculation);
+    
+    // Prepare signature for print - ensure it's properly formatted
+    let signatureForPrint = '';
+    if (ddoSignature) {
+      // Verify the signature is a valid base64 data URL
+      if (ddoSignature.startsWith('data:image/')) {
+        signatureForPrint = ddoSignature;
+      } else {
+        // If it's not a data URL, convert it to one
+        signatureForPrint = `data:image/png;base64,${ddoSignature}`;
+      }
+    }
+    
+    console.log('Signature for print:', signatureForPrint ? 'Available' : 'Not available');
 
     const gstSectionHTML = (function() {
       const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
@@ -1039,10 +1190,10 @@ export default function GenerateBillPage() {
           '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (latestCalculation?.sgst ? formatCurrency(latestCalculation.sgst) : '-') + '</strong></span></div>' +
           '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(latestCalculation?.gstAmount || 0) + '</strong></span></div>' +
           '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
-          '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+          '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
       }
 
-      return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
+      return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
     })();
 
     const printHTML = `
@@ -1060,108 +1211,117 @@ export default function GenerateBillPage() {
             
             @page {
               size: A4;
-              margin: 1.5cm 1cm;
+              margin: 0.8cm 0.8cm;
             }
             
             body {
               font-family: 'Times New Roman', serif;
               font-size: 12px;
-              line-height: 1.4;
+              line-height: 1.3;
               color: #000;
               background: #fff;
               padding: 0;
             }
             
             .header-section {
-              text-align: center;
-              margin-bottom: 25px;
-              padding: 20px 0;
-              border-bottom: 4px solid #2C5F2D;
+              display: flex;
+              align-items: center;
+              justify-content: flex-start;
+              margin-bottom: 12px;
+              padding: 12px 0 8px 0;
+              border-bottom: 3px solid #2C5F2D;
             }
             
             .logo-container {
-              margin-bottom: 20px;
+              margin-right: 16px;
+              margin-bottom: 0;
+              flex-shrink: 0;
             }
             
             .logo-container img {
-              width: 140px;
-              height: 140px;
+              width: 90px;
+              height: 90px;
               object-fit: contain;
             }
             
             .org-name {
-              font-size: 18px;
+              font-size: 16px;
               font-weight: bold;
-              margin-bottom: 10px;
+              margin-bottom: 8px;
               color: #2C5F2D;
               line-height: 1.3;
             }
             
+            .header-text {
+              flex: 1;
+            }
+            
             .org-details {
-              font-size: 13px;
-              margin-bottom: 5px;
-              line-height: 1.2;
+              font-size: 12px;
+              margin-bottom: 4px;
+              line-height: 1.3;
+              text-align: left;
             }
             
             .gstin {
-              font-size: 14px;
+              font-size: 13px;
               font-weight: bold;
-              margin-top: 12px;
+              margin-top: 10px;
               color: #2C5F2D;
             }
             
             .invoice-title {
               text-align: center;
-              font-size: 28px;
+              font-size: 22px;
               font-weight: bold;
-              margin: 30px 0 25px 0;
-              padding: 15px 0;
+              margin: 10px 0 14px 0;
+              padding: 10px 0;
               background: linear-gradient(135deg, #2C5F2D, #4A7C59);
               color: white;
-              border-radius: 10px;
+              border-radius: 6px;
             }
             
             .bill-details {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 30px;
-              margin-bottom: 25px;
+              gap: 12px;
+              margin-bottom: 12px;
             }
             
             .bill-section {
-              border: 2px solid #2C5F2D;
-              padding: 15px;
+              border: 1.5px solid #2C5F2D;
+              padding: 8px;
               background: #f8f9fa;
-              border-radius: 8px;
+              border-radius: 4px;
             }
             
             .section-title {
               font-weight: bold;
-              margin-bottom: 12px;
-              font-size: 14px;
+              margin-bottom: 8px;
+              font-size: 13px;
               color: #2C5F2D;
               border-bottom: 1px solid #2C5F2D;
-              padding-bottom: 5px;
+              padding-bottom: 4px;
             }
             
             .section-content {
-              font-size: 12px;
-              margin-bottom: 6px;
+              font-size: 11px;
+              margin-bottom: 4px;
               line-height: 1.3;
             }
             
             .invoice-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 25px 0;
+              margin: 10px 0;
               font-size: 11px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              box-shadow: 0 1px 4px rgba(0,0,0,0.1);
             }
             
             .invoice-table th,
             .invoice-table td {
-              border: 2px solid #2C5F2D;
-              padding: 10px;
+              border: 1.5px solid #2C5F2D;
+              padding: 6px 8px;
               text-align: left;
             }
             
@@ -1171,6 +1331,7 @@ export default function GenerateBillPage() {
               font-weight: bold;
               text-align: center;
               font-size: 11px;
+              padding: 8px 6px;
             }
             
             .invoice-table td {
@@ -1195,38 +1356,38 @@ export default function GenerateBillPage() {
             .gst-calculation {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 30px;
-              margin: 25px 0;
+              gap: 12px;
+              margin: 8px 0;
             }
             
             .calc-section {
               font-size: 11px;
-              border: 2px solid #2C5F2D;
-              padding: 15px;
+              border: 1.5px solid #2C5F2D;
+              padding: 10px;
               background: #f8f9fa;
-              border-radius: 8px;
+              border-radius: 4px;
             }
             
             .calc-section h4 {
               color: #2C5F2D;
-              margin-bottom: 12px;
-              font-size: 13px;
+              margin-bottom: 8px;
+              font-size: 12px;
               border-bottom: 1px solid #2C5F2D;
-              padding-bottom: 5px;
+              padding-bottom: 4px;
             }
             
             .calc-row {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 8px;
-              padding: 6px 0;
+              margin-bottom: 4px;
+              padding: 3px 0;
               border-bottom: 1px dotted #666;
             }
             
             .calc-row.border-top {
-              border-top: 2px solid #2C5F2D;
-              padding-top: 12px;
-              margin-top: 12px;
+              border-top: 1.5px solid #2C5F2D;
+              padding-top: 6px;
+              margin-top: 6px;
             }
             
             .calc-row.bold {
@@ -1235,27 +1396,62 @@ export default function GenerateBillPage() {
             
             .calc-row.total {
               font-weight: bold;
-              font-size: 16px;
+              font-size: 14px;
               background: linear-gradient(135deg, #2C5F2D, #4A7C59);
               color: white;
-              padding: 12px;
-              margin: 15px -15px -15px -15px;
-              border-radius: 0 0 8px 8px;
+              padding: 10px;
+              margin: 10px -10px -10px -10px;
+              border-radius: 0 0 4px 4px;
+            }
+            
+            /* Compact field styles for single page optimization */
+            .compact-field {
+              margin-left: 15px;
+              margin-bottom: 8px;
+              min-height: 32px;
+              padding: 4px;
+              background: #fff;
+              border: 1px solid #ddd;
+              font-size: 9px;
+              line-height: 1.3;
+            }
+            
+            .compact-field-small {
+              margin-left: 15px;
+              margin-bottom: 8px;
+              min-height: 24px;
+              padding: 3px;
+              background: #fff;
+              border: 1px solid #ddd;
+              font-size: 8px;
+              line-height: 1.2;
+            }
+            
+            .compact-field-italic {
+              margin-left: 15px;
+              margin-bottom: 8px;
+              min-height: 28px;
+              padding: 4px;
+              background: #fff;
+              border: 1px solid #ddd;
+              font-size: 9px;
+              font-style: italic;
+              line-height: 1.3;
             }
             
             .signature-row {
               display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-              gap: 20px;
-              margin-top: 15px;
-              padding: 15px;
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              gap: 12px;
+              margin-top: 8px;
+              padding: 8px;
               border: 1px dashed #b2b2b2;
-              border-radius: 8px;
+              border-radius: 4px;
               background: #f8fdf8;
             }
             
             .signature-block span {
-              font-size: 11px;
+              font-size: 9px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
               color: #2C5F2D;
@@ -1263,70 +1459,162 @@ export default function GenerateBillPage() {
             }
             
             .signature-value {
-              margin-top: 8px;
-              font-size: 13px;
+              margin-top: 4px;
+              font-size: 10px;
               font-weight: bold;
               color: #1a1a1a;
             }
             
             .signature-line {
-              margin-top: 20px;
-              border: 2px solid #999;
-              height: 40px;
-            }
-            
-            .terms-section {
-              margin-top: 25px;
-              padding: 20px 0;
-              border-top: 3px solid #2C5F2D;
-            }
-            
-            .terms-section h3 {
-              font-weight: bold;
-              margin-bottom: 12px;
-              font-size: 14px;
-              color: #2C5F2D;
-            }
-            
-            .terms-section ol {
-              margin-left: 20px;
-              font-size: 11px;
-              line-height: 1.4;
-            }
-            
-            .terms-section li {
-              margin-bottom: 6px;
-              font-weight: 500;
+              margin-top: 12px;
+              border: 1.5px solid #999;
+              height: 24px;
             }
             
             .bank-section {
-              margin-top: 20px;
-              padding: 15px 0;
-              border-top: 2px solid #2C5F2D;
+              margin-top: 8px;
+              padding: 8px 0;
+              border-top: 1.5px solid #2C5F2D;
             }
             
             .bank-section h3 {
               font-weight: bold;
-              margin-bottom: 12px;
-              font-size: 14px;
+              margin-bottom: 8px;
+              font-size: 13px;
               color: #2C5F2D;
             }
             
             .bank-details {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 20px;
+              gap: 15px;
               font-size: 12px;
             }
             
             .footer {
               text-align: center;
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 2px solid #2C5F2D;
-              font-size: 11px;
+              margin-top: 12px;
+              padding-top: 8px;
+              border-top: 1.5px solid #2C5F2D;
+              font-size: 9px;
               font-style: italic;
               font-weight: bold;
+            }
+
+            /* Print-specific optimizations for single page */
+            @media print {
+              .header-section {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                margin-bottom: 8px;
+                padding: 8px 0 4px 0;
+              }
+              
+              .logo-container img {
+                width: 75px;
+                height: 75px;
+                margin-right: 15px;
+              }
+              
+              .header-text {
+                flex: 1;
+                text-align: left;
+              }
+              
+              .org-name {
+                font-size: 14px;
+                margin-bottom: 6px;
+                text-align: left;
+              }
+              
+              .invoice-title {
+                font-size: 16px;
+                margin: 6px 0 8px 0;
+                padding: 6px 0;
+              }
+              
+              .bill-details {
+                gap: 8px;
+                margin-bottom: 8px;
+              }
+              
+              .bill-section {
+                padding: 6px;
+              }
+              
+              .invoice-table {
+                margin: 6px 0;
+                font-size: 8px;
+              }
+              
+              .invoice-table th,
+              .invoice-table td {
+                padding: 3px 4px;
+              }
+              
+              .invoice-table th {
+                font-size: 8px;
+                padding: 4px 3px;
+              }
+              
+              .gst-calculation {
+                gap: 8px;
+                margin: 6px 0;
+              }
+              
+              .calc-section {
+                padding: 6px;
+                font-size: 8px;
+              }
+              
+              .calc-section h4 {
+                font-size: 9px;
+                margin-bottom: 4px;
+              }
+              
+              .calc-row {
+                margin-bottom: 3px;
+                padding: 2px 0;
+              }
+              
+              .calc-row.total {
+                font-size: 11px;
+                padding: 6px;
+                margin: 6px -6px -6px -6px;
+              }
+              
+              .signature-row {
+                margin-top: 6px;
+                padding: 6px;
+              }
+              
+              .signature-line {
+                height: 20px;
+                margin-top: 8px;
+              }
+              
+              .bank-section {
+                margin-top: 6px;
+                padding: 6px 0;
+              }
+              
+              .footer {
+                margin-top: 8px;
+                padding-top: 6px;
+              }
+              
+              /* Force single page layout */
+              body {
+                overflow: hidden;
+                height: auto;
+              }
+              
+              .page-break {
+                page-break-before: avoid;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+              }
             }
           </style>
         </head>
@@ -1336,13 +1624,15 @@ export default function GenerateBillPage() {
             <div class="logo-container">
               <img src="${logoSrc}" alt="Bengaluru City Police Logo" />
             </div>
-            <div class="org-name">
-              ${gstDetails?.gstName || ''}
+            <div class="header-text">
+              <div class="org-name">
+                ${gstDetails?.gstName || ''}
+              </div>
+              <div class="org-details">${gstDetails?.address || ''}</div>
+              <div class="org-details">${gstDetails?.city || ''} - ${gstDetails?.pinCode || ''}</div>
+              <div class="org-details">Contact No : ${gstDetails?.mobile || ''} , ${gstDetails?.email || ''}</div>
+              <div class="gstin">GSTIN : ${gstDetails?.gstNumber || ''}</div>
             </div>
-            <div class="org-details">${gstDetails?.address || ''}</div>
-            <div class="org-details">${gstDetails?.city || ''} - ${gstDetails?.pinCode || ''}</div>
-            <div class="org-details">Contact No : ${gstDetails?.mobile || ''} , ${gstDetails?.email || ''}</div>
-            <div class="gstin">GSTIN : ${gstDetails?.gstNumber || ''}</div>
           </div>
 
           <!-- Invoice Title -->
@@ -1443,10 +1733,10 @@ export default function GenerateBillPage() {
                 '<div class="calc-row"><span><strong>SGST @ ' + displaySgstRate + '%</strong></span><span><strong>' + (gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-') + '</strong></span></div>' +
                 '<div class="calc-row border-top"><span><strong>Total GST Amount</strong></span><span><strong>' + formatCurrency(gstCalculation?.gstAmount || 0) + '</strong></span></div>' +
                 '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
-                '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span><div class="signature-line"></div></div></div></div>';
+                '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
             }
     
-            return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 60px;">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; min-height: 80px; font-size: 10px;">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row" style="margin-left: 15px; margin-bottom: 12px; font-style: italic; min-height: 60px;">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
+            return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
           })()}
 
           <!-- Bank Details -->
@@ -1614,34 +1904,112 @@ export default function GenerateBillPage() {
   );
 
   const renderDDOSignatureSection = () => (
-    <div className="mt-4 pt-4 border-t border-dashed border-[var(--color-border)]">
-      <div className="flex flex-row gap-4">
-        <div className="flex-1">
+    <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)]">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Left side - Instructions */}
+        <div className="lg:flex-1 lg:max-w-xs">
+          <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+            Digital Signature Required
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            Your digital signature is required to authenticate this Proforma Advice document. 
+            {ddoSignature ? ' You can change your signature if needed.' : ' Please add your signature to proceed.'}
+          </p>
         </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">
-            {ddoDetails?.fullName || '-'}
-          </p>
-          <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
-            {t('bill.signatureOfDdo')}
-          </p>
-          <div className="mt-2 h-16 border-2 border-solid border-[var(--color-border)] rounded bg-white flex items-center justify-center">
-            {ddoSignature ? (
-              <img 
-                src={ddoSignature} 
-                alt="DDO Signature" 
-                className="max-h-full max-w-full object-contain p-1"
-              />
-            ) : (
-              <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
+        
+        {/* Right side - Signature area */}
+        <div className="lg:flex-1 lg:flex lg:flex-col lg:items-end">
+          <div className="w-full lg:max-w-sm">
+            {/* Name and Title */}
+            <div className="text-center lg:text-right mb-3">
+              <p className="text-sm font-semibold text-[var(--color-text-primary)] break-words">
+                {ddoDetails?.fullName || 'DDO Name'}
+              </p>
+              <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
+                {t('bill.signatureOfDdo')}
+              </p>
+            </div>
+            
+            {/* Signature Display Area */}
+            <div className="relative">
+              <div 
+                className={`h-20 border-2 border-dashed rounded-lg bg-white flex items-center justify-center transition-all duration-200 overflow-hidden ${
+                  ddoSignature 
+                    ? 'border-green-300 bg-green-50/30' 
+                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-muted)]/20'
+                }`}
+                onClick={() => setShowSignaturePad(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setShowSignaturePad(true)}
+              >
+                {ddoSignature ? (
+                  <div className="relative group w-full h-full">
+                    <img 
+                      src={ddoSignature} 
+                      alt="DDO Signature" 
+                      className="max-h-full max-w-full object-contain mx-auto p-2 w-full h-full"
+                      style={{ imageRendering: 'crisp-edges' }}
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Click to change</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center p-2">
+                    <svg className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Success indicator */}
+              {ddoSignature && (
+                <div className="absolute top-1 right-1">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Action Button */}
+            <button
+              onClick={() => setShowSignaturePad(true)}
+              className={`w-full mt-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                ddoSignature
+                  ? 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90 border border-[var(--color-accent)]'
+                  : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90'
+              }`}
+            >
+              {ddoSignature ? (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Change Signature
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Add Signature
+                </div>
+              )}
+            </button>
+            
+            {/* Warning message */}
+            {!ddoSignature && (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
+                ⚠️ Signature is required to save this Proforma Advice
+              </p>
             )}
           </div>
-          <button
-            onClick={() => setShowSignaturePad(true)}
-            className="mt-2 px-3 py-1.5 text-xs font-medium bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 transition-colors"
-          >
-            {ddoSignature ? 'Change Signature' : 'Add Signature'}
-          </button>
         </div>
       </div>
     </div>
@@ -1655,10 +2023,13 @@ export default function GenerateBillPage() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h1 className="text-xl font-bold mb-1 text-[var(--color-text-primary)]">
-                  {t('nav.generateBill')}
+                  {isInvoiceCreation ? 'Create Tax Invoice' : t('nav.generateBill')}
                 </h1>
                 <p className="text-sm text-[var(--color-text-secondary)]">
-                  {t('bill.generateBillSubtitle')}
+                  {isInvoiceCreation 
+                    ? 'Creating tax invoice from Proforma Advice with pre-filled data'
+                    : t('bill.generateBillSubtitle')
+                  }
                 </p>
               </div>
               <div className="flex items-end gap-4">
@@ -1728,12 +2099,20 @@ export default function GenerateBillPage() {
             setNote={setNote}
             notificationDetails={notificationDetails}
             setNotificationDetails={setNotificationDetails}
+            rcmIgst={rcmIgst}
+            setRcmIgst={setRcmIgst}
+            rcmCgst={rcmCgst}
+            setRcmCgst={setRcmCgst}
+            rcmSgst={rcmSgst}
+            setRcmSgst={setRcmSgst}
             ddoDetails={ddoDetails}
             bankDetails={bankDetails}
             saving={saving}
             setSaving={setSaving}
             currentLang={currentLang}
             gstinList={gstinList}
+            ddoSignature={ddoSignature}
+            isInvoiceCreation={isInvoiceCreation}
             onNavigateToAddCustomer={handleNavigateToAddCustomer}
             onAddCustomer={handleAddCustomer}
             onAddLineItem={handleAddLineItem}
