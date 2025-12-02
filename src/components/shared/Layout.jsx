@@ -92,9 +92,9 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
+    { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
     { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'credit-notes' },
     { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'invoices' },
-    
   ];
 
   const gstinNavItems = [
