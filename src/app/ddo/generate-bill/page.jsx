@@ -85,6 +85,11 @@ export default function GenerateBillPage() {
   const [notificationDetails, setNotificationDetails] = useState('');
   const [ddoDetails, setDdoDetails] = useState('');
   const [bankDetails, setBankDetails] = useState(null);
+  
+  // RCM specific fields
+  const [rcmIgst, setRcmIgst] = useState(0);
+  const [rcmCgst, setRcmCgst] = useState(0);
+  const [rcmSgst, setRcmSgst] = useState(0);
   // const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isNavigatingToCustomer, setIsNavigatingToCustomer] = useState(false);
@@ -210,6 +215,24 @@ export default function GenerateBillPage() {
     setFilteredProformaList(filtered);
   }, [proformaSearchTerm, proformaList]);
 
+  // Update RCM IGST, CGST, and SGST fields when gstCalculation changes
+  useEffect(() => {
+    if (invoiceType === 'RCM' && gstCalculation) {
+      setRcmIgst(gstCalculation.igst || 0);
+      setRcmCgst(gstCalculation.cgst || 0);
+      setRcmSgst(gstCalculation.sgst || 0);
+      console.log('RCM Fields Updated:', {
+        igst: gstCalculation.igst || 0,
+        cgst: gstCalculation.cgst || 0,
+        sgst: gstCalculation.sgst || 0
+      });
+    } else if (invoiceType !== 'RCM') {
+      setRcmIgst(0);
+      setRcmCgst(0);
+      setRcmSgst(0);
+    }
+  }, [gstCalculation, invoiceType]);
+
   function getDdoDetails() {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
     if (storedProfile) {
@@ -316,18 +339,43 @@ export default function GenerateBillPage() {
         const items = Array.isArray(item.items) ? item.items : [];
         const proformaAmount = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0) || item.totalAmount || item.grandTotal || 0;
 
+        // Extract complete customer information
+        const customerResponse = item.customerResponse || item.customer || {};
+        console.log('📊 Raw customer data from API:', customerResponse);
+        
+        const customerData = {
+          id: customerResponse.id || null,
+          customerName: customerResponse.name || customerResponse.customerName || customerResponse.customerName || '-',
+          gstNumber: customerResponse.gstNumber || customerResponse.gstinNumber || '',
+          address: customerResponse.address || '',
+          city: customerResponse.city || '',
+          stateCode: customerResponse.stateCode || '',
+          pin: customerResponse.pinCode || customerResponse.pin || '',
+          customerType: customerResponse.customerType || customerResponse.type || 'Govt',
+          mobile: customerResponse.mobile || '',
+          email: customerResponse.customerEmail || customerResponse.email || '',
+          exemptionNumber: customerResponse.exemptionNumber || customerResponse.exemptionCertNumber || ''
+        };
+        
+        console.log('🔧 Mapped customer data:', customerData);
+
         return {
           id: item.invoiceId || item.id || item.proformaId || null,
           proformaNumber: item.invoiceNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
           invoiceNumber: item.invoiceNumber || item.billNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
           proformaAmount: proformaAmount,
           taxInvoiceAmount: item.paidAmount || item.invoiceAmount || item.paidAmount || 0,
-          customerName: item.customerResponse && (item.customerResponse.name || item.customerResponse.customerName) || '-',
+          customerName: customerData.customerName,
           serviceType: item.serviceType || item.invoiceType || '-',
           proformaDate: item.invoiceDate || item.createdAt || item.proformaDate || null,
           invoiceDate: new Date().toISOString(),
           signature: item.signature || (item.ddoSignature && item.ddoSignature.signatureUrl) || null,
-          raw: item,
+          raw: {
+            ...item,
+            // Ensure customer data is preserved in raw for edit functionality
+            customer: customerData,
+            customerResponse: customerData
+          },
         };
       });
 
@@ -489,7 +537,10 @@ export default function GenerateBillPage() {
     if (record.raw && (record.raw.customer || record.raw.customerResponse)) {
       const c = record.raw.customer || record.raw.customerResponse;
       
-      // Try to find in customers list by GST or name
+      console.log('🔍 Customer data found in record:', c);
+      console.log('🔍 Available customers list:', customers.length, 'customers');
+      
+      // First, try to find in customers list by GST or name
       const found = customers.find(x => 
         (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) || 
         (x.customerName && c.customerName && x.customerName === c.customerName) ||
@@ -497,20 +548,29 @@ export default function GenerateBillPage() {
       );
       
       if (found) {
+        console.log('✅ Found customer in customers list:', found);
         setSelectedCustomer(found);
       } else {
-        // Create a lightweight customer object to show in the form
-        setSelectedCustomer({ 
-          id: record.id || null, 
+        // Create a complete customer object from the preserved data
+        const customerObj = { 
+          id: c.id || record.id || null, 
           customerName: c.customerName || c.name || record.customerName || '-', 
           gstNumber: c.gstNumber || '', 
           address: c.address || '',
           city: c.city || '',
           stateCode: c.stateCode || '',
           pin: c.pinCode || c.pin || '',
-          customerType: c.customerType || c.type || 'Govt'
-        });
+          customerType: c.customerType || c.type || 'Govt',
+          mobile: c.mobile || '',
+          email: c.email || c.customerEmail || '',
+          exemptionNumber: c.exemptionNumber || c.exemptionCertNumber || ''
+        };
+        console.log('🏗️ Created customer object from raw data:', customerObj);
+        setSelectedCustomer(customerObj);
       }
+    } else {
+      console.log('⚠️ No customer data found in record.raw');
+      console.log('🔍 Record raw keys:', Object.keys(record.raw || {}));
     }
     
     // Set line items from raw data if available
@@ -621,6 +681,13 @@ export default function GenerateBillPage() {
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
       } else {
         setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
+      }
+      
+      // Ensure RCM fields are populated for display
+      if (!isRCMExempted) {
+        // The calculation below will populate rcmIgst and rcmCgst via useEffect
+        // Make sure the calculation includes all tax components
+        console.log('RCM Calculation - will be handled by the calculation logic below');
       }
     } else if (invoiceType === 'FCM') {
       if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
@@ -987,6 +1054,11 @@ export default function GenerateBillPage() {
         totalIgst: totalIgst,
         grandTotal: grandTotal,
         
+        // RCM specific fields
+        rcmIgst: invoiceType === 'RCM' ? rcmIgst : 0,
+        rcmCgst: invoiceType === 'RCM' ? rcmCgst : 0,
+        rcmSgst: invoiceType === 'RCM' ? rcmSgst : 0,
+        
         paidAmount: parseFloat(paidAmount) || 0,
         balanceAmount: balanceAmount,
         
@@ -1121,7 +1193,7 @@ export default function GenerateBillPage() {
           '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
       }
 
-      return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
+      return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
     })();
 
     const printHTML = `
@@ -1664,7 +1736,7 @@ export default function GenerateBillPage() {
                 '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
             }
     
-            return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div><div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
+            return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
           })()}
 
           <!-- Bank Details -->
@@ -2027,6 +2099,12 @@ export default function GenerateBillPage() {
             setNote={setNote}
             notificationDetails={notificationDetails}
             setNotificationDetails={setNotificationDetails}
+            rcmIgst={rcmIgst}
+            setRcmIgst={setRcmIgst}
+            rcmCgst={rcmCgst}
+            setRcmCgst={setRcmCgst}
+            rcmSgst={rcmSgst}
+            setRcmSgst={setRcmSgst}
             ddoDetails={ddoDetails}
             bankDetails={bankDetails}
             saving={saving}

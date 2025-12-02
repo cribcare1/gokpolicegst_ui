@@ -74,7 +74,14 @@ export default function ProformaAdviceForm({
   totalAmount,
   totalAdviceAmountReceivable,
   renderDDOSignatureSection,
-  onBackToList
+  onBackToList,
+  // RCM specific fields
+  rcmIgst,
+  setRcmIgst,
+  rcmCgst,
+  setRcmCgst,
+  rcmSgst,
+  setRcmSgst
 }) {
   const router = useRouter();
 
@@ -224,52 +231,9 @@ export default function ProformaAdviceForm({
           width: 100%;
           background: white;
           color: black;
-          font-size: 12px;
-          line-height: 1.2;
-          padding: 0;
-          margin: 0;
         }
         .no-print {
           display: none !important;
-        }
-        .page-break {
-          page-break-after: always;
-        }
-        table {
-          border-collapse: collapse;
-          width: 100%;
-          font-size: 10px;
-        }
-        th, td {
-          border: 1px solid #000;
-          padding: 4px;
-          text-align: left;
-        }
-        th {
-          background-color: #f0f0f0;
-          font-weight: bold;
-        }
-        .print-header {
-          border-bottom: 2px solid #000;
-          margin-bottom: 10px;
-          padding-bottom: 10px;
-        }
-        .print-section {
-          margin-bottom: 15px;
-        }
-        .print-total {
-          font-weight: bold;
-          background-color: #f8f8f8;
-        }
-        .compact-print {
-          font-size: 10px;
-        }
-        .compact-print table {
-          font-size: 9px;
-        }
-        .compact-print .print-header {
-          margin-bottom: 5px;
-          padding-bottom: 5px;
         }
       }
       
@@ -444,12 +408,12 @@ export default function ProformaAdviceForm({
                       </div>
                     )}
 
-                    {notificationDetails && (
+                    {/* {notificationDetails && (
                       <div className="text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">Notification: </span>
                         <span className="text-[var(--color-text-secondary)]">{notificationDetails}</span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
@@ -634,6 +598,28 @@ export default function ProformaAdviceForm({
                       </div>
                     </div>
 
+                    {/* RCM specific fields - only show when invoiceType is RCM */}
+                    {invoiceType === 'RCM' && (
+                      <div className="space-y-3">
+                        <div className="border-t border-[var(--color-border)] pt-3">
+                          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                            RCM Tax Details
+                          </h4>
+                          <div className="w-full">
+                            <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)] mobile-text-sm">
+                              GST Payable Under RCM by the Recipient
+                            </label>
+                            <div className="w-full px-3 py-2 bg-[var(--color-muted)]/20 border border-[var(--color-border)] rounded text-sm font-medium bg-[var(--color-background)] text-[var(--color-text-primary)] mobile-text-sm">
+                              IGST : {formatCurrency(rcmIgst)}          CGST : {formatCurrency(rcmCgst)}/-          SGST: {formatCurrency(rcmSgst)}/-
+                            </div>
+                            <p className="text-xs text-[var(--color-text-secondary)] mt-1 mobile-text-xs">
+                              * These values are automatically calculated based on the GST calculation
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)] mobile-text-sm">
                         Total Invoice Value in Words
@@ -757,7 +743,7 @@ export default function ProformaAdviceForm({
                       Saving...
                     </>
                   ) : (
-                    isInvoiceCreation ? 'Create Tax Invoice' : 'Save Bill'
+                    isInvoiceCreation ? 'Create   ' : 'Save Bill'
                   )}
                 </Button>
               </div>
@@ -960,7 +946,7 @@ export default function ProformaAdviceForm({
         </form>
       </Modal>
 
-      {/* Bill Preview Modal */}
+      {/* Bill Preview Modal - EXACTLY SAME AS ProformaAdviceList */}
       <Modal
         isOpen={showPreviewModal}
         onClose={() => {
@@ -980,7 +966,7 @@ export default function ProformaAdviceForm({
                 onClick={() => setPrintOptimizedView(!printOptimizedView)}
                 className="px-4 py-2 mobile-full mobile-text-sm"
               >
-                {printOptimizedView ? 'Normal View' : 'Print View'}
+                {printOptimizedView ? 'Normal View' : 'Compact View'}
               </Button>
               <span className="text-sm text-[var(--color-text-secondary)] mobile-text-sm">
                 {printOptimizedView ? 'Optimized for printing' : 'Normal preview'}
@@ -991,48 +977,52 @@ export default function ProformaAdviceForm({
             </div>
           </div>
 
-          {/* Preview Content */}
+          {/* Preview Content - Same as ProformaAdviceList */}
           <div 
             id="bill-preview-content" 
             className={`flex-1 overflow-auto bg-white text-black p-6 print-content ${
-              printOptimizedView ? 'compact-print' : ''
+              printOptimizedView ? 'print-optimized' : ''
             }`}
+            style={{ 
+              maxWidth: '210mm', 
+              margin: '0 auto',
+              minHeight: '297mm'
+            }}
           >
             {/* Print Header */}
-            <div className="print-header mb-6">
-              <div className="flex items-center justify-between mb-4 mobile-stack mobile-space-y-4">
-                <div className="flex items-center gap-4 mobile-stack mobile-space-y-2">
-                  <div className="relative w-20 h-20">
+            <div className="print-header mb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-2 flex-1">
+                  <div className="relative w-12 h-12 mt-1">
                     <Image
                       src="/1.png"
                       alt="Organization Logo"
-                      fill
-                      className="object-contain"
-                      quality={90}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-contain"
                     />
                   </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-gray-800 mobile-text-lg">
-                      {gstDetails?.gstName || 'Organization Name'}
+                  <div className="flex-1">
+                    <h1 className="text-sm font-bold text-gray-800 leading-tight">
+                      {gstDetails?.gstName || 'Government of Karnataka Police Department'}
                     </h1>
-                    <p className="text-sm text-gray-600 mobile-text-xs">{gstDetails?.address || ''}</p>
-                    <p className="text-sm text-gray-600 mobile-text-xs">{gstDetails?.city || ''} - {gstDetails?.pinCode || ''}</p>
-                    <p className="text-sm text-gray-600 mobile-text-xs">GSTIN: {gstDetails?.gstNumber || ''}</p>
+                    <p className="text-xs text-gray-600 leading-tight">{gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
+                    <p className="text-xs text-gray-600">GSTIN: {gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
                   </div>
                 </div>
-                <div className="text-right mobile-text-center mobile-full">
-                  <h2 className="text-2xl font-bold text-[#2C5F2D] mobile-text-xl">PROFORMA NUMBER</h2>
-                  <p className="text-sm font-semibold mobile-text-xs">Invoice No: {invoiceNumber}</p>
-                  <p className="text-sm mobile-text-xs">Date: {formatDate(billDetails.date)}</p>
+                <div className="text-right">
+                  <h2 className="text-lg font-bold text-[#2C5F2D]">PROFORMA ADVISE</h2>
+                  <p className="text-sm font-semibold">Proforma No: {invoiceNumber}</p>
+                  <p className="text-sm">Date: {formatDate(billDetails.date)}</p>
                 </div>
               </div>
             </div>
 
             {/* Customer and Invoice Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 print-section mobile-grid-1 mobile-space-y-4">
-              <div className="border border-gray-300 p-4 rounded">
-                <h3 className="font-bold mb-3 text-gray-800 border-b pb-2 mobile-text-sm">Bill To</h3>
-                <div className="space-y-2 text-sm mobile-text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+              <div className="border border-gray-300 p-3 rounded">
+                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Service Receiver Details</h3>
+                <div className="space-y-1 text-xs">
                   <p><strong>Name:</strong> M/s {selectedCustomer?.customerName || ''}</p>
                   <p><strong>GSTIN:</strong> {selectedCustomer?.gstNumber || 'Not provided'}</p>
                   <p><strong>Address:</strong> {selectedCustomer?.address || ''}</p>
@@ -1041,9 +1031,9 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
 
-              <div className="border border-gray-300 p-4 rounded">
-                <h3 className="font-bold mb-3 text-gray-800 border-b pb-2 mobile-text-sm">Invoice Details</h3>
-                <div className="space-y-2 text-sm mobile-text-xs">
+              <div className="border border-gray-300 p-3 rounded">
+                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Advice Details</h3>
+                <div className="space-y-1 text-xs">
                   <p><strong>DDO Code:</strong> {ddoDetails.ddoCode}</p>
                   <p><strong>DDO Name:</strong> {ddoDetails.fullName}</p>
                   <p><strong>Place of Supply:</strong> {billDetails.placeOfSupply || 'Bengaluru'}</p>
@@ -1053,65 +1043,78 @@ export default function ProformaAdviceForm({
             </div>
 
             {/* Line Items Table */}
-            <div className="mb-6 print-section mobile-table-container">
-              <table className="w-full border-collapse border border-gray-400 mobile-table">
+            <div className="mb-3 print-section">
+              <table className="w-full border-collapse border border-gray-400">
                 <thead>
                   <tr className="bg-[#2C5F2D] text-white">
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">S.No</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">Description</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">HSN Code</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">Qty</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">Unit</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">Amount (₹)</th>
-                    <th className="border border-gray-400 p-2 text-left font-bold text-sm mobile-text-xs">Taxable Value (₹)</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">S.No</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Description</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">HSN Code</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Qty</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Unit</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Amount (₹)</th>
+                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Taxable Value (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((item, index) => (
                     <tr key={index}>
-                      <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">{item.serialNo}</td>
-                      <td className="border border-gray-400 p-2 text-sm mobile-text-xs">{item.description}</td>
-                      <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">{item.hsnNumber}</td>
-                      <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">1</td>
-                      <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">Nos</td>
-                      <td className="border border-gray-400 p-2 text-sm text-right mobile-text-xs">{formatCurrency(item.amount)}</td>
-                      <td className="border border-gray-400 p-2 text-sm text-right mobile-text-xs">{formatCurrency(item.amount)}</td>
+                      <td className="border border-gray-400 p-1 text-xs text-center">{item.serialNo}</td>
+                      <td className="border border-gray-400 p-1 text-xs">{item.description}</td>
+                      <td className="border border-gray-400 p-1 text-xs text-center">{item.hsnNumber}</td>
+                      <td className="border border-gray-400 p-1 text-xs text-center">1</td>
+                      <td className="border border-gray-400 p-1 text-xs text-center">Nos</td>
+                      <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(item.amount)}</td>
+                      <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(item.amount)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-100 font-bold print-total">
-                    <td colSpan="3" className="border border-gray-400 p-2 text-sm text-right mobile-text-xs">Total</td>
-                    <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">{totalQuantity}</td>
-                    <td className="border border-gray-400 p-2 text-sm text-center mobile-text-xs">Nos</td>
-                    <td className="border border-gray-400 p-2 text-sm text-right mobile-text-xs">Total Amount</td>
-                    <td className="border border-gray-400 p-2 text-sm text-right mobile-text-xs">{formatCurrency(totalAmount)}</td>
+                  <tr className="bg-gray-100 font-bold">
+                    <td colSpan="3" className="border border-gray-400 p-1 text-xs text-right">Total</td>
+                    <td className="border border-gray-400 p-1 text-xs text-center">{totalQuantity}</td>
+                    <td className="border border-gray-400 p-1 text-xs text-center">Nos</td>
+                    <td className="border border-gray-400 p-1 text-xs text-right">Total Amount</td>
+                    <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(totalAmount)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             {/* Calculation and Additional Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 print-section mobile-grid-1 mobile-space-y-4">
-              <div className="border border-gray-300 p-4 rounded">
-                <h3 className="font-bold mb-3 text-gray-800 border-b pb-2 mobile-text-sm">Additional Information</h3>
-                <div className="space-y-3 text-sm mobile-text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+              <div className="border border-gray-300 p-3 rounded">
+                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Additional Information</h3>
+                <div className="space-y-2 text-xs">
                   <div>
                     <p className="font-semibold">Invoice Remarks:</p>
-                    <p className="mt-1 p-2 bg-gray-50 rounded border mobile-text-xs">{note || '-'}</p>
+                    <p className="mt-1 p-1 bg-gray-50 rounded border">{note || '-'}</p>
                   </div>
                   <div>
                     <p className="font-semibold">Notification Details:</p>
-                    <p className="mt-1 p-2 bg-gray-50 rounded border min-h-[50px] mobile-text-xs">{notificationDetails || '-'}</p>
+                    <p className="mt-1 p-1 bg-gray-50 rounded border min-h-[40px]">{notificationDetails || '-'}</p>
                   </div>
+                  
+                  {/* RCM specific fields in preview */}
+                  {invoiceType === 'RCM' && (
+                    <div>
+                      <p className="font-semibold">RCM Tax Details:</p>
+                      <div className="mt-1 p-2 bg-gray-50 rounded border text-xs">
+                        <span className="font-medium">GST Payable Under RCM by the Recipient</span>
+                        <div className="mt-1 font-semibold">
+                          IGST : {formatCurrency(rcmIgst)}          CGST : {formatCurrency(rcmCgst)}/-          SGST: {formatCurrency(rcmSgst)}/-
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <p className="font-semibold">Amount in Words:</p>
-                    <p className="mt-1 p-2 bg-gray-50 rounded border italic mobile-text-xs">{amountInWords(totalAdviceAmountReceivable)}</p>
+                    <p className="mt-1 p-1 bg-gray-50 rounded border italic">{amountInWords(totalAdviceAmountReceivable)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border border-gray-300 p-4 rounded">
-                <h3 className="font-bold mb-3 text-gray-800 border-b pb-2 mobile-text-sm">Calculation Summary</h3>
-                <div className="space-y-2 text-sm mobile-text-xs">
+              <div className="border border-gray-300 p-3 rounded">
+                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Calculation Summary</h3>
+                <div className="space-y-1 text-xs">
                   <div className="flex justify-between border-b py-1">
                     <span>Total Taxable Value:</span>
                     <span className="font-semibold">{formatCurrency(totalAmount)}</span>
@@ -1131,14 +1134,14 @@ export default function ProformaAdviceForm({
                         <span>SGST @ {formatPercent(displaySgstRate)}%:</span>
                         <span>{gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
                       </div>
-                      <div className="flex justify-between border-b py-2 font-semibold">
+                      <div className="flex justify-between border-b py-1 font-semibold">
                         <span>Total GST:</span>
                         <span>{formatCurrency(gstCalculation?.gstAmount || 0)}</span>
                       </div>
                     </>
                   )}
 
-                  <div className="flex justify-between py-3 bg-[#2C5F2D] text-white rounded px-4 mt-4 font-bold mobile-text-sm">
+                  <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold text-xs">
                     <span>Total Invoice Amount:</span>
                     <span>{formatCurrency(totalAdviceAmountReceivable)}</span>
                   </div>
@@ -1146,40 +1149,53 @@ export default function ProformaAdviceForm({
               </div>
             </div>
 
-            {/* Bank Details and Footer */}
-            <div className="print-section">
-              <div className="border border-gray-300 p-4 rounded mb-4">
-                <h3 className="font-bold mb-3 text-gray-800 border-b pb-2 mobile-text-sm">Bank Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mobile-grid-1 mobile-space-y-2 mobile-text-xs">
-                  <div><strong>Bank:</strong> {bankDetails?.bankName || '-'}</div>
-                  <div><strong>Branch:</strong> {bankDetails?.bankBranch || '-'}</div>
-                  <div><strong>IFSC:</strong> {bankDetails?.ifscCode || '-'}</div>
-                  <div><strong>Account No:</strong> {bankDetails?.accountNumber || '-'}</div>
-                </div>
+            {/* Bank Details */}
+            <div className="border border-gray-300 p-3 rounded mb-3 print-section">
+              <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Bank Details</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><strong>Bank:</strong> {bankDetails?.bankName || 'State Bank of India'}</div>
+                <div><strong>Branch:</strong> {bankDetails?.bankBranch || 'Bangalore Main'}</div>
+                <div><strong>IFSC:</strong> {bankDetails?.ifscCode || 'SBIN0001234'}</div>
+                <div><strong>Account No:</strong> {bankDetails?.accountNumber || '1234567890'}</div>
               </div>
+            </div>
 
-              {/* Signature Section */}
-              <div className="signature-section flex justify-end mt-8">
+            {/* Signature Section - EXACTLY SAME */}
+            <div className="signature-section print-section mt-4">
+              <div className="flex justify-end">
                 <div className="text-center">
                   {ddoSignature ? (
-                    <div className="mb-2">
+                    <div className="mb-2 p-2 border border-gray-300 bg-white">
                       <img 
                         src={ddoSignature} 
                         alt="DDO Signature" 
-                        className="h-16 max-w-48 object-contain mx-auto mobile-w-32"
+                        className="h-20 max-w-48 object-contain mx-auto"
                         style={{ imageRendering: 'crisp-edges' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = `
+                            <div class="text-red-500 text-center py-4">
+                              <svg class="w-6 h-6 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                              </svg>
+                              Signature Image Not Available
+                            </div>
+                          `;
+                        }}
                       />
                     </div>
                   ) : (
-                    <div className="h-16 border-b border-gray-400 mb-2 w-48 mobile-w-32"></div>
+                    <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center">
+                      <span className="text-gray-500 text-sm">No Signature Available</span>
+                    </div>
                   )}
-                  <p className="text-sm font-semibold mobile-text-xs">Signature of DDO</p>
-                  <p className="text-sm mobile-text-xs">{ddoDetails?.fullName || ''}</p>
+                  <p className="text-xs font-semibold mt-1">Signature of DDO</p>
+                  <p className="text-xs">{ddoDetails?.fullName || 'Karnataka Police Department'}</p>
                 </div>
               </div>
 
-              <div className="text-center mt-8 pt-4 border-t border-gray-300">
-                <p className="text-xs text-gray-600 italic mobile-text-xs">This is a computer generated document</p>
+              <div className="text-center mt-4 pt-2 border-t border-gray-300">
+                <p className="text-xs text-gray-600 italic">This is a computer generated document</p>
               </div>
             </div>
           </div>
