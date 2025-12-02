@@ -666,7 +666,7 @@ export default function ProformaAdviceForm({
                   )}
 
                   <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded-lg px-4 mt-4 font-semibold mobile-text-sm">
-                    <span className="text-base mobile-text-sm">Total Invoice Amount</span>
+                    <span className="text-base mobile-text-sm">Total amount payable</span>
                     <span className="text-base mobile-text-sm">
                       {formatCurrency(totalAdviceAmountReceivable)}
                     </span>
@@ -1142,7 +1142,7 @@ export default function ProformaAdviceForm({
                   )}
 
                   <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold text-xs">
-                    <span>Total Invoice Amount:</span>
+                    <span>Total amount payable:</span>
                     <span>{formatCurrency(totalAdviceAmountReceivable)}</span>
                   </div>
                 </div>
