@@ -365,7 +365,7 @@ export default function GenerateBillPage() {
           serviceType: item?.customerResponse?.type  || '-',
           proformaDate: item.invoiceDate || item.createdAt || item.proformaDate || null,
           invoiceDate: new Date().toISOString(),
-          signature: item.signImage || (item.ddoSignature && item.ddoSignature.signatureUrl) || null,
+          signature: getSignatureUrl(item.signImage || (item.ddoSignature && item.ddoSignature.signatureUrl)),
           raw: {
             ...item,
             // Ensure customer data is preserved in raw for edit functionality
@@ -513,8 +513,37 @@ export default function GenerateBillPage() {
     toast.success('Opening Proforma Advice form for invoice creation');
   };
 
+  // Helper function to get signature URL - consistent with ProformaAdviceList
+  const getSignatureUrl = (signaturePath) => {
+    if (!signaturePath) return null;
+    if (signaturePath.startsWith('http')) return signaturePath;
+    if (signaturePath.startsWith('/')) return signaturePath;
+    return API_ENDPOINTS.IMAGE_BASE_URL + signaturePath;
+  };
+
+  // Reset form to initial state for new Proforma Advice
+  const resetFormState = () => {
+    setSelectedCustomer(null);
+    setPaidAmount(0);
+    setDdoSignature(null);
+    setNote('');
+    setInvoiceType('FCM');
+    setCustomerType('Govt');
+    setGstCalculation(null);
+    setLineItems([
+      { serialNo: 1, description: '', amount: "", hsnNumber: '', quantity: 1 },
+      { serialNo: 2, description: '', amount: "", hsnNumber: '', quantity: 1 },
+    ]);
+    setIsInvoiceCreation(false);
+  };
+
   const handleOpenEditProforma = (record) => {
-    if (!record) return;
+    // If no record is passed, reset form for new entry
+    if (!record) {
+      resetFormState();
+      setShowForm(true);
+      return;
+    }
     
     // Prefill paidAmount (tax invoice amount) so the field becomes editable in the form
     const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
@@ -523,8 +552,9 @@ export default function GenerateBillPage() {
 
     setPaidAmount(Number.isFinite(taxInvoiceAmount) ? Math.floor(taxInvoiceAmount) : 0);
     
-    // Set signature data if available
-    const signatureData = record.signature || (record.raw && (record.raw.signature || (record.raw.ddoSignature && record.raw.ddoSignature.signatureUrl)));
+    // Set signature data if available - use consistent URL handling
+    const signaturePath = record.signature || (record.raw && (record.raw.signature || (record.raw.ddoSignature && record.raw.ddoSignature.signatureUrl)));
+    const signatureData = getSignatureUrl(signaturePath);
     if (signatureData) {
       setDdoSignature(signatureData);
     }
@@ -2012,16 +2042,25 @@ export default function GenerateBillPage() {
         {showForm && (
           <div className="mb-4">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-xl font-bold mb-1 text-[var(--color-text-primary)]">
-                  {isInvoiceCreation ? 'Create Tax Invoice' : t('nav.generateBill')}
-                </h1>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {isInvoiceCreation 
-                    ? 'Creating tax invoice from Proforma Advice with pre-filled data'
-                    : t('bill.generateBillSubtitle')
-                  }
-                </p>
+              <div className="flex items-start gap-4">
+                <Button
+                  onClick={() => setShowForm(false)}
+                  variant="outline"
+                  className="px-4 py-2 text-sm border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] mt-1"
+                >
+                  ← {isInvoiceCreation ? 'Back to Proforma List' : 'Back to List'}
+                </Button>
+                <div>
+                  <h1 className="text-xl font-bold mb-1 text-[var(--color-text-primary)]">
+                    {isInvoiceCreation ? 'Create Tax Invoice' : t('nav.generateBill')}
+                  </h1>
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    {isInvoiceCreation 
+                      ? 'Creating tax invoice from Proforma Advice with pre-filled data'
+                      : t('bill.generateBillSubtitle')
+                    }
+                  </p>
+                </div>
               </div>
               <div className="flex items-end gap-4">
                 <div>
@@ -2126,7 +2165,6 @@ export default function GenerateBillPage() {
             setProformaSearchTerm={setProformaSearchTerm}
             filteredProformaList={filteredProformaList}
             proformaLoading={proformaLoading}
-            onCreateInvoiceFromProforma={handleCreateInvoiceFromProforma}
             onShowForm={handleOpenEditProforma}
             onUpdateProforma={handleUpdateProformaInline}
           />
