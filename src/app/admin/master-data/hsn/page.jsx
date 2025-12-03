@@ -229,23 +229,15 @@ export default function HSNRecordsPage() {
 
   useEffect(() => {
     fetchGSTINList();
-    fetchBills();
     // Fetch data initially even if gstinList is empty (will be re-transformed when gstinList loads)
     fetchData();
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
     if (gstinListHook && gstinListHook.length > 0) {
       setGstinList(gstinListHook);
     }
   }, [gstinListHook]);
-
-  // Fetch HSN data after GSTIN list is loaded (if not already fetched)
-  useEffect(() => {
-    if ((gstinList.length > 0 || gstinListHook?.length > 0) && data.length === 0) {
-      fetchData();
-    }
-  }, [gstinList.length, gstinListHook?.length]);
 
   // Re-transform data when gstinList is updated (in case data was fetched before gstinList was ready)
   useEffect(() => {
@@ -326,36 +318,9 @@ export default function HSNRecordsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gstinList.length, gstinListHook?.length]);
-
-  useEffect(() => {
-    console.log('Data state changed:', data);
-    console.log('Data length:', data.length);
-    if (data.length > 0) {
-      console.log('First data item:', data[0]);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    console.log('Filtered data changed:', filteredData);
-    console.log('Filtered data length:', filteredData.length);
-  }, [filteredData]);
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = data.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-      setFilteredData(filtered);
-    } else {
-      setFilteredData(data);
-    }
-  }, [searchTerm, data]);
-
-  const fetchGSTINList = async () => {
+const fetchGSTINList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 2000);
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
       if (response?.status === 'success' && response?.data) {
         // Ensure gstId is preserved in the GSTIN list
         const processedGstinList = response.data.map(item => ({
@@ -374,16 +339,19 @@ export default function HSNRecordsPage() {
     }
   };
 
-  const fetchBills = async () => {
-    try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 2000);
-      if (response?.status === 'success' && response?.data) {
-        setBills(response.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching bills:', error);
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = data.filter((item) =>
+        Object.values(item).some((val) =>
+          String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(data);
     }
-  };
+  }, [searchTerm, data]);
+
 
   const fetchData = async () => {
     try {
@@ -391,9 +359,6 @@ export default function HSNRecordsPage() {
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.HSN_LIST);
       
       console.log('HSN API Response:', response);
-      console.log('Response data:', response?.data);
-      console.log('Response data type:', Array.isArray(response?.data) ? 'Array' : typeof response?.data);
-      console.log('Response data length:', Array.isArray(response?.data) ? response.data.length : 'Not an array');
       
       if (response && response.status === 'success') {
         // Ensure response.data is an array
@@ -413,26 +378,16 @@ export default function HSNRecordsPage() {
           rawData = [];
         }
         
-        console.log('Processed raw data (array):', rawData);
-        console.log('Raw data length:', rawData.length);
-        
         // Use current gstinList state or fallback to hook
         const currentGstinList = gstinList.length > 0 ? gstinList : (gstinListHook || []);
         
-        console.log('Current GSTIN List:', currentGstinList);
-        console.log('Current GSTIN List length:', currentGstinList.length);
-        
         const transformedData = rawData.map((item, index) => {
-          console.log(`Processing item ${index}:`, item);
           const transformed = { ...item };
           
           // First, try to get GSTIN number from various possible field names in the item itself
           transformed.gstinNumber = transformed.gstinNumber || 
                                     transformed.gstNumber || 
-                                    transformed.gstin || 
-                                    transformed.gstIN ||
-                                    transformed.gstin_number ||
-                                    transformed.gst_number;
+                                    transformed.gstin ;
           
           // Map gstId to gstinNumber if gstinNumber is still missing
           if (!transformed.gstinNumber && transformed.gstId && currentGstinList.length > 0) {
@@ -443,14 +398,12 @@ export default function HSNRecordsPage() {
                 g.id === itemGstId ||
                 String(g.gstId) === String(itemGstId) ||
                 String(g.id) === String(itemGstId) ||
-                Number(g.gstId) === Number(itemGstId) ||
-                Number(g.id) === Number(itemGstId)
+                Number(g.gstId) === Number(itemGstId) 
               );
             });
             if (gst) {
               transformed.gstinNumber = gst.gstNumber || gst.gstinNumber || gst.value || gst.label || gst.gstIN;
-              console.log(`Mapped gstId ${transformed.gstId} to gstinNumber: ${transformed.gstinNumber}`);
-              console.log('Matched GSTIN object:', gst);
+             
             } else {
               console.log(`Could not find GSTIN for gstId: ${transformed.gstId} in list of ${currentGstinList.length} items`);
               console.log('Available GSTIN IDs:', currentGstinList.map(g => ({ gstId: g.gstId, id: g.id, gstNumber: g.gstNumber })));
@@ -476,7 +429,7 @@ export default function HSNRecordsPage() {
               });
               if (gst) {
                 transformed.gstinNumber = gst.value || gst.gstNumber || gst.gstinNumber || gst.label || gst.gstIN;
-                console.log(`Found GSTIN by matching value: ${transformed.gstinNumber}`);
+              
                 break;
               }
             }
@@ -485,13 +438,6 @@ export default function HSNRecordsPage() {
           // Final fallback: use gstNumber if available (even if it's the same field)
           if (!transformed.gstinNumber && transformed.gstNumber) {
             transformed.gstinNumber = transformed.gstNumber;
-          }
-          
-          // Log final GSTIN number
-          if (transformed.gstinNumber) {
-            console.log(`Final GSTIN Number for item ${index}: ${transformed.gstinNumber}`);
-          } else {
-            console.warn(`No GSTIN Number found for item ${index}:`, transformed);
           }
           
           // Map hsnNumber to hsnCode if needed
@@ -516,17 +462,10 @@ export default function HSNRecordsPage() {
           
           // Preserve isEditable field from API response
           transformed.isEditable = item.isEditable;
-          
-          console.log(`Transformed item ${index}:`, transformed);
+      
           return transformed;
         });
         
-        console.log('Final transformed data:', transformedData);
-        console.log('Setting data with', transformedData.length, 'items');
-        
-        if (transformedData.length > 0) {
-          console.log('Sample transformed item:', transformedData[0]);
-        }
         
         setData(transformedData);
         setFilteredData(transformedData);
@@ -734,7 +673,7 @@ export default function HSNRecordsPage() {
       if (response && response.status === 'success') {
         toast.success('HSN record deleted successfully');
         fetchData();
-        fetchBills(); // Refresh bills to update invoice status
+    // Refresh bills to update invoice status
       } else {
         const errorMessage = response?.message || 'Failed to delete record';
         toast.error(errorMessage);
@@ -874,7 +813,7 @@ export default function HSNRecordsPage() {
         toast.success(t('alert.success'));
         setIsModalOpen(false);
         fetchData();
-        fetchBills(); // Refresh bills to update invoice status
+ // Refresh bills to update invoice status
       } else {
         toast.error(response?.message || t('alert.error'));
       }
@@ -989,6 +928,7 @@ export default function HSNRecordsPage() {
         key: 'hsnCode', 
         label: 'HSN/SSC Code', 
         required: true,
+        maxLength: 8,
         readOnly: editingItem && hasInvoices
       },
       { 
@@ -1179,7 +1119,7 @@ export default function HSNRecordsPage() {
           title={editingItem ? `Edit HSN Master` : `Add HSN Master`}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {getFormFields().map((field) => {
               const hasInvoices = editingItem ? hasInvoicesForHSN(
                 editingItem.id || editingItem.hsnId,
@@ -1297,7 +1237,7 @@ export default function HSNRecordsPage() {
               );
             })}
 
-            <div className="flex items-center justify-end gap-3 pt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 md:col-span-2">
               <Button
                 type="button"
                 variant="secondary"

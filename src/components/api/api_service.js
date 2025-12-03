@@ -10,7 +10,7 @@ static  getToken = () => {
 };
 
 // **1️⃣ GET Request Handler**
-static async handleGetRequest(url, timeoutMs = 4000) {
+static async handleGetRequest(url, timeoutMs = 7000) {
   console.log("GET Call URL:", url);
 
   try {
@@ -178,9 +178,10 @@ static async handlePostMultiPartFileRequest(url, req, file) {
   // Create FormData
   const formData = new FormData();
   formData.append("request", JSON.stringify(req)); // 🔥 Backend expects raw JSON string
- if (!file || !(file instanceof File || file instanceof Blob)) {
-    console.error("No file added.");
-    formData.append("file", file); 
+ if (file && (file instanceof File || file instanceof Blob)) {
+  formData.append("file", file);
+  } else {
+    console.error("❌ No valid file provided");
   }
 
   // Debug FormData content
