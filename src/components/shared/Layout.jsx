@@ -75,7 +75,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
     { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
     { href: '/ddo/ddo_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'reports' },
-    { href: '/ddo/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'reports' },
+    // { href: '/ddo/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'reports' },
   ];
 
   const gstinNavItems = [
