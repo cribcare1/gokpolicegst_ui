@@ -39,7 +39,8 @@ export const API_ENDPOINTS = {
   DDO_UPDATE: `${API_BASE_URL}/user/addDDOByGSTIN`,
   DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
   DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
-
+  GST_TDS_MONTHLY_REPORT : `${API_BASE_URL}/monthly-gst-filing/getMonthlyGstFilingByDdoId/`,
+  TDS_MONTHLY_SAVE : `${API_BASE_URL}/monthly-gst-filing/saveOrUpdateNew`,
   // HSN Master Data Endpoints
   HSN_LIST: `${API_BASE_URL}/hsn/getAllHSN`,
   HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,

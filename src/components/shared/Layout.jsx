@@ -65,6 +65,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/admin/master-data/hsn', label: 'nav.hsn', icon: 'hsn' },
     { href: '/admin/master-data/bank', label: 'nav.bank', icon: 'bank' },
     { href: '/admin/reports', label: 'nav.reports', icon: 'reports' },
+  
   ];
 
   const ddoNavItems = [
@@ -73,6 +74,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
     { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
+    { href: '/ddo/ddo_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'reports' },
+    { href: '/ddo/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'reports' },
   ];
 
   const gstinNavItems = [
