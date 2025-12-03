@@ -133,6 +133,7 @@ export const calculateGST = (
   let isSameStateFlag = false;
   if (supplierGSTIN && customerGSTIN) {
     isSameStateFlag = isSameState(supplierGSTIN, customerGSTIN);
+    console.log("isSameStateFlag",isSameStateFlag);
   }
 
   // Get GST rates from HSN details if available
@@ -409,13 +410,16 @@ export const validateDDOCode = (ddoCode) => {
 };
 
 /**
- * Validates HSN code (4-8 digits)
+ * Validates HSN code (4-8 digits, maximum 8 characters)
  */
 export const validateHSN = (hsn) => {
   if (!hsn) return { valid: false, message: 'HSN code is required' };
   const cleaned = hsn.trim().replace(/\D/g, '');
-  if (cleaned.length < 4 || cleaned.length > 8) {
-    return { valid: false, message: 'HSN code must be between 4 and 8 digits' };
+  if (cleaned.length < 4) {
+    return { valid: false, message: 'HSN code must be at least 4 digits' };
+  }
+  if (cleaned.length > 8) {
+    return { valid: false, message: 'HSN code cannot exceed 8 characters' };
   }
   return { valid: true, cleaned };
 };

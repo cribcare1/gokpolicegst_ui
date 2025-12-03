@@ -5,7 +5,7 @@ import Button from '@/components/shared/Button';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
 import { toast } from 'sonner';
-import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash } from 'lucide-react';
+import { Edit, Save, X, Building2, MapPin, Mail, Phone, Hash, FileText, Landmark } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
@@ -20,6 +20,8 @@ export default function DDOProfilePage() {
     pinCode: '',
     mobileNumber: '',
     email: '',
+    gstinNumber: '',
+    gstinBankDetails: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -263,6 +265,42 @@ export default function DDOProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const formatLabel = (label = '') => {
+    return label
+      .replace(/_/g, ' ')
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const formatBankDetails = (details) => {
+    console.log("Bank details to format: ", details);
+    if (!details) return '-';
+    if (typeof details === 'string') {
+      return details.trim() || '-';
+    }
+    if (Array.isArray(details)) {
+      const filtered = details.filter((item) => !!item);
+      return filtered.length ? filtered.join(' | ') : '-';
+    }
+    if (typeof details === 'object') {
+      // Exclude sensitive/metadata fields: id, gstId, gstName, gstNumber, status
+      const excludedKeys = ['id', 'gstId', 'gstName', 'gstNumber', 'status'];
+      const entries = Object.entries(details)
+        .filter(([key, value]) => !excludedKeys.includes(key) && value)
+        .filter(([, value]) => value);
+      if (!entries.length) return '-';
+      return entries
+        .map(([key, value]) => `${formatLabel(key)}: ${value}`)
+        .join(' | ');
+    }
+    return String(details);
+  };
+
+  const gstinValue = formData.gstinNumber || formData.gstNumber || formData.gstin || '';
+  const gstinBankDetails = formatBankDetails(formData.bankDetailsResponse || formData.bankDetails);
+
   return (
     <Layout role="ddo">
       <div className="space-y-6 sm:space-y-8">
@@ -328,20 +366,9 @@ export default function DDOProfilePage() {
                     <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
                       DDO Code
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="ddoCode"
-                        value={formData.ddoCode}
-                        onChange={handleChange}
-                        className="premium-input w-full px-4 py-3 text-base"
-                        placeholder="Enter DDO code"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                        <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.ddoCode}</p>
-                      </div>
-                    )}
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium font-mono">{formData.ddoCode}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -370,6 +397,25 @@ export default function DDOProfilePage() {
                         <p className="text-[var(--color-text-primary)] font-medium">{formData.fullName}</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* GSTIN Number (Read Only) */}
+              <div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg mt-1">
+                    <FileText className="text-cyan-600 dark:text-cyan-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      GSTIN Number
+                    </label>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium font-mono uppercase tracking-wide">
+                        {gstinValue || '-'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -426,6 +472,25 @@ export default function DDOProfilePage() {
                         <p className="text-[var(--color-text-primary)] font-medium">{formData.city || '-'}</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* GSTIN Bank Details (Read Only) */}
+              <div className="lg:col-span-2">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg mt-1">
+                    <Landmark className="text-amber-600 dark:text-amber-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      GSTIN Bank Details
+                    </label>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium">
+                        {gstinBankDetails}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

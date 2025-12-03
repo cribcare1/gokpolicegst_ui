@@ -19,6 +19,8 @@ export const API_ENDPOINTS = {
   DDO_REFRESH_COUNT: `${API_BASE_URL}/user/viewDashboardData?tanNumber=`,
   DDO_DETAILS_EDITBUTTON: `${API_BASE_URL}/user/editDdo/`,
   
+  IMAGE_BASE_URL: `${API_BASE_URL}/auth/getImage/gst/`,
+
   // GST Master Data Endpoints
   GST_LIST: `${API_BASE_URL}/gst/activeGSTDetails`,
   GST_ADD: `${API_BASE_URL}/gst/saveOrUpdateGST`,
@@ -52,7 +54,7 @@ export const API_ENDPOINTS = {
   BANK_LIST: `${API_BASE_URL}/banks/activeBankDetails`,
   BANK_ADD: `${API_BASE_URL}/banks/saveOrUpdateBank`,
   BANK_UPDATE: `${API_BASE_URL}/banks/saveOrUpdateBank`,
-  BANK_DELETE: `${API_BASE_URL}/banks/delete/`,
+  BANK_DELETE: `${API_BASE_URL}/banks/deleteBank/`,
   
   // Customer Endpoints
   CUSTOMER_LIST: `${API_BASE_URL}/customer/list`,
@@ -65,7 +67,9 @@ export const API_ENDPOINTS = {
   
   // Bill/Invoice Endpoints
   BILL_LIST: `${API_BASE_URL}/bill/list`,
-  BILL_ADD: `${API_BASE_URL}/bill/add`,
+  INVOICE_DDO_LIST: `${API_BASE_URL}/invoices/list?ddoId=`,
+  PROFORMA_ADVICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?ddoId=`,
+  BILL_ADD: `${API_BASE_URL}/invoices/save`,
   BILL_UPDATE: `${API_BASE_URL}/bill/update`,
   BILL_GET: `${API_BASE_URL}/bill/get/`,
   BILL_DETAIL: `${API_BASE_URL}/bill/detail/`,

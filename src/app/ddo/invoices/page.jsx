@@ -271,10 +271,10 @@ export default function InvoiceListPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
-              <span className="gradient-text">{t('nav.invoiceList')}</span>
+              <span className="gradient-text">{t('nav.creditNote')}</span>
             </h1>
             <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
-              Manage and submit your invoices
+              Manage and submit your credit notes
             </p>
           </div>
           {selectedBills.length > 0 && (

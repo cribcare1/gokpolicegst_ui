@@ -64,7 +64,7 @@ export default function GSTMasterPage() {
 
   const fetchPANList = async () => {
     try {
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST, 2000);
+      const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST);
       if (response?.status === 'success' && response?.data) {
         setPanList(response.data);
       } else {
@@ -83,31 +83,6 @@ export default function GSTMasterPage() {
     }
   };
 
-  const fetchDdoCountForGstin = async (gstinId, gstinNumber) => {
-    try {
-      const response = await ApiService.handleGetRequest(
-        `${API_ENDPOINTS.DDO_LIST_PER_GST}${gstinId}`,
-        2000
-      );
-      let count = 0;
-      if (response?.status === 'success') {
-        if (Array.isArray(response.data)) {
-          count = response.data.length;
-        } else if (Array.isArray(response.data?.ddos)) {
-          count = response.data.ddos.length;
-        } else if (response.data?.ddoCount) {
-          count = response.data.ddoCount;
-        }
-      }
-      setDdoCounts((prev) => ({ ...prev, [gstinId]: count }));
-      return count;
-    } catch (error) {
-      console.error(`Error fetching DDO count for GSTIN ${gstinNumber}:`, error);
-      setDdoCounts((prev) => ({ ...prev, [gstinId]: 0 }));
-      return 0;
-    }
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -117,47 +92,12 @@ export default function GSTMasterPage() {
           const gstData = response.data;
           setData(gstData);
           setFilteredData(gstData);
-          
-          // Fetch DDO counts for all GSTINs
-          if (Array.isArray(gstData)) {
-            const countPromises = gstData.map((item) => 
-              fetchDdoCountForGstin(item.id, item.gstNumber)
-            );
-            await Promise.all(countPromises);
-          }
       }
       
     } catch (error) {
       console.log('Using demo data');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDDOList = async (gstinNumber) => {
-    setDdoLoading(true);
-    try {
-      const response = await ApiService.handleGetRequest(
-        `${API_ENDPOINTS.DDO_LIST}?gstin=${gstinNumber}`,
-        2000
-      );
-      if (response?.status === 'success' && response?.data) {
-        setDdoList(response.data);
-      } else {
-        // Demo DDO data
-        setDdoList([
-          { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', email: 'ddo001@example.com' },
-          { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', email: 'ddo002@example.com' },
-        ]);
-      }
-    } catch (error) {
-      console.error('Error fetching DDO list:', error);
-      setDdoList([
-        { id: '1', ddoCode: '0200PO0032', ddoName: 'DCP CAR HQ', email: 'ddo001@example.com' },
-        { id: '2', ddoCode: '0200PO0033', ddoName: 'DCP South', email: 'ddo002@example.com' },
-      ]);
-    } finally {
-      setDdoLoading(false);
     }
   };
 
@@ -189,7 +129,7 @@ export default function GSTMasterPage() {
 
   const handleDelete = async (item) => {
     const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
-    
+    console.log("Deleting item:", item);
     if (ddoCount > 0) {
       toast.error(`GSTIN is protected - dependent records found`);
       return;
@@ -199,9 +139,7 @@ export default function GSTMasterPage() {
     
     try {
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.GST_DELETE}${item.id}`,
-        {}
-      );
+        `${API_ENDPOINTS.GST_DELETE}${item.gstId}`,{} );
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
@@ -436,7 +374,7 @@ export default function GSTMasterPage() {
   const handleDDOCountClick = async (gstItem) => {
     setSelectedGSTIN(gstItem);
     setShowDDOList(true);
-    await fetchDDOList(gstItem.gstNumber);
+    // await fetchDDOList(gstItem.gstNumber);
   };
 
   const handleDDOEditPassword = (ddo) => {
@@ -544,11 +482,13 @@ export default function GSTMasterPage() {
       label: 'Logo',
       render: (value, row) => {
         const logoUrl = row.logo || row.logoUrl || value;
+        const imageUrl = API_ENDPOINTS.IMAGE_BASE_URL + logoUrl;
+        console.log("logoUrl", logoUrl, imageUrl);
         if (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') {
           return (
             <div className="flex items-center justify-center">
               <img 
-                src={logoUrl} 
+                src={imageUrl} 
                 alt="Logo" 
                 className="w-12 h-12 object-contain rounded-lg border border-[var(--color-border)] bg-white dark:bg-gray-800"
                 onError={(e) => {
@@ -710,9 +650,9 @@ export default function GSTMasterPage() {
             title={editingItem ? `Edit GSTIN Master` : `Add GSTIN Master`}
             size="lg"
           >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {formFields.map((field) => (
-                <div key={field.key}>
+                <div key={field.key} className={field.key === 'address' ? 'md:col-span-2' : ''}>
                   <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                     {field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0 && (
@@ -937,7 +877,7 @@ export default function GSTMasterPage() {
                 </div>
               ))}
 
-              <div className="flex items-center justify-end gap-3 pt-4">
+              <div className="flex items-center justify-end gap-3 pt-4 md:col-span-2">
                 <Button
                   type="button"
                   variant="secondary"
