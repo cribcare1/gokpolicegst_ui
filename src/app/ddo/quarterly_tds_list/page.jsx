@@ -1,4 +1,7 @@
+
+
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
@@ -10,6 +13,7 @@ import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
+import { t } from "@/lib/localization";
 
 export default function TDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
@@ -27,6 +31,7 @@ export default function TDSQuarterlyListPage() {
     return `${day}-${month}-${year}`;
   };
 
+  // Fetch records on mount
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -47,16 +52,16 @@ export default function TDSQuarterlyListPage() {
 
       if (response?.status === "success") {
         const mapped = response.data.map((item) => ({
-          fy: item.fy,
+          fy: item.fiscalYear,
           returnType: item.returnType,
           quarter: item.quarter,
-          filingDate: formatDate(item.filingDate),
-          receiptNo: item.receiptNo,
+          filingDate: formatDate(item.dateOfFiling),
+          receiptNo: item.provisionalReceiptNo,
           deducteeCount: item.deducteeCount,
-          challanAmount: item.challanAmount,
-          taxDeducted: item.taxDeducted,
-          revision: item.revision,
-          ackFile: item.ackFile,
+          challanAmount: item.totalChallanAmount,
+          taxDeducted: item.totalTaxDeducted,
+          revision: item.anyRevisionFiled ? "Yes" : "No",
+          ackFile: item.ackDocument,
         }));
         setRecords(mapped);
         setFiltered(mapped);
@@ -75,6 +80,7 @@ export default function TDSQuarterlyListPage() {
     }
   };
 
+  // Handle search
   useEffect(() => {
     if (searchTerm) {
       setFiltered(
@@ -124,7 +130,7 @@ export default function TDSQuarterlyListPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
-              <span className="gradient-text">Quarterly TDS Reports</span>
+              <span className="gradient-text">{t("nav.tdsquarterlyreports")}</span>
             </h1>
             <p className="text-sm text-gray-500">
               View all submitted quarterly TDS filings and acknowledgement documents

@@ -42,7 +42,9 @@ export const API_ENDPOINTS = {
   DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
   DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
   GST_TDS_MONTHLY_REPORT : `${API_BASE_URL}/monthly-gst-filing/getMonthlyGstFilingByDdoId/`,
+  TDS_QUARTERLY_LIST : `${API_BASE_URL}/quarterly-income-tax/ddo/`,
   TDS_MONTHLY_SAVE : `${API_BASE_URL}/monthly-gst-filing/saveOrUpdateNew`,
+  TDS_QUARTERLY_SAVE : `${API_BASE_URL}/quarterly-income-tax/saveOrUpdate`,
   // HSN Master Data Endpoints
   HSN_LIST: `${API_BASE_URL}/hsn/getAllHSN`,
   HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
