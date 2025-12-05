@@ -94,11 +94,11 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
     { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
     { href: '/ddo/invoices', label: 'nav.invoiceList', icon: 'invoices' },
+    { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
+    { href: '/ddo/credit-notes', label: 'nav.creditNote', icon: 'credit-notes' },
     { href: '/ddo/ddo_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'reports' },
     { href: '/ddo/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreports' },
-    { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
-    { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'credit-notes' },
-    { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'invoices' },
+   
 
   ];
 
