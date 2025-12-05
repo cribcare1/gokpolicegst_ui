@@ -314,6 +314,7 @@ export default function ProformaAdviceForm({
 
           {/* Main Form Content */}
           <div className="space-y-6 mobile-p-2">
+
             {/* Bill To Section */}
             <div className="border border-[var(--color-border)] rounded-lg p-4 space-y-4 bg-[var(--color-background)]">
               <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">
@@ -705,13 +706,6 @@ export default function ProformaAdviceForm({
             {/* Actions Section */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-4 border-t border-[var(--color-border)] mobile-stack mobile-space-y-4">
               <div className="flex flex-col gap-2 mobile-full">
-                <Button
-                  onClick={onBackToList}
-                  variant="outline"
-                  className="px-4 py-2 text-sm border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] mobile-full mobile-text-sm"
-                >
-                  ← {isInvoiceCreation ? 'Back to Proforma List' : 'Back to List'}
-                </Button>
                 <p className="text-xs text-[var(--color-text-secondary)] mobile-text-xs">
                   💡 <strong>Print Tip:</strong> Use Preview to see how your bill will look when printed
                 </p>
@@ -953,29 +947,34 @@ export default function ProformaAdviceForm({
           setShowPreviewModal(false);
           setPrintOptimizedView(false);
         }}
-        title="Bill Preview"
         size="full"
       >
-        <div className="flex flex-col h-full">
-          {/* Preview Controls */}
-          <div className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20 p-4 flex justify-between items-center no-print mobile-stack mobile-space-y-2">
-            <div className="flex items-center gap-3 mobile-stack mobile-space-y-2">
-              <Button
-                variant={printOptimizedView ? "primary" : "outline"}
-                size="sm"
-                onClick={() => setPrintOptimizedView(!printOptimizedView)}
-                className="px-4 py-2 mobile-full mobile-text-sm"
-              >
-                {printOptimizedView ? 'Normal View' : 'Compact View'}
-              </Button>
-              <span className="text-sm text-[var(--color-text-secondary)] mobile-text-sm">
-                {printOptimizedView ? 'Optimized for printing' : 'Normal preview'}
-              </span>
-            </div>
-            <div className="text-sm text-[var(--color-text-secondary)] mobile-text-sm mobile-hidden">
-              Toggle view to see print layout
-            </div>
+        {/* Custom Header - Title on left, Icons + Close on right */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] to-[var(--color-muted)] flex-shrink-0 sticky top-0 z-10">
+          <h2 className="text-lg sm:text-2xl font-bold gradient-text truncate flex-1 pr-2">
+            Bill Preview
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onPrintBill} className="p-2 hover:bg-blue-50 hover:text-blue-600">
+              <Download size={18} />
+            </Button>
+            <Button variant="primary" onClick={() => window.print()} className="p-2 bg-[#2C5F2D] hover:bg-[#1e4d1f]">
+              <Printer size={18} />
+            </Button>
+            <button
+              onClick={() => {
+                setShowPreviewModal(false);
+                setPrintOptimizedView(false);
+              }}
+              className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 hover:scale-110 hover:rotate-90 flex items-center justify-center"
+              aria-label="Close"
+            >
+              <X size={22} className="text-white" />
+            </button>
           </div>
+        </div>
+        
+        <div className="flex flex-col h-full">
 
           {/* Preview Content - Same as ProformaAdviceList */}
           <div 
@@ -1200,16 +1199,7 @@ export default function ProformaAdviceForm({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="border-t border-[var(--color-border)] bg-[var(--color-background)] p-4 flex justify-end gap-3 no-print mobile-btn-group">
-            <Button variant="outline" onClick={() => setShowPreviewModal(false)} className="mobile-full mobile-text-sm">
-              Close
-            </Button>
-            <Button variant="primary" onClick={onPrintBill} className="bg-[#2C5F2D] hover:bg-[#1e4d1f] mobile-full mobile-text-sm">
-              <Printer className="mr-2 inline" size={14} />
-              Print
-            </Button>
-          </div>
+
         </div>
       </Modal>
     </>

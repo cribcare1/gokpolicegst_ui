@@ -4,9 +4,12 @@ import { useRouter } from 'next/navigation';
 import Layout from '@/components/shared/Layout';
 import Table from '@/components/shared/Table';
 import Button from '@/components/shared/Button';
-import { Plus, Search, Calendar, FileText, AlertCircle, X, Eye, Check, RefreshCw } from 'lucide-react';
+import { Plus, Search, Calendar, FileText, AlertCircle, X, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/gstUtils';
+import { API_ENDPOINTS } from '@/components/api/api_const';
+import ApiService from '@/components/api/api_service';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 export default function ProformaAdvicePage() {
   const router = useRouter();
@@ -15,94 +18,126 @@ export default function ProformaAdvicePage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [viewMode, setViewMode] = useState('all');
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [showPaymentEntry, setShowPaymentEntry] = useState(false);
-  const [showShortfall, setShowShortfall] = useState(false);
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState('');
+  const [showPaymentEntry, setShowPaymentEntry] = useState(true);
   
   // State for payment entry
   const [paymentMode, setPaymentMode] = useState('Bank / Cash');
-  const [paymentRefNo, setPaymentRefNo] = useState('UTR31352');
-  const [paymentDate, setPaymentDate] = useState('2025-06-25');
-  const [differenceAmount, setDifferenceAmount] = useState(1000);
+  const [paymentRefNo, setPaymentRefNo] = useState('');
+  const [paymentDate, setPaymentDate] = useState('');
+  const [differenceAmount, setDifferenceAmount] = useState(0);
   const [differenceReason, setDifferenceReason] = useState('Shortfall Payment/ Discount Payment');
   
   // Selected receipts for payment processing
-  const [selectedReceipts, setSelectedReceipts] = useState([]);
-  
-  // Demo data matching the image structure
-  const [receiptsData] = useState([
-    {
-      id: '1',
-      paNo: '1ZC******',
-      customerName: 'adadas',
-      amountPayable: 1000,
-      select: false,
-      amountReceived: 1000,
-      difference: 0,
-      status: 'full'
-    },
-    {
-      id: '2',
-      paNo: '1ZC******',
-      customerName: 'adadas',
-      amountPayable: 2500,
-      select: true,
-      amountReceived: 2000,
-      difference: 500,
-      status: 'shortfall',
-      taxInvoiceGenerated: false
-    },
-    {
-      id: '3',
-      paNo: '1ZC******',
-      customerName: 'adadas',
-      amountPayable: 2500,
-      select: true,
-      amountReceived: 2000,
-      difference: 500,
-      status: 'shortfall',
-      taxInvoiceGenerated: false
-    }
-  ]);
+  const [selectedReceipts, setSelectedReceipts] = useState([]); 
+  const [receiptsData, setReceiptsData] = useState([]);
+  const [allReceiptsData, setAllReceiptsData] = useState([]); // Store all data for filtering
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [ddoId, setDdoId] = useState(null);
+  const [customers, setCustomers] = useState([]);
 
-  const [stepsData] = useState([
-    {
-      step: 'PA',
-      description: 'Proforma Advice',
-      code: '12X0032/25/PA001',
-      gs: 'GS',
-      policeDdoCode: '0200P00032'
-    },
-    {
-      step: 'PR',
-      description: 'Payment Receipts',
-      code: '12X0032/25/PR001',
-      gs: '',
-      policeDdoCode: '0200P00040'
-    },
-    {
-      step: 'TI',
-      description: 'Tax Invoice',
-      code: '12X0032/25/IN001',
-      gs: '',
-      policeDdoCode: '0200P00047',
-      pushToGST: true,
-      irnStatus: 'Pending'
-    },
-    {
-      step: 'CN',
-      description: 'Credit Note',
-      code: '12X0032/25/CN001',
-      gs: '',
-      policeDdoCode: '0200P00062'
+  // Function to fetch customers from API
+  const fetchCustomers = async () => {
+    try {
+      const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      if (!userId) return;
+      
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${userId}`);
+      if (response && response.status === 'success') {
+        setCustomers(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
     }
-  ]);
+  };
 
-  const [customers] = useState([
-    { id: '1', name: 'adadas' },
-    { id: '2', name: 'ABC Corporation' },
-    { id: '3', name: 'XYZ Ltd' }
-  ]);
+  // Function to fetch receipts data from API (same as Proforma Advice)
+  const fetchReceiptsData = async () => {
+    if (!ddoId) return;
+    
+    setReceiptsLoading(true);
+    try {
+      console.log('Fetching receipts data for DDO ID:', ddoId);
+      const gstId = localStorage.getItem(LOGIN_CONSTANT.GSTID) || '';
+      const apiUrl = `${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVED`;
+      console.log('API URL:', apiUrl);
+      
+      const response = await ApiService.handleGetRequest(apiUrl);
+      console.log('Full API Response:', JSON.stringify(response, null, 2));
+      
+      // Handle multiple possible shapes from backend (same as generate-bill page)
+      const okStatus = response && (response.status === 'success' || response.status === 'SUCCESS' || response.status === true);
+      let payloadArray = [];
+
+      if (okStatus) {
+        if (Array.isArray(response.data)) {
+          payloadArray = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          payloadArray = response.data.data;
+        } else if (response.data && typeof response.data === 'object') {
+          payloadArray = [response.data];
+        }
+      } else {
+        if (Array.isArray(response)) {
+          payloadArray = response;
+        } else if (response && Array.isArray(response.data)) {
+          payloadArray = response.data;
+        }
+      }
+
+      console.log('Payload Array:', payloadArray);
+
+      // Transform API response to match receipts table structure
+      const transformedData = (payloadArray || []).map((item) => {
+        console.log('Processing item:', item);
+        
+        const items = Array.isArray(item.items) ? item.items : [];
+        const proformaAmount = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0) || item.totalAmount || item.grandTotal || 0;
+        const paidAmount = item.paidAmount || item.invoiceAmount || 0;
+        const difference = proformaAmount - paidAmount;
+
+        // Get customer info from various possible locations in API response
+        const customerResponse = item.customerResponse || item.customer || {};
+        console.log('Customer Response:', customerResponse);
+        
+        const customerName = customerResponse.name || customerResponse.customerName || item.customerName || 'N/A';
+        const customerId = customerResponse.id || item.customerId || null;
+
+        return {
+          id: item.invoiceId || item.id || item.proformaId || null,
+          paNo: item.invoiceNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
+          customerName: customerName,
+          customerId: customerId,
+          amountPayable: proformaAmount,
+          select: true,
+          amountReceived: paidAmount,
+          difference: Math.max(difference, 0),
+          status: difference > 0 ? 'shortfall' : 'full'
+        };
+      });
+      
+      console.log('Transformed data:', transformedData);
+      
+      setAllReceiptsData(transformedData);
+      setReceiptsData(transformedData);
+      setSelectedReceipts(transformedData.map(item => item.id));
+    } catch (error) {
+      console.error('Error fetching receipts data:', error);
+      toast.error('Failed to load receipts data');
+      setReceiptsData([]);
+      setAllReceiptsData([]);
+    } finally {
+      setReceiptsLoading(false);
+    }
+  };
+
+  const paymentModes = ['Bank / Cash', 'Cheque', 'Credit Card', 'Debit Card', 'Online Transfer'];
+  const differenceReasons = [
+    'Shortfall Payment/ Discount Payment',
+    'Advance Payment',
+    'Part Payment',
+    'Other'
+  ];
 
   useEffect(() => {
     // Set default date range
@@ -110,7 +145,69 @@ export default function ProformaAdvicePage() {
     const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
     setFromDate(thirtyDaysAgo.toISOString().split('T')[0]);
     setToDate(today.toISOString().split('T')[0]);
+    
+    // Set payment date to today
+    setPaymentDate(today.toISOString().split('T')[0]);
+
+    // Get DDO ID from localStorage and fetch data
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        const currentDdoId = parsedUser.id || parsedUser.ddoId;
+        if (currentDdoId) {
+          setDdoId(currentDdoId);
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+    
+    // Fetch customers
+    fetchCustomers();
   }, []);
+
+  // Fetch receipts data when DDO ID is available
+  useEffect(() => {
+    if (ddoId) {
+      fetchReceiptsData();
+    }
+  }, [ddoId]);
+
+  // Filter receipts based on viewMode and selectedCustomerFilter
+  useEffect(() => {
+    if (viewMode === 'all') {
+      setReceiptsData(allReceiptsData);
+    } else if (viewMode === 'customer' && selectedCustomerFilter) {
+      const selectedCustomerData = customers.find(c => String(c.id) === String(selectedCustomerFilter));
+      const customerName = selectedCustomerData?.customerName || selectedCustomerData?.name || '';
+      
+      console.log('Filtering by customer:', selectedCustomerFilter, customerName);
+      console.log('All receipts data:', allReceiptsData);
+      console.log('Receipts customer names:', allReceiptsData.map(r => ({ id: r.customerId, name: r.customerName })));
+      
+      const filtered = allReceiptsData.filter(receipt => {
+        // Match by customerId
+        const matchById = receipt.customerId && String(receipt.customerId) === String(selectedCustomerFilter);
+        // Match by customerName (exact or partial, case-insensitive)
+        const matchByName = customerName && receipt.customerName && (
+          receipt.customerName.toLowerCase() === customerName.toLowerCase() ||
+          receipt.customerName.toLowerCase().includes(customerName.toLowerCase()) ||
+          customerName.toLowerCase().includes(receipt.customerName.toLowerCase())
+        );
+        
+        console.log(`Receipt ${receipt.paNo}: customerId=${receipt.customerId}, customerName=${receipt.customerName}, matchById=${matchById}, matchByName=${matchByName}`);
+        
+        return matchById || matchByName;
+      });
+      
+      console.log('Filtered receipts:', filtered);
+      
+      setReceiptsData(filtered);
+    } else {
+      setReceiptsData(allReceiptsData);
+    }
+  }, [viewMode, selectedCustomerFilter, allReceiptsData, customers]);
 
   const handleSelectReceipt = (id, checked) => {
     if (checked) {
@@ -130,23 +227,22 @@ export default function ProformaAdvicePage() {
 
   const handleGenerateTaxInvoice = (id) => {
     toast.success(`Generating Tax Invoice for Receipt ${id}`);
-    // API call to generate tax invoice
   };
 
   const handlePushToGST = () => {
     toast.success('Pushed to GST Portal for E-Invoicing');
-    // API call to push to GST portal
   };
 
   const handleSaveAndGenerate = () => {
     toast.success('Saved and Generated Successfully');
-    setShowPaymentEntry(false);
-    setShowShortfall(false);
   };
 
   const handleExit = () => {
     setShowPaymentEntry(false);
-    setShowShortfall(false);
+  };
+
+  const handleShowPaymentEntry = () => {
+    setShowPaymentEntry(true);
   };
 
   const calculateTotals = () => {
@@ -160,15 +256,6 @@ export default function ProformaAdvicePage() {
     }, { amountPayable: 0, amountReceived: 0, difference: 0 });
     
     return totals;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
   };
 
   // Receipts Table Columns
@@ -187,7 +274,7 @@ export default function ProformaAdvicePage() {
     },
     { 
       key: 'paNo', 
-      label: 'PA no',
+      label: 'PROFORMA NUMBER',
       render: (value) => (
         <div className="font-medium text-blue-600">{value}</div>
       )
@@ -209,119 +296,29 @@ export default function ProformaAdvicePage() {
     { 
       key: 'amountReceived', 
       label: 'Amount Received',
-      render: (value, row) => (
-        <div className="flex items-center gap-1">
-          <span className="font-semibold">{formatCurrency(value)}</span>
-          {row.select && <Check className="w-4 h-4 text-green-600" />}
-        </div>
+      render: (value) => (
+        <div className="font-semibold">{formatCurrency(value)}</div>
       )
     },
     { 
       key: 'difference', 
-      label: 'Difference',
+      label: 'Difference Amount',
       render: (value) => (
         <div className={`font-bold ${value > 0 ? 'text-red-600' : 'text-green-600'}`}>
           {formatCurrency(Math.abs(value))}
         </div>
       )
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (value, row) => (
-        <div className="flex gap-2">
-          {row.difference > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs px-3 py-1"
-              onClick={() => handleGenerateTaxInvoice(row.id)}
-            >
-              Generate Tax Invoice
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs px-2 py-1"
-            onClick={() => toast.info(`View details for ${row.paNo}`)}
-          >
-            <Eye size={14} />
-          </Button>
-        </div>
-      )
     }
   ];
 
-  // Steps Table Columns
-  const stepsColumns = [
-    { key: 'step', label: 'Steps' },
-    { key: 'description', label: 'Description' },
-    { 
-      key: 'gs', 
-      label: 'GS',
-      render: (value) => value || '-'
-    },
-    { key: 'code', label: 'Code' },
-    { 
-      key: 'policeDdoCode', 
-      label: 'Police DDO Code',
-      render: (value) => (
-        <div className="font-mono">{value}</div>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (value, row) => (
-        <div className="flex gap-2">
-          {row.step === 'TI' && row.pushToGST && (
-            <>
-              <Button
-                variant="primary"
-                size="sm"
-                className="text-xs px-3 py-1"
-                onClick={handlePushToGST}
-              >
-                Push
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs px-3 py-1"
-                onClick={() => toast.info('View IRN Details')}
-              >
-                IRN
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs px-3 py-1"
-                onClick={() => toast.success('Auto Store Completed')}
-              >
-                Auto Store
-              </Button>
-              <Button
-                variant="success"
-                size="sm"
-                className="text-xs px-3 py-1"
-                onClick={() => toast.success('Tax Invoice Approved')}
-              >
-                Approve
-              </Button>
-            </>
-          )}
-        </div>
-      )
-    }
-  ];
+
 
   const totals = calculateTotals();
 
   return (
     <Layout role="ddo">
       <div className="space-y-6">
-        {/* Header with Tabs */}
+        {/* Header */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
@@ -331,39 +328,15 @@ export default function ProformaAdvicePage() {
               Manage receipts, payment entries, and generate tax invoices
             </p>
           </div>
-          
-          {/* Tabs */}
-          <div className="flex bg-[var(--color-muted)] p-1 rounded-lg">
-            <button
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'receipts' 
-                  ? 'bg-white shadow-sm text-[var(--color-primary)]' 
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
-              onClick={() => setActiveTab('receipts')}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleShowPaymentEntry}
             >
-              Receipts
-            </button>
-            <button
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'payment' 
-                  ? 'bg-white shadow-sm text-[var(--color-primary)]' 
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
-              onClick={() => setActiveTab('payment')}
-            >
-              Payment Entry
-            </button>
-            <button
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'shortfall' 
-                  ? 'bg-white shadow-sm text-[var(--color-primary)]' 
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
-              onClick={() => setActiveTab('shortfall')}
-            >
-              Shortfall PA
-            </button>
+              <FileText size={16} />
+              Show Payment Entry
+            </Button>
           </div>
         </div>
 
@@ -420,14 +393,14 @@ export default function ProformaAdvicePage() {
                   Select Customer
                 </label>
                 <select
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
+                  value={selectedCustomerFilter}
+                  onChange={(e) => setSelectedCustomerFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 >
                   <option value="">All Customers</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
-                      {customer.name}
+                      {customer.customerName || customer.name}
                     </option>
                   ))}
                 </select>
@@ -451,8 +424,9 @@ export default function ProformaAdvicePage() {
               onClick={() => {
                 setFromDate('');
                 setToDate('');
-                setSelectedCustomer('');
+                setSelectedCustomerFilter('');
                 setViewMode('all');
+                setReceiptsData(allReceiptsData);
               }}
             >
               <RefreshCw size={16} />
@@ -461,7 +435,9 @@ export default function ProformaAdvicePage() {
           </div>
         </div>
 
-        {/* Receipts Table with Totals */}
+
+
+        {/* Receipts Table */}
         <div className="premium-card overflow-hidden">
           <div className="p-4 border-b border-[var(--color-border)]">
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -469,14 +445,24 @@ export default function ProformaAdvicePage() {
             </h2>
           </div>
           
-          {/* Table */}
-          <Table
-            columns={receiptColumns}
-            data={receiptsData}
-            itemsPerPage={10}
-          />
+          <div className="overflow-x-auto">
+            {receiptsLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-sm text-gray-600">Loading receipts...</p>
+                </div>
+              </div>
+            ) : (
+              <Table
+                columns={receiptColumns}
+                data={receiptsData}
+                itemsPerPage={10}
+                className="min-w-[1000px]"
+              />
+            )}
+          </div>
           
-          {/* Totals Row */}
           <div className="border-t border-[var(--color-border)] bg-[var(--color-muted)]/20 p-4">
             <div className="flex justify-between items-center">
               <div className="font-semibold">Total</div>
@@ -491,21 +477,32 @@ export default function ProformaAdvicePage() {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-red-600">{formatCurrency(totals.difference)}</div>
-                  <div className="text-sm text-[var(--color-text-secondary)]">Difference</div>
+                  <div className="text-sm text-[var(--color-text-secondary)]">Difference Amount</div>
                 </div>
-                <div className="w-40"></div> {/* Spacer for actions column */}
+                <div className="w-40"></div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Payment Entry Section */}
-        {activeTab === 'payment' && selectedReceipts.length > 0 && (
+        {/* Payment Entry Section - PA Details और Receipts Details के नीचे */}
+        {showPaymentEntry && (
           <div className="premium-card p-6">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              Payment Entry Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                Payment Entry
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExit}
+                className="hover:bg-red-50 hover:text-red-600"
+              >
+                <X size={18} />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               {/* Payment Mode */}
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
@@ -516,24 +513,25 @@ export default function ProformaAdvicePage() {
                   onChange={(e) => setPaymentMode(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 >
-                  <option>Bank / Cash</option>
-                  <option>Online Transfer</option>
-                  <option>Cheque</option>
-                  <option>UPI</option>
+                  {paymentModes.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {mode}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               {/* Payment Ref No */}
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                  Payment Ref/No
+                  Payment Ref No
                 </label>
                 <input
                   type="text"
                   value={paymentRefNo}
                   onChange={(e) => setPaymentRefNo(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                  placeholder="Enter UTR/Reference number"
+                  placeholder="Enter reference number"
                 />
               </div>
 
@@ -560,11 +558,12 @@ export default function ProformaAdvicePage() {
                   value={differenceAmount}
                   onChange={(e) => setDifferenceAmount(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  placeholder="Enter difference amount"
                 />
               </div>
 
               {/* Difference Reason */}
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                   Difference Reason
                 </label>
@@ -573,138 +572,35 @@ export default function ProformaAdvicePage() {
                   onChange={(e) => setDifferenceReason(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 >
-                  <option>Shortfall Payment/ Discount Payment</option>
-                  <option>Advance Payment</option>
-                  <option>Partial Payment</option>
-                  <option>Full Payment</option>
-                  <option>Over Payment</option>
+                  {differenceReasons.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-[var(--color-border)]">
+            <div className="flex justify-end gap-4 pt-4 border-t border-[var(--color-border)]">
               <Button
                 variant="outline"
+                className="px-6 py-2.5"
                 onClick={handleExit}
-                className="px-6"
               >
                 Exit
               </Button>
               <Button
                 variant="primary"
+                className="px-6 py-2.5"
                 onClick={handleSaveAndGenerate}
-                className="px-6"
               >
-                Save and Generate
+                Save and Generate Invoice
               </Button>
             </div>
           </div>
         )}
 
-        {/* Tax Invoice Generation Steps */}
-        <div className="premium-card overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-              Tax Invoice Generation Steps
-            </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-              Complete workflow from Proforma Advice to Tax Invoice
-            </p>
-          </div>
-          
-          <Table
-            columns={stepsColumns}
-            data={stepsData}
-            itemsPerPage={10}
-          />
-          
-          {/* GST Portal Integration Section */}
-          <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-muted)]/10">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">
-                  Tax Invoice by the DDO User after Receipts
-                </h3>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                  Generate Invoice transferred to GSTIN admin for E-Invoicing
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-[var(--color-text-secondary)]">
-                  Tax Invoice: <span className="font-mono font-semibold">12X0032/25/IN001</span>
-                </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={handlePushToGST}
-                >
-                  Push to GST Portal
-                </Button>
-                <div className="text-xs text-[var(--color-text-secondary)] bg-white px-3 py-1 rounded border">
-                  IRN: Pending
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Shortfall PA Section */}
-        {activeTab === 'shortfall' && (
-          <div className="premium-card p-6">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              Shortfall Payment Advice Details
-            </h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                    Total Shortfall Amount
-                  </label>
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(totals.difference)}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                    Number of Shortfall Receipts
-                  </label>
-                  <div className="text-2xl font-bold">
-                    {receiptsData.filter(r => r.difference > 0).length}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3">Shortfall Receipts Requiring Action</h3>
-                <div className="space-y-2">
-                  {receiptsData
-                    .filter(r => r.difference > 0)
-                    .map(receipt => (
-                      <div key={receipt.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{receipt.paNo}</div>
-                          <div className="text-sm text-[var(--color-text-secondary)]">{receipt.customerName}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold">Difference: {formatCurrency(receipt.difference)}</div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => handleGenerateTaxInvoice(receipt.id)}
-                          >
-                            Generate Tax Invoice
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );
