@@ -18,8 +18,11 @@ export const translations = {
   "nav.generateBill": { en: "Proforma Advice", kn: "ಬಿಲ್ ರಚಿಸಿ" },
   "nav.invoiceList": { en: "Invoice List", kn: "ಚಲಾನ್ ಪಟ್ಟಿ" },
   "nav.reports": { en: "Reports", kn: "ವರದಿಗಳು" },
+  "nav.gstmonthlyreports": { en: "Monthly GST-TDS", kn: " ಮಾಸಿಕ GST - TDS  " },
+  "nav.tdsquarterlyreports": { en: "Quarterly TDS Reports", kn: " ತ್ರೈಮಾಸಿಕ TDS ವರದಿಗಳು" },
+  "nav.settings": { en: "Settings", kn: "ಸೆಟ್ಟಿಂಗ್" },
   "nav.creditNote": { en: "Credit Note", kn: "ಕ್ರೆಡಿಟ್ ನೋಟ್" },
-  "nav.settings": { en: "Settings", kn: "ಸettings" },
+
   "nav.logout": { en: "Logout", kn: "ಲಾಗ್ ಔಟ್" },
   "nav.aboutUs": { en: "ABOUT US", kn: "ನಮ್ಮ ಬಗ್ಗೆ" },
   "nav.contactUs": { en: "Contact Us", kn: "ಸಂಪರ್ಕಿಸಿ" },

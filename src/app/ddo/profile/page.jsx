@@ -61,6 +61,8 @@ export default function DDOProfilePage() {
     try {
       const ddoCode = localStorage.getItem('ddoCode');
       const ddoId = localStorage.getItem('ddoId');
+      console.log("ddoCode", ddoCode);
+      
       
       if (!ddoCode && !ddoId) {
         toast.error('DDO information not found. Please login again.');
