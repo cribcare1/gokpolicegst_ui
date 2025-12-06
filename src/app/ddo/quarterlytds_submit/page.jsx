@@ -7,7 +7,9 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { t } from "@/lib/localization";
+import { useRouter } from 'next/navigation';
 export default function TDSQuarterlyCreate() {
+    const router = useRouter();
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ddoInfo, setDdoInfo] = useState({ ddoCode: "", gstin: "", officeName: "" });
@@ -148,7 +150,7 @@ export default function TDSQuarterlyCreate() {
       ackFile: null,
       remarks: "",
     });
-
+router.replace('/ddo/quarterly_tds_list'); 
   } catch (err) {
     console.error("Submit Error:", err);
     toast.show(err.message || LOGIN_CONSTANT.SOMETHING_WENT_WRONG, LOGIN_CONSTANT.error);

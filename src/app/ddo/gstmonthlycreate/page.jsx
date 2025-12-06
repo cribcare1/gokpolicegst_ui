@@ -7,7 +7,9 @@ import { useEffect, useState } from "react";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { t } from "@/lib/localization";
+import { useRouter } from 'next/navigation';
 export default function GSTTDSMonthlyCreate() {
+  const router = useRouter();
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fyList, setFyList] = useState([]);
@@ -28,7 +30,7 @@ export default function GSTTDSMonthlyCreate() {
     amountPaid: "",
     penaltyAmount: "",
     ackFile: null,
-    remark: "",       
+    remark: "",
   });
 
   // ------------------------------
@@ -164,7 +166,7 @@ export default function GSTTDSMonthlyCreate() {
         declaredAmount: Number(f.amountDeclared),
         paidAmount: Number(f.amountPaid),
         penaltyAmount: Number(f.penaltyAmount || 0),
-        remark: f.remark ?? "", 
+        remark: f.remark ?? "",
       };
 
       const data = await ApiService.handlePostMultiPartFileRequest(
@@ -188,11 +190,11 @@ export default function GSTTDSMonthlyCreate() {
         amountPaid: "",
         penaltyAmount: "",
         ackFile: null,
-        remark: "",       
+        remark: "",
       });
 
       setMonthList([]);
-
+      router.replace('/ddo/ddo_gstmonthlyreport_list'); 
     } catch (err) {
       toast.show(err.message, "error");
     } finally {
@@ -242,7 +244,7 @@ export default function GSTTDSMonthlyCreate() {
         <div className="flex flex-col lg:flex-row justify-between gap-6 items-start">
           <div>
             <h1 className="text-2xl lg:text-3xl font-extrabold mb-2">
-            {t("nav.gstmonthlyreports")}
+              {t("nav.gstmonthlyreports")}
             </h1>
             <p className="text-sm text-gray-500">
               Submit monthly GST-TDS return details
