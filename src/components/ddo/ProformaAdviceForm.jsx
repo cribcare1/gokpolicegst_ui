@@ -213,10 +213,340 @@ export default function ProformaAdviceForm({
     }
   };
 
+  // Print Document Function
+  const handlePrintDocument = () => {
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    const currentDate = formatDate(billDetails.date);
+    const signatureUrl = ddoSignature || '';
+    
+    // Get logo source
+    const logoImg = document.querySelector('#bill-preview-content img');
+    const logoSrc = logoImg ? logoImg.src : '/1.png';
+    
+    // Build line items HTML
+    const lineItemsHTML = lineItems.map((item, index) => `
+      <tr>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.serialNo}</td>
+        <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${item.description || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.hsnNumber || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">1</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">Nos</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
+      </tr>
+    `).join('');
+    
+    // GST Calculation HTML
+    let gstCalcHTML = '';
+    if (invoiceType === 'FCM' && gstCalculation) {
+      gstCalcHTML = `
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>IGST @ ${formatPercent(displayGstRate)}%:</span>
+          <span>${gstCalculation?.igst ? formatCurrency(gstCalculation.igst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>CGST @ ${formatPercent(displayCgstRate)}%:</span>
+          <span>${gstCalculation?.cgst ? formatCurrency(gstCalculation.cgst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>SGST @ ${formatPercent(displaySgstRate)}%:</span>
+          <span>${gstCalculation?.sgst ? formatCurrency(gstCalculation.sgst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px; font-weight: bold;">
+          <span>Total GST:</span>
+          <span>${formatCurrency(gstCalculation?.gstAmount || 0)}</span>
+        </div>
+      `;
+    }
+    
+    // RCM Tax Details
+    let rcmHTML = '';
+    if (invoiceType === 'RCM') {
+      rcmHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-weight: bold; font-size: 11px; margin-bottom: 4px;">RCM Tax Details:</p>
+          <div style="padding: 8px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 11px;">
+            <p style="font-weight: bold; margin-bottom: 4px;">GST Payable Under RCM by the Recipient</p>
+            <p style="font-weight: bold;">IGST : ${formatCurrency(rcmIgst)} &nbsp;&nbsp; CGST : ${formatCurrency(rcmCgst)}/- &nbsp;&nbsp; SGST: ${formatCurrency(rcmSgst)}/-</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Proforma Advice - ${invoiceNumber}</title>
+          <style>
+            @page {
+              margin: 8mm;
+              size: A4 portrait;
+            }
+            
+            body {
+              font-family: 'Arial', sans-serif;
+              font-size: 10px;
+              line-height: 1.3;
+              color: black;
+              background: white;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            
+            .print-container {
+              width: 194mm;
+              margin: 0 auto;
+              padding: 3mm;
+              box-sizing: border-box;
+            }
+            
+            .print-header {
+              border-bottom: 2px solid #000;
+              padding-bottom: 6px;
+              margin-bottom: 8px;
+            }
+            
+            .print-section {
+              margin-bottom: 8px;
+              page-break-inside: avoid;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 6px 0;
+              font-size: 10px;
+            }
+            
+            th, td {
+              border: 1px solid #000;
+              padding: 4px;
+              text-align: left;
+            }
+            
+            th {
+              background-color: #2C5F2D !important;
+              color: white !important;
+              font-weight: bold;
+              text-align: center;
+            }
+            
+            .total-row {
+              background-color: #f5f5f5 !important;
+              font-weight: bold;
+            }
+            
+            .signature-section {
+              margin-top: 15px;
+              text-align: right;
+            }
+            
+            .signature-box {
+              display: inline-block;
+              text-align: center;
+            }
+            
+            .signature-image {
+              max-height: 60px;
+              max-width: 180px;
+              object-fit: contain;
+              margin-bottom: 5px;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              
+              .print-container {
+                width: 100%;
+                min-height: 100%;
+                padding: 10mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            <!-- Header Section -->
+            <div class="print-header">
+              <table style="border: none; margin-bottom: 5px;">
+                <tr>
+                  <td style="border: none; width: 20%; vertical-align: top;">
+                    <div style="text-align: center;">
+                      <img src="${logoSrc}" alt="Logo" style="max-width: 60px; max-height: 60px;" onerror="this.style.display='none'">
+                    </div>
+                  </td>
+                  <td style="border: none; width: 60%; vertical-align: top; padding-left: 10px;">
+                    <h1 style="margin: 0; font-size: 13px; font-weight: bold; color: #000;">
+                      ${gstDetails?.gstName || 'Government of Karnataka Police Department'}
+                    </h1>
+                    <p style="margin: 1px 0; font-size: 10px;">${gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
+                  </td>
+                  <td style="border: none; width: 20%; vertical-align: top; text-align: right;">
+                    <h2 style="margin: 0; font-size: 15px; font-weight: bold; color: #2C5F2D;">PROFORMA ADVISE</h2>
+                    <p style="margin: 3px 0; font-size: 10px; font-weight: bold;">Proforma No: ${invoiceNumber}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">Date: ${currentDate}</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Customer and Advice Details -->
+            <div class="print-section">
+              <table style="border: none; margin-bottom: 10px;">
+                <tr>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Service Receiver Details</h3>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Name:</strong> M/s ${selectedCustomer?.customerName || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>GSTIN:</strong> ${selectedCustomer?.gstNumber || 'Not provided'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Address:</strong> ${selectedCustomer?.address || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>State Code:</strong> ${selectedCustomer?.stateCode || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Type:</strong> ${invoiceType}</p>
+                  </td>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Advice Details</h3>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Code:</strong> ${ddoDetails?.ddoCode || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Name:</strong> ${ddoDetails?.fullName || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Place of Supply:</strong> ${billDetails.placeOfSupply || 'Bengaluru'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>City/District:</strong> ${ddoDetails?.city || ''}</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Line Items Table -->
+            <div class="print-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Description</th>
+                    <th>HSN Code</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th style="text-align: right;">Amount (₹)</th>
+                    <th style="text-align: right;">Taxable Value (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lineItemsHTML}
+                  <tr class="total-row">
+                    <td colspan="3" style="text-align: right; font-weight: bold;">Total</td>
+                    <td style="text-align: center; font-weight: bold;">${totalQuantity}</td>
+                    <td style="text-align: center; font-weight: bold;">Nos</td>
+                    <td style="text-align: right; font-weight: bold;">${formatCurrency(totalAmount)}</td>
+                    <td style="text-align: right; font-weight: bold;">${formatCurrency(totalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Additional Information and Calculation Summary -->
+            <div class="print-section">
+              <table style="border: none;">
+                <tr>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Additional Information</h3>
+                    <div style="margin-bottom: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Invoice Remarks:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0;">${note || '-'}</p>
+                    </div>
+                    <div style="margin-bottom: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Notification Details:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0; min-height: 30px;">${notificationDetails || '-'}</p>
+                    </div>
+                    ${rcmHTML}
+                    <div style="margin-top: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Amount in Words:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0; font-style: italic;">${amountInWords(totalAdviceAmountReceivable)}</p>
+                    </div>
+                  </td>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Calculation Summary</h3>
+                    <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+                      <span>Total Taxable Value:</span>
+                      <span style="font-weight: bold;">${formatCurrency(totalAmount)}</span>
+                    </div>
+                    ${gstCalcHTML}
+                    <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
+                      <span>Total amount payable:</span>
+                      <span>${formatCurrency(totalAdviceAmountReceivable)}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- Bank Details and Signature on same page -->
+            <div class="print-section" style="page-break-inside: avoid;">
+              <table style="border: none; margin-bottom: 10px;">
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px; width: 60%;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Bank Details</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px;">
+                      <div><strong>Bank:</strong> ${bankDetails?.bankName || 'State Bank of India'}</div>
+                      <div><strong>Branch:</strong> ${bankDetails?.bankBranch || 'Bangalore Main'}</div>
+                      <div><strong>IFSC:</strong> ${bankDetails?.ifscCode || 'SBIN0001234'}</div>
+                      <div><strong>Account No:</strong> ${bankDetails?.accountNumber || '1234567890'}</div>
+                    </div>
+                  </td>
+                  <td style="border: none; width: 40%; vertical-align: top; text-align: right; padding-left: 10px;">
+                    <div class="signature-box" style="display: inline-block; text-align: center;">
+                      ${signatureUrl 
+                        ? `<img src="${signatureUrl}" 
+                             alt="DDO Signature" 
+                             class="signature-image"
+                             style="max-height: 50px; max-width: 150px; object-fit: contain; margin-bottom: 4px;"
+                             onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
+                        : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin-bottom: 4px;"></div>`
+                      }
+                      <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
+                      <div style="font-size: 10px;">${ddoDetails?.fullName || 'Karnataka Police Department'}</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Footer -->
+              <div style="text-align: center; margin-top: 8px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 4px;">
+                This is a computer generated document
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+  };
+
   // Print-specific styles and content
   const PrintStyles = () => (
     <style jsx global>{`
       @media print {
+        @page {
+          margin: 10mm;
+          size: A4 portrait;
+        }
+        
         body * {
           visibility: hidden;
         }
@@ -231,9 +561,27 @@ export default function ProformaAdviceForm({
           width: 100%;
           background: white;
           color: black;
+          font-size: 11px;
         }
         .no-print {
           display: none !important;
+        }
+        .print-section {
+          page-break-inside: avoid;
+        }
+        table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        th, td {
+          border: 1px solid #000;
+          padding: 4px 6px;
+        }
+        th {
+          background-color: #2C5F2D !important;
+          color: white !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
       }
       
@@ -958,7 +1306,7 @@ export default function ProformaAdviceForm({
             <Button variant="outline" onClick={onPrintBill} className="p-2 hover:bg-blue-50 hover:text-blue-600">
               <Download size={18} />
             </Button>
-            <Button variant="primary" onClick={() => window.print()} className="p-2 bg-[#2C5F2D] hover:bg-[#1e4d1f]">
+            <Button variant="primary" onClick={handlePrintDocument} className="p-2 bg-[#2C5F2D] hover:bg-[#1e4d1f]">
               <Printer size={18} />
             </Button>
             <button
@@ -985,43 +1333,44 @@ export default function ProformaAdviceForm({
             style={{ 
               maxWidth: '210mm', 
               margin: '0 auto',
-              minHeight: '297mm'
+              minHeight: '297mm',
+              fontFamily: 'Arial, sans-serif'
             }}
           >
             {/* Print Header */}
-            <div className="print-header mb-3">
+            <div className="print-header mb-4 pb-3 border-b-2 border-gray-400">
               <div className="flex items-start justify-between">
-                <div className="flex items-start gap-2 flex-1">
-                  <div className="relative w-12 h-12 mt-1">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="relative w-14 h-14 mt-1">
                     <Image
                       src="/1.png"
                       alt="Organization Logo"
-                      width={48}
-                      height={48}
+                      width={56}
+                      height={56}
                       className="w-full h-full object-contain"
                     />
                   </div>
                   <div className="flex-1">
-                    <h1 className="text-sm font-bold text-gray-800 leading-tight">
+                    <h1 className="font-bold text-gray-800 leading-tight" style={{ fontSize: '14px' }}>
                       {gstDetails?.gstName || 'Government of Karnataka Police Department'}
                     </h1>
-                    <p className="text-xs text-gray-600 leading-tight">{gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
-                    <p className="text-xs text-gray-600">GSTIN: {gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
+                    <p className="text-gray-600 leading-tight" style={{ fontSize: '11px', marginTop: '2px' }}>{gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
+                    <p className="text-gray-600" style={{ fontSize: '11px', marginTop: '2px' }}>GSTIN: {gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-lg font-bold text-[#2C5F2D]">PROFORMA ADVISE</h2>
-                  <p className="text-sm font-semibold">Proforma No: {invoiceNumber}</p>
-                  <p className="text-sm">Date: {formatDate(billDetails.date)}</p>
+                  <h2 className="font-bold text-[#2C5F2D]" style={{ fontSize: '16px' }}>PROFORMA ADVISE</h2>
+                  <p className="font-semibold" style={{ fontSize: '11px', marginTop: '4px' }}>Proforma No: {invoiceNumber}</p>
+                  <p style={{ fontSize: '11px', marginTop: '2px' }}>Date: {formatDate(billDetails.date)}</p>
                 </div>
               </div>
             </div>
 
             {/* Customer and Invoice Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
               <div className="border border-gray-300 p-3 rounded">
-                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Service Receiver Details</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Service Receiver Details</h3>
+                <div className="space-y-1" style={{ fontSize: '11px' }}>
                   <p><strong>Name:</strong> M/s {selectedCustomer?.customerName || ''}</p>
                   <p><strong>GSTIN:</strong> {selectedCustomer?.gstNumber || 'Not provided'}</p>
                   <p><strong>Address:</strong> {selectedCustomer?.address || ''}</p>
@@ -1031,8 +1380,8 @@ export default function ProformaAdviceForm({
               </div>
 
               <div className="border border-gray-300 p-3 rounded">
-                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Advice Details</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Advice Details</h3>
+                <div className="space-y-1" style={{ fontSize: '11px' }}>
                   <p><strong>DDO Code:</strong> {ddoDetails.ddoCode}</p>
                   <p><strong>DDO Name:</strong> {ddoDetails.fullName}</p>
                   <p><strong>Place of Supply:</strong> {billDetails.placeOfSupply || 'Bengaluru'}</p>
@@ -1043,60 +1392,60 @@ export default function ProformaAdviceForm({
 
             {/* Line Items Table */}
             <div className="mb-3 print-section">
-              <table className="w-full border-collapse border border-gray-400">
+              <table className="w-full border-collapse border border-gray-400" style={{ fontSize: '11px' }}>
                 <thead>
                   <tr className="bg-[#2C5F2D] text-white">
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">S.No</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Description</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">HSN Code</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Qty</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Unit</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Amount (₹)</th>
-                    <th className="border border-gray-400 p-1 text-left font-bold text-xs">Taxable Value (₹)</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>S.No</th>
+                    <th className="border border-gray-400 p-2 text-left font-bold" style={{ fontSize: '11px' }}>Description</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>HSN Code</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>Qty</th>
+                    <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>Unit</th>
+                    <th className="border border-gray-400 p-2 text-right font-bold" style={{ fontSize: '11px' }}>Amount (₹)</th>
+                    <th className="border border-gray-400 p-2 text-right font-bold" style={{ fontSize: '11px' }}>Taxable Value (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((item, index) => (
                     <tr key={index}>
-                      <td className="border border-gray-400 p-1 text-xs text-center">{item.serialNo}</td>
-                      <td className="border border-gray-400 p-1 text-xs">{item.description}</td>
-                      <td className="border border-gray-400 p-1 text-xs text-center">{item.hsnNumber}</td>
-                      <td className="border border-gray-400 p-1 text-xs text-center">1</td>
-                      <td className="border border-gray-400 p-1 text-xs text-center">Nos</td>
-                      <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(item.amount)}</td>
-                      <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(item.amount)}</td>
+                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.serialNo}</td>
+                      <td className="border border-gray-400 p-2" style={{ fontSize: '11px' }}>{item.description}</td>
+                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.hsnNumber}</td>
+                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>1</td>
+                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
+                      <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(item.amount)}</td>
+                      <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(item.amount)}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-100 font-bold">
-                    <td colSpan="3" className="border border-gray-400 p-1 text-xs text-right">Total</td>
-                    <td className="border border-gray-400 p-1 text-xs text-center">{totalQuantity}</td>
-                    <td className="border border-gray-400 p-1 text-xs text-center">Nos</td>
-                    <td className="border border-gray-400 p-1 text-xs text-right">Total Amount</td>
-                    <td className="border border-gray-400 p-1 text-xs text-right">{formatCurrency(totalAmount)}</td>
+                    <td colSpan="3" className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>Total</td>
+                    <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{totalQuantity}</td>
+                    <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
+                    <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(totalAmount)}</td>
+                    <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(totalAmount)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             {/* Calculation and Additional Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 print-section">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
               <div className="border border-gray-300 p-3 rounded">
-                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Additional Information</h3>
-                <div className="space-y-2 text-xs">
+                <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Additional Information</h3>
+                <div className="space-y-2" style={{ fontSize: '11px' }}>
                   <div>
                     <p className="font-semibold">Invoice Remarks:</p>
-                    <p className="mt-1 p-1 bg-gray-50 rounded border">{note || '-'}</p>
+                    <p className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>{note || '-'}</p>
                   </div>
                   <div>
                     <p className="font-semibold">Notification Details:</p>
-                    <p className="mt-1 p-1 bg-gray-50 rounded border min-h-[40px]">{notificationDetails || '-'}</p>
+                    <p className="mt-1 p-2 bg-gray-50 rounded border min-h-[40px]" style={{ fontSize: '11px' }}>{notificationDetails || '-'}</p>
                   </div>
                   
                   {/* RCM specific fields in preview */}
                   {invoiceType === 'RCM' && (
                     <div>
                       <p className="font-semibold">RCM Tax Details:</p>
-                      <div className="mt-1 p-2 bg-gray-50 rounded border text-xs">
+                      <div className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>
                         <span className="font-medium">GST Payable Under RCM by the Recipient</span>
                         <div className="mt-1 font-semibold">
                           IGST : {formatCurrency(rcmIgst)}          CGST : {formatCurrency(rcmCgst)}/-          SGST: {formatCurrency(rcmSgst)}/-
@@ -1106,14 +1455,14 @@ export default function ProformaAdviceForm({
                   )}
                   <div>
                     <p className="font-semibold">Amount in Words:</p>
-                    <p className="mt-1 p-1 bg-gray-50 rounded border italic">{amountInWords(totalAdviceAmountReceivable)}</p>
+                    <p className="mt-1 p-2 bg-gray-50 rounded border italic" style={{ fontSize: '11px' }}>{amountInWords(totalAdviceAmountReceivable)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="border border-gray-300 p-3 rounded">
-                <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Calculation Summary</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Calculation Summary</h3>
+                <div className="space-y-1" style={{ fontSize: '11px' }}>
                   <div className="flex justify-between border-b py-1">
                     <span>Total Taxable Value:</span>
                     <span className="font-semibold">{formatCurrency(totalAmount)}</span>
@@ -1140,7 +1489,7 @@ export default function ProformaAdviceForm({
                     </>
                   )}
 
-                  <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold text-xs">
+                  <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                     <span>Total amount payable:</span>
                     <span>{formatCurrency(totalAdviceAmountReceivable)}</span>
                   </div>
@@ -1148,10 +1497,10 @@ export default function ProformaAdviceForm({
               </div>
             </div>
 
-            {/* Bank Details */}
-            <div className="border border-gray-300 p-3 rounded mb-3 print-section">
-              <h3 className="font-bold mb-1 text-gray-800 border-b pb-1 text-xs">Bank Details</h3>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* Bank Details - Should appear on separate page */}
+            <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakBefore: 'always' }}>
+              <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
+              <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
                 <div><strong>Bank:</strong> {bankDetails?.bankName || 'State Bank of India'}</div>
                 <div><strong>Branch:</strong> {bankDetails?.bankBranch || 'Bangalore Main'}</div>
                 <div><strong>IFSC:</strong> {bankDetails?.ifscCode || 'SBIN0001234'}</div>
@@ -1159,24 +1508,21 @@ export default function ProformaAdviceForm({
               </div>
             </div>
 
-            {/* Signature Section - EXACTLY SAME */}
-            <div className="signature-section print-section mt-4">
+            {/* Signature Section */}
+            <div className="signature-section print-section mt-6" style={{ pageBreakInside: 'avoid' }}>
               <div className="flex justify-end">
                 <div className="text-center">
                   {ddoSignature ? (
-                    <div className="mb-2 p-2 border border-gray-300 bg-white">
+                    <div className="mb-2 p-2 border border-gray-300 bg-white inline-block">
                       <img 
                         src={ddoSignature} 
                         alt="DDO Signature" 
                         className="h-20 max-w-48 object-contain mx-auto"
-                        style={{ imageRendering: 'crisp-edges' }}
+                        style={{ imageRendering: 'crisp-edges', maxHeight: '80px', maxWidth: '200px' }}
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.parentElement.innerHTML = `
-                            <div class="text-red-500 text-center py-4">
-                              <svg class="w-6 h-6 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
-                              </svg>
+                            <div class="text-red-500 text-center py-4" style="font-size: 10px;">
                               Signature Image Not Available
                             </div>
                           `;
@@ -1184,17 +1530,17 @@ export default function ProformaAdviceForm({
                       />
                     </div>
                   ) : (
-                    <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center">
-                      <span className="text-gray-500 text-sm">No Signature Available</span>
+                    <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center inline-block">
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>No Signature Available</span>
                     </div>
                   )}
-                  <p className="text-xs font-semibold mt-1">Signature of DDO</p>
-                  <p className="text-xs">{ddoDetails?.fullName || 'Karnataka Police Department'}</p>
+                  <p className="font-semibold mt-1" style={{ fontSize: '11px' }}>Signature of DDO</p>
+                  <p style={{ fontSize: '11px' }}>{ddoDetails?.fullName || 'Karnataka Police Department'}</p>
                 </div>
               </div>
 
-              <div className="text-center mt-4 pt-2 border-t border-gray-300">
-                <p className="text-xs text-gray-600 italic">This is a computer generated document</p>
+              <div className="text-center mt-6 pt-2 border-t border-gray-300">
+                <p className="text-gray-600 italic" style={{ fontSize: '10px' }}>This is a computer generated document</p>
               </div>
             </div>
           </div>

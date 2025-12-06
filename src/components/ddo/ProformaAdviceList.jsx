@@ -68,31 +68,138 @@ export default function ProformaAdviceList({
     return API_ENDPOINTS.IMAGE_BASE_URL + signaturePath;
   };
 
+  // Extract data from previewData to match Form format
+  const extractPreviewData = () => {
+    if (!previewData) return null;
+    
+    const raw = previewData.raw || previewData;
+    const items = raw.items || [];
+    const customerResponse = raw.customerResponse || raw.customer || {};
+    
+    // Extract line items
+    const lineItems = items.map((item, index) => ({
+      serialNo: index + 1,
+      description: item.description || '',
+      hsnNumber: item.hsnCode || item.hsnNumber || '',
+      amount: parseFloat(item.amount) || 0
+    }));
+    
+    const totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalQuantity = lineItems.length;
+    
+    return {
+      lineItems,
+      totalAmount,
+      totalQuantity,
+      customer: {
+        customerName: customerResponse.name || customerResponse.customerName || previewData.customerName || '',
+        gstNumber: customerResponse.gstNumber || customerResponse.gstin || previewData.customerGstin || '',
+        address: customerResponse.address || '',
+        stateCode: customerResponse.stateCode || ''
+      },
+      invoiceType: raw.invoiceType || raw.serviceType || 'EXEMPTED',
+      note: raw.note || raw.invoiceRemarks || '',
+      notificationDetails: raw.notificationDetails || '',
+      gstCalculation: raw.gstCalculation || null,
+      billDetails: {
+        date: raw.date || previewData.proformaDate || new Date().toISOString().split('T')[0],
+        placeOfSupply: raw.placeOfSupply || 'Bengaluru'
+      },
+      invoiceNumber: previewData.proformaNumber || raw.invoiceNumber || '',
+      signature: previewData.signature || raw.signature || '',
+      rcmIgst: raw.rcmIgst || 0,
+      rcmCgst: raw.rcmCgst || 0,
+      rcmSgst: raw.rcmSgst || 0,
+      totalAdviceAmountReceivable: raw.totalAdviceAmountReceivable || raw.grandTotal || totalAmount
+    };
+  };
+
   const handlePrint = () => {
     if (!previewData) return;
     
+    const data = extractPreviewData();
+    if (!data) return;
+    
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     
-    const currentDate = previewData?.proformaDate ? 
-      new Date(previewData.proformaDate).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }) : 
-      new Date().toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+    const currentDate = formatDateLocal(previewData.proformaDate || data.billDetails.date);
+    const signatureUrl = getSignatureUrl(data.signature);
     
-    const invoiceDate = previewData?.invoiceDate ? 
-      new Date(previewData.invoiceDate).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }) : '-';
+    // Get logo source
+    const logoImg = document.querySelector('#proforma-preview-content img');
+    const logoSrc = logoImg ? logoImg.src : '/1.png';
     
-    const signatureUrl = getSignatureUrl(previewData?.signature || (previewData?.raw?.signature));
+    // Build line items HTML
+    const lineItemsHTML = data.lineItems.map((item) => `
+      <tr>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.serialNo}</td>
+        <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${item.description || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.hsnNumber || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">1</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">Nos</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
+      </tr>
+    `).join('');
+    
+    // Format percent helper
+    const formatPercent = (val) => {
+      if (val === null || val === undefined) return '';
+      const num = Number(val);
+      if (Number.isNaN(num)) return String(val);
+      let s = num.toString();
+      if (!/e/i.test(s) && s.includes('.')) {
+        s = Number(num.toFixed(6)).toString();
+      }
+      s = s.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/, '');
+      return s;
+    };
+    
+    // Calculate display rates
+    const gstCalc = data.gstCalculation || {};
+    const displayGstRate = gstCalc.gstRate || gstCalc.igst || 18;
+    const displayCgstRate = gstCalc.cgstRate || (displayGstRate / 2);
+    const displaySgstRate = gstCalc.sgstRate || (displayGstRate / 2);
+    
+    // GST Calculation HTML
+    let gstCalcHTML = '';
+    if (data.invoiceType === 'FCM' && gstCalc) {
+      gstCalcHTML = `
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>IGST @ ${formatPercent(displayGstRate)}%:</span>
+          <span>${gstCalc?.igst ? formatCurrency(gstCalc.igst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>CGST @ ${formatPercent(displayCgstRate)}%:</span>
+          <span>${gstCalc?.cgst ? formatCurrency(gstCalc.cgst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+          <span>SGST @ ${formatPercent(displaySgstRate)}%:</span>
+          <span>${gstCalc?.sgst ? formatCurrency(gstCalc.sgst) : '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px; font-weight: bold;">
+          <span>Total GST:</span>
+          <span>${formatCurrency(gstCalc?.gstAmount || 0)}</span>
+        </div>
+      `;
+    }
+    
+    // RCM Tax Details
+    let rcmHTML = '';
+    if (data.invoiceType === 'RCM') {
+      rcmHTML = `
+        <div style="margin-top: 6px;">
+          <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">RCM Tax Details:</p>
+          <div style="padding: 6px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px;">
+            <p style="font-weight: bold; margin-bottom: 2px;">GST Payable Under RCM by the Recipient</p>
+            <p style="font-weight: bold;">IGST : ${formatCurrency(data.rcmIgst)} &nbsp;&nbsp; CGST : ${formatCurrency(data.rcmCgst)}/- &nbsp;&nbsp; SGST: ${formatCurrency(data.rcmSgst)}/-</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Amount in words
+    const amountInWords = numberToWordsEnhanced(data.totalAdviceAmountReceivable);
     
     // Enhanced number to words function
     const convertToWords = (num) => {
@@ -167,16 +274,16 @@ export default function ProformaAdviceList({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Proforma Advice - ${previewData?.proformaNumber || ''}</title>
+          <title>Proforma Advice - ${data.invoiceNumber}</title>
           <style>
             @page {
-              margin: 10mm;
+              margin: 8mm;
               size: A4 portrait;
             }
             
             body {
               font-family: 'Arial', sans-serif;
-              font-size: 11px;
+              font-size: 10px;
               line-height: 1.3;
               color: black;
               background: white;
@@ -187,16 +294,15 @@ export default function ProformaAdviceList({
             }
             
             .print-container {
-              width: 190mm;
-              min-height: 267mm;
+              width: 194mm;
               margin: 0 auto;
-              padding: 5mm;
+              padding: 3mm;
               box-sizing: border-box;
             }
             
             .print-header {
-              border-bottom: 1.5px solid #000;
-              padding-bottom: 8px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 6px;
               margin-bottom: 8px;
             }
             
@@ -208,21 +314,21 @@ export default function ProformaAdviceList({
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 8px 0;
+              margin: 6px 0;
               font-size: 10px;
             }
             
             th, td {
               border: 1px solid #000;
-              padding: 4px 6px;
+              padding: 4px;
               text-align: left;
-              vertical-align: top;
             }
             
             th {
               background-color: #2C5F2D !important;
               color: white !important;
               font-weight: bold;
+              text-align: center;
             }
             
             .total-row {
@@ -231,34 +337,20 @@ export default function ProformaAdviceList({
             }
             
             .signature-section {
-              margin-top: 20px;
+              margin-top: 15px;
               text-align: right;
             }
             
             .signature-box {
               display: inline-block;
               text-align: center;
-              margin-top: 20px;
             }
             
             .signature-image {
               max-height: 50px;
               max-width: 150px;
               object-fit: contain;
-              margin-bottom: 5px;
-            }
-            
-            .amount-in-words {
-              font-style: italic;
-              padding: 5px;
-              background-color: #f9f9f9;
-              border: 1px solid #ddd;
-              margin: 5px 0;
-            }
-            
-            .header-logo {
-              max-width: 60px;
-              max-height: 60px;
+              margin-bottom: 4px;
             }
             
             @media print {
@@ -272,10 +364,6 @@ export default function ProformaAdviceList({
                 min-height: 100%;
                 padding: 10mm;
               }
-              
-              .no-print {
-                display: none !important;
-              }
             }
           </style>
         </head>
@@ -287,141 +375,145 @@ export default function ProformaAdviceList({
                 <tr>
                   <td style="border: none; width: 20%; vertical-align: top;">
                     <div style="text-align: center;">
-                      <img src="/1.png" alt="Logo" class="header-logo" onerror="this.style.display='none'">
+                      <img src="${logoSrc}" alt="Logo" style="max-width: 60px; max-height: 60px;" onerror="this.style.display='none'">
                     </div>
                   </td>
                   <td style="border: none; width: 60%; vertical-align: top; padding-left: 10px;">
-                    <h1 style="margin: 0; font-size: 14px; font-weight: bold; color: #000;">
+                    <h1 style="margin: 0; font-size: 13px; font-weight: bold; color: #000;">
                       ${defaultGstDetails.gstName}
                     </h1>
-                    <p style="margin: 2px 0; font-size: 10px;">${defaultGstDetails.address}</p>
-                    <p style="margin: 2px 0; font-size: 10px;">GSTIN: ${defaultGstDetails.gstNumber}</p>
-                    <p style="margin: 2px 0; font-size: 10px;">Email: police@karnataka.gov.in</p>
+                    <p style="margin: 1px 0; font-size: 10px;">${defaultGstDetails.address}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${defaultGstDetails.gstNumber}</p>
                   </td>
                   <td style="border: none; width: 20%; vertical-align: top; text-align: right;">
-                    <h2 style="margin: 0; font-size: 14px; font-weight: bold; color: #2C5F2D;">PROFORMA ADVICE</h2>
-                    <p style="margin: 2px 0; font-size: 10px; font-weight: bold;">Advice No: ${previewData?.proformaNumber || 'N/A'}</p>
-                    <p style="margin: 2px 0; font-size: 10px;">Date: ${currentDate}</p>
+                    <h2 style="margin: 0; font-size: 15px; font-weight: bold; color: #2C5F2D;">PROFORMA ADVISE</h2>
+                    <p style="margin: 3px 0; font-size: 10px; font-weight: bold;">Proforma No: ${data.invoiceNumber}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">Date: ${currentDate}</p>
                   </td>
                 </tr>
               </table>
             </div>
             
-            <!-- Customer Details -->
+            <!-- Customer and Advice Details -->
             <div class="print-section">
-              <table>
+              <table style="border: none; margin-bottom: 10px;">
                 <tr>
-                  <th colspan="4" style="background-color: #2C5F2D; color: white;">SERVICE RECEIVER DETAILS</th>
-                </tr>
-                <tr>
-                  <td style="width: 25%; font-weight: bold;">Name</td>
-                  <td style="width: 75%;" colspan="3">M/s ${previewData?.customerName || 'N/A'}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">GSTIN</td>
-                  <td>${previewData?.customerGstin || 'Not provided'}</td>
-                  <td style="font-weight: bold;">Service Type</td>
-                  <td>${previewData?.serviceType || 'Not specified'}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">DDO Code</td>
-                  <td>${defaultDdoDetails.ddoCode}</td>
-                  <td style="font-weight: bold;">Department</td>
-                  <td>${defaultDdoDetails.fullName}</td>
-                </tr>
-              </table>
-            </div>
-            
-            <!-- Amount Details -->
-            <div class="print-section">
-              <table>
-                <tr>
-                  <th colspan="2" style="background-color: #2C5F2D; color: white;">AMOUNT DETAILS</th>
-                </tr>
-                <tr>
-                  <td style="width: 70%; font-weight: bold;">Description</td>
-                  <td style="width: 30%; font-weight: bold; text-align: right;">Amount (₹)</td>
-                </tr>
-                <tr>
-                  <td>Proforma Advice Amount</td>
-                  <td style="text-align: right;">${formatCurrency(previewData?.proformaAmount || 0)}</td>
-                </tr>
-                <tr>
-                  <td>Tax Invoice Amount</td>
-                  <td style="text-align: right;">${formatCurrency(previewData?.taxInvoiceAmount || 0)}</td>
-                </tr>
-                <tr class="total-row">
-                  <td style="font-weight: bold;">Difference Amount</td>
-                  <td style="text-align: right; font-weight: bold; ${(previewData?.proformaAmount || 0) - (previewData?.taxInvoiceAmount || 0) > 0 ? 'color: red;' : 'color: green;'}">
-                    ${formatCurrency(Math.max((previewData?.proformaAmount || 0) - (previewData?.taxInvoiceAmount || 0), 0))}
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Service Receiver Details</h3>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Name:</strong> M/s ${data.customer.customerName || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>GSTIN:</strong> ${data.customer.gstNumber || 'Not provided'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Address:</strong> ${data.customer.address || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>State Code:</strong> ${data.customer.stateCode || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Type:</strong> ${data.invoiceType}</p>
+                  </td>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Advice Details</h3>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Code:</strong> ${defaultDdoDetails.ddoCode}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Name:</strong> ${defaultDdoDetails.fullName}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Place of Supply:</strong> ${data.billDetails.placeOfSupply || 'Bengaluru'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>City/District:</strong> ${defaultDdoDetails.city}</p>
                   </td>
                 </tr>
               </table>
             </div>
             
-            <!-- Date Information -->
+            <!-- Line Items Table -->
             <div class="print-section">
               <table>
+                <thead>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Description</th>
+                    <th>HSN Code</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th style="text-align: right;">Amount (₹)</th>
+                    <th style="text-align: right;">Taxable Value (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lineItemsHTML}
+                  <tr class="total-row">
+                    <td colspan="3" style="text-align: right; font-weight: bold;">Total</td>
+                    <td style="text-align: center; font-weight: bold;">${data.totalQuantity}</td>
+                    <td style="text-align: center; font-weight: bold;">Nos</td>
+                    <td style="text-align: right; font-weight: bold;">${formatCurrency(data.totalAmount)}</td>
+                    <td style="text-align: right; font-weight: bold;">${formatCurrency(data.totalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Additional Information and Calculation Summary -->
+            <div class="print-section">
+              <table style="border: none;">
                 <tr>
-                  <th colspan="2" style="background-color: #2C5F2D; color: white;">DATE INFORMATION</th>
-                </tr>
-                <tr>
-                  <td style="width: 50%; font-weight: bold;">Proforma Date</td>
-                  <td style="width: 50%;">${currentDate}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">Invoice Date</td>
-                  <td>${invoiceDate}</td>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Additional Information</h3>
+                    <div style="margin-bottom: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Invoice Remarks:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0;">${data.note || '-'}</p>
+                    </div>
+                    <div style="margin-bottom: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Notification Details:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0; min-height: 30px;">${data.notificationDetails || '-'}</p>
+                    </div>
+                    ${rcmHTML}
+                    <div style="margin-top: 6px;">
+                      <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Amount in Words:</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0; font-style: italic;">${amountInWords}</p>
+                    </div>
+                  </td>
+                  <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Calculation Summary</h3>
+                    <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd; font-size: 10px;">
+                      <span>Total Taxable Value:</span>
+                      <span style="font-weight: bold;">${formatCurrency(data.totalAmount)}</span>
+                    </div>
+                    ${gstCalcHTML}
+                    <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
+                      <span>Total amount payable:</span>
+                      <span>${formatCurrency(data.totalAdviceAmountReceivable)}</span>
+                    </div>
+                  </td>
                 </tr>
               </table>
             </div>
             
-            <!-- Bank Details -->
-            <div class="print-section">
-              <table>
+            <!-- Bank Details and Signature on same page -->
+            <div class="print-section" style="page-break-inside: avoid;">
+              <table style="border: none; margin-bottom: 10px;">
                 <tr>
-                  <th colspan="4" style="background-color: #2C5F2D; color: white;">BANK DETAILS</th>
-                </tr>
-                <tr>
-                  <td style="width: 25%; font-weight: bold;">Bank Name</td>
-                  <td style="width: 25%;">${defaultBankDetails.bankName}</td>
-                  <td style="width: 25%; font-weight: bold;">Branch</td>
-                  <td style="width: 25%;">${defaultBankDetails.bankBranch}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">IFSC Code</td>
-                  <td>${defaultBankDetails.ifscCode}</td>
-                  <td style="font-weight: bold;">Account No</td>
-                  <td>${defaultBankDetails.accountNumber}</td>
+                  <td style="border: 1px solid #000; padding: 6px; width: 60%;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Bank Details</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px;">
+                      <div><strong>Bank:</strong> ${defaultBankDetails.bankName}</div>
+                      <div><strong>Branch:</strong> ${defaultBankDetails.bankBranch}</div>
+                      <div><strong>IFSC:</strong> ${defaultBankDetails.ifscCode}</div>
+                      <div><strong>Account No:</strong> ${defaultBankDetails.accountNumber}</div>
+                    </div>
+                  </td>
+                  <td style="border: none; width: 40%; vertical-align: top; text-align: right; padding-left: 10px;">
+                    <div class="signature-box" style="display: inline-block; text-align: center;">
+                      ${signatureUrl 
+                        ? `<img src="${signatureUrl}" 
+                             alt="DDO Signature" 
+                             class="signature-image"
+                             style="max-height: 50px; max-width: 150px; object-fit: contain; margin-bottom: 4px;"
+                             onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
+                        : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin-bottom: 4px;"></div>`
+                      }
+                      <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
+                      <div style="font-size: 10px;">${defaultDdoDetails.fullName}</div>
+                    </div>
+                  </td>
                 </tr>
               </table>
-            </div>
-            
-            <!-- Amount in Words -->
-            <div class="print-section">
-              <div class="amount-in-words">
-                <strong>Amount in Words:</strong> ${convertToWords(previewData?.proformaAmount || 0)}
+              
+              <!-- Footer -->
+              <div style="text-align: center; margin-top: 8px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 4px;">
+                This is a computer generated document
               </div>
-            </div>
-            
-            <!-- Signature Section -->
-            <div class="signature-section">
-              <div class="signature-box">
-                ${signatureUrl 
-                  ? `<img src="${signatureUrl}" 
-                       alt="DDO Signature" 
-                       class="signature-image"
-                       onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:40px; width:150px; border-bottom:1px solid #000; margin-bottom:5px;\'></div>'">`
-                  : `<div style="height: 40px; width: 150px; border-bottom: 1px solid #000; margin-bottom: 5px;"></div>`
-                }
-                <div style="font-weight: bold; font-size: 11px;">Signature of DDO</div>
-                <div style="font-size: 10px;">${defaultDdoDetails.fullName}</div>
-              </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="text-align: center; margin-top: 20px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 5px;">
-              This is a computer generated document and does not require signature
             </div>
           </div>
           
@@ -793,7 +885,7 @@ export default function ProformaAdviceList({
             <Button variant="outline" onClick={handlePrint} className="p-2 hover:bg-blue-50 hover:text-blue-600">
               <Download size={18} />
             </Button>
-            <Button variant="primary" onClick={() => window.print()} className="p-2 bg-[#2C5F2D] hover:bg-[#1e4d1f]">
+            <Button variant="primary" onClick={handlePrint} className="p-2 bg-[#2C5F2D] hover:bg-[#1e4d1f]">
               <Printer size={18} />
             </Button>
             <button
@@ -810,250 +902,258 @@ export default function ProformaAdviceList({
         </div>
         
         <div className="flex flex-col h-full">
-          {/* Preview Content - Optimized for One-Page Print */}
-          {previewData && (
-            <div 
-              id="proforma-preview-content"
-              ref={printRef}
-              className={`flex-1 overflow-auto p-4 sm:p-6 ${printOptimizedView ? 'print-optimized bg-white text-black' : 'bg-white text-black'}`}
-              style={{ maxWidth: '210mm', margin: '0 auto' }}
-            >
-              {/* Header Section */}
-              <div className="border-b border-gray-300 pb-4 mb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="relative w-14 h-14">
-                      <Image
-                        src="/1.png"
-                        alt="Organization Logo"
-                        width={56}
-                        height={56}
-                        className="w-full h-full object-contain"
-                      />
+          {/* Preview Content - Same as Form */}
+          {previewData && (() => {
+            const data = extractPreviewData();
+            if (!data) return null;
+            
+            return (
+              <div 
+                id="proforma-preview-content"
+                ref={printRef}
+                className={`flex-1 overflow-auto bg-white text-black p-6 print-content ${
+                  printOptimizedView ? 'print-optimized' : ''
+                }`}
+                style={{ 
+                  maxWidth: '210mm', 
+                  margin: '0 auto',
+                  minHeight: '297mm',
+                  fontFamily: 'Arial, sans-serif'
+                }}
+              >
+                {/* Print Header */}
+                <div className="print-header mb-4 pb-3 border-b-2 border-gray-400">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="relative w-14 h-14 mt-1">
+                        <Image
+                          src="/1.png"
+                          alt="Organization Logo"
+                          width={56}
+                          height={56}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h1 className="font-bold text-gray-800 leading-tight" style={{ fontSize: '14px' }}>
+                          {defaultGstDetails.gstName}
+                        </h1>
+                        <p className="text-gray-600 leading-tight" style={{ fontSize: '11px', marginTop: '2px' }}>{defaultGstDetails.address}</p>
+                        <p className="text-gray-600" style={{ fontSize: '11px', marginTop: '2px' }}>GSTIN: {defaultGstDetails.gstNumber}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h1 className="text-sm font-bold">
-                        {defaultGstDetails.gstName}
-                      </h1>
-                      <p className="text-xs mt-1">{defaultGstDetails.address}</p>
-                      <p className="text-xs">GSTIN: {defaultGstDetails.gstNumber}</p>
-                      <p className="text-xs">Email: police@karnataka.gov.in</p>
+                    <div className="text-right">
+                      <h2 className="font-bold text-[#2C5F2D]" style={{ fontSize: '16px' }}>PROFORMA ADVISE</h2>
+                      <p className="font-semibold" style={{ fontSize: '11px', marginTop: '4px' }}>Proforma No: {data.invoiceNumber}</p>
+                      <p style={{ fontSize: '11px', marginTop: '2px' }}>Date: {formatDateLocal(previewData.proformaDate || data.billDetails.date)}</p>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-lg font-bold text-[#2C5F2D]">
-                      PROFORMA ADVICE
-                    </h2>
-                    <p className="text-sm font-semibold mt-1">
-                      Advice No: {previewData.proformaNumber}
-                    </p>
-                    <p className="text-sm">
-                      Date: {formatDateLocal(previewData.proformaDate)}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Customer Details */}
-              <div className="mb-4">
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-[#2C5F2D] text-white">
-                      <th colSpan="4" className="p-2 text-sm">
-                        SERVICE RECEIVER DETAILS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300" style={{width: '25%'}}>Name</td>
-                      <td className="p-2 text-sm border border-gray-300" colSpan="3">
-                        M/s {previewData.customerName || 'N/A'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">GSTIN</td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {previewData.customerGstin || 'Not provided'}
-                      </td>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">Service Type</td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {previewData.serviceType || 'Not specified'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">DDO Code</td>
-                      <td className="p-2 text-sm border border-gray-300">{defaultDdoDetails.ddoCode}</td>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">Department</td>
-                      <td className="p-2 text-sm border border-gray-300">{defaultDdoDetails.fullName}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                {/* Customer and Invoice Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
+                  <div className="border border-gray-300 p-3 rounded">
+                    <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Service Receiver Details</h3>
+                    <div className="space-y-1" style={{ fontSize: '11px' }}>
+                      <p><strong>Name:</strong> M/s {data.customer.customerName || ''}</p>
+                      <p><strong>GSTIN:</strong> {data.customer.gstNumber || 'Not provided'}</p>
+                      <p><strong>Address:</strong> {data.customer.address || ''}</p>
+                      <p><strong>State Code:</strong> {data.customer.stateCode || ''}</p>
+                      <p><strong>Type:</strong> {data.invoiceType}</p>
+                    </div>
+                  </div>
 
-              {/* Amount Details */}
-              <div className="mb-4">
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-[#2C5F2D] text-white">
-                      <th colSpan="2" className="p-2 text-sm">
-                        AMOUNT DETAILS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300" style={{width: '70%'}}>Description</td>
-                      <td className="p-2 font-semibold text-sm border border-gray-300 text-right" style={{width: '30%'}}>
-                        Amount (₹)
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 text-sm border border-gray-300">
-                        Proforma Advice Amount
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300 text-right">
-                        {formatCurrency(previewData.proformaAmount || 0)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 text-sm border border-gray-300">
-                        Tax Invoice Amount
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300 text-right">
-                        {formatCurrency(previewData.taxInvoiceAmount || 0)}
-                      </td>
-                    </tr>
-                    <tr className="bg-gray-100">
-                      <td className="p-2 font-semibold text-sm border border-gray-300">
-                        Difference Amount
-                      </td>
-                      <td className={`p-2 text-sm border border-gray-300 text-right font-semibold ${(previewData.proformaAmount || 0) - (previewData.taxInvoiceAmount || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatCurrency(Math.max((previewData.proformaAmount || 0) - (previewData.taxInvoiceAmount || 0), 0))}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                  <div className="border border-gray-300 p-3 rounded">
+                    <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Advice Details</h3>
+                    <div className="space-y-1" style={{ fontSize: '11px' }}>
+                      <p><strong>DDO Code:</strong> {defaultDdoDetails.ddoCode}</p>
+                      <p><strong>DDO Name:</strong> {defaultDdoDetails.fullName}</p>
+                      <p><strong>Place of Supply:</strong> {data.billDetails.placeOfSupply || 'Bengaluru'}</p>
+                      <p><strong>City/District:</strong> {defaultDdoDetails.city}</p>
+                    </div>
+                  </div>
+                </div>
 
-              {/* Date Information */}
-              <div className="mb-4">
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-[#2C5F2D] text-white">
-                      <th colSpan="2" className="p-2 text-sm">
-                        DATE INFORMATION
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300" style={{width: '50%'}}>
-                        Proforma Date
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {formatDateLocal(previewData.proformaDate)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">
-                        Invoice Date
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {formatDateLocal(previewData.invoiceDate)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                {/* Line Items Table */}
+                <div className="mb-3 print-section">
+                  <table className="w-full border-collapse border border-gray-400" style={{ fontSize: '11px' }}>
+                    <thead>
+                      <tr className="bg-[#2C5F2D] text-white">
+                        <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>S.No</th>
+                        <th className="border border-gray-400 p-2 text-left font-bold" style={{ fontSize: '11px' }}>Description</th>
+                        <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>HSN Code</th>
+                        <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>Qty</th>
+                        <th className="border border-gray-400 p-2 text-center font-bold" style={{ fontSize: '11px' }}>Unit</th>
+                        <th className="border border-gray-400 p-2 text-right font-bold" style={{ fontSize: '11px' }}>Amount (₹)</th>
+                        <th className="border border-gray-400 p-2 text-right font-bold" style={{ fontSize: '11px' }}>Taxable Value (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.lineItems.map((item, index) => (
+                        <tr key={index}>
+                          <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.serialNo}</td>
+                          <td className="border border-gray-400 p-2" style={{ fontSize: '11px' }}>{item.description}</td>
+                          <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.hsnNumber}</td>
+                          <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>1</td>
+                          <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
+                          <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(item.amount)}</td>
+                          <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(item.amount)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-100 font-bold">
+                        <td colSpan="3" className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>Total</td>
+                        <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{data.totalQuantity}</td>
+                        <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
+                        <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(data.totalAmount)}</td>
+                        <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(data.totalAmount)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* Bank Details */}
-              <div className="mb-4">
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-[#2C5F2D] text-white">
-                      <th colSpan="4" className="p-2 text-sm">
-                        BANK DETAILS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300" style={{width: '25%'}}>
-                        Bank Name
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300" style={{width: '25%'}}>
-                        {defaultBankDetails.bankName}
-                      </td>
-                      <td className="p-2 font-semibold text-sm border border-gray-300" style={{width: '25%'}}>
-                        Branch
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300" style={{width: '25%'}}>
-                        {defaultBankDetails.bankBranch}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">
-                        IFSC Code
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {defaultBankDetails.ifscCode}
-                      </td>
-                      <td className="p-2 font-semibold text-sm border border-gray-300">
-                        Account No
-                      </td>
-                      <td className="p-2 text-sm border border-gray-300">
-                        {defaultBankDetails.accountNumber}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Amount in Words */}
-              <div className="mb-4 p-3 bg-gray-50 border border-gray-300 text-sm">
-                <strong>Amount in Words:</strong> {numberToWordsEnhanced(previewData.proformaAmount || 0)}
-              </div>
-
-              {/* Signature Section */}
-              <div className="mt-8">
-                <div className="flex justify-end">
-                  <div className="text-center">
-                    {(() => {
-                      const signaturePath = previewData.signature || (previewData.raw && previewData.raw.signature);
-                      const signatureUrl = getSignatureUrl(signaturePath);
+                {/* Calculation and Additional Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
+                  <div className="border border-gray-300 p-3 rounded">
+                    <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Additional Information</h3>
+                    <div className="space-y-2" style={{ fontSize: '11px' }}>
+                      <div>
+                        <p className="font-semibold">Invoice Remarks:</p>
+                        <p className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>{data.note || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Notification Details:</p>
+                        <p className="mt-1 p-2 bg-gray-50 rounded border min-h-[40px]" style={{ fontSize: '11px' }}>{data.notificationDetails || '-'}</p>
+                      </div>
                       
-                      return signatureUrl ? (
-                        <div className="mb-2 p-2 border border-gray-300 bg-white">
-                          <img 
-                            src={signatureUrl} 
-                            alt="DDO Signature" 
-                            className="h-20 max-w-48 object-contain mx-auto"
-                            style={{ imageRendering: 'crisp-edges' }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = `
-                                <div class="h-20 w-48 border-b-2 border-gray-400 mx-auto mb-2"></div>
-                              `;
-                            }}
-                          />
+                      {/* RCM specific fields in preview */}
+                      {data.invoiceType === 'RCM' && (
+                        <div>
+                          <p className="font-semibold">RCM Tax Details:</p>
+                          <div className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>
+                            <span className="font-medium">GST Payable Under RCM by the Recipient</span>
+                            <div className="mt-1 font-semibold">
+                              IGST : {formatCurrency(data.rcmIgst)}          CGST : {formatCurrency(data.rcmCgst)}/-          SGST: {formatCurrency(data.rcmSgst)}/-
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="h-20 w-48 border-b-2 border-gray-400 mx-auto mb-2"></div>
-                      );
-                    })()}
-                    <p className="text-sm font-semibold">Signature of DDO</p>
-                    <p className="text-sm">{defaultDdoDetails.fullName}</p>
+                      )}
+                      <div>
+                        <p className="font-semibold">Amount in Words:</p>
+                        <p className="mt-1 p-2 bg-gray-50 rounded border italic" style={{ fontSize: '11px' }}>{numberToWordsEnhanced(data.totalAdviceAmountReceivable)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-gray-300 p-3 rounded">
+                    <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Calculation Summary</h3>
+                    <div className="space-y-1" style={{ fontSize: '11px' }}>
+                      <div className="flex justify-between border-b py-1">
+                        <span>Total Taxable Value:</span>
+                        <span className="font-semibold">{formatCurrency(data.totalAmount)}</span>
+                      </div>
+                      
+                      {data.invoiceType === 'FCM' && data.gstCalculation && (() => {
+                        const gstCalc = data.gstCalculation;
+                        const displayGstRate = gstCalc.gstRate || gstCalc.igst || 18;
+                        const displayCgstRate = gstCalc.cgstRate || (displayGstRate / 2);
+                        const displaySgstRate = gstCalc.sgstRate || (displayGstRate / 2);
+                        const formatPercent = (val) => {
+                          if (val === null || val === undefined) return '';
+                          const num = Number(val);
+                          if (Number.isNaN(num)) return String(val);
+                          let s = num.toString();
+                          if (!/e/i.test(s) && s.includes('.')) {
+                            s = Number(num.toFixed(6)).toString();
+                          }
+                          s = s.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/, '');
+                          return s;
+                        };
+                        
+                        return (
+                          <>
+                            <div className="flex justify-between border-b py-1">
+                              <span>IGST @ {formatPercent(displayGstRate)}%:</span>
+                              <span>{gstCalc?.igst ? formatCurrency(gstCalc.igst) : '-'}</span>
+                            </div>
+                            <div className="flex justify-between border-b py-1">
+                              <span>CGST @ {formatPercent(displayCgstRate)}%:</span>
+                              <span>{gstCalc?.cgst ? formatCurrency(gstCalc.cgst) : '-'}</span>
+                            </div>
+                            <div className="flex justify-between border-b py-1">
+                              <span>SGST @ {formatPercent(displaySgstRate)}%:</span>
+                              <span>{gstCalc?.sgst ? formatCurrency(gstCalc.sgst) : '-'}</span>
+                            </div>
+                            <div className="flex justify-between border-b py-1 font-semibold">
+                              <span>Total GST:</span>
+                              <span>{formatCurrency(gstCalc?.gstAmount || 0)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+
+                      <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
+                        <span>Total amount payable:</span>
+                        <span>{formatCurrency(data.totalAdviceAmountReceivable)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bank Details and Signature */}
+                <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakInside: 'avoid' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
+                      <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
+                        <div><strong>Bank:</strong> {defaultBankDetails.bankName}</div>
+                        <div><strong>Branch:</strong> {defaultBankDetails.bankBranch}</div>
+                        <div><strong>IFSC:</strong> {defaultBankDetails.ifscCode}</div>
+                        <div><strong>Account No:</strong> {defaultBankDetails.accountNumber}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="text-center inline-block">
+                        {(() => {
+                          const signaturePath = data.signature || (previewData.raw && previewData.raw.signature);
+                          const signatureUrl = getSignatureUrl(signaturePath);
+                          
+                          return signatureUrl ? (
+                            <div className="mb-2 p-2 border border-gray-300 bg-white inline-block">
+                              <img 
+                                src={signatureUrl} 
+                                alt="DDO Signature" 
+                                className="h-20 max-w-48 object-contain mx-auto"
+                                style={{ imageRendering: 'crisp-edges', maxHeight: '80px', maxWidth: '200px' }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.innerHTML = `
+                                    <div class="text-red-500 text-center py-4" style="font-size: 10px;">
+                                      Signature Image Not Available
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center inline-block">
+                              <span className="text-gray-500" style={{ fontSize: '10px' }}>No Signature Available</span>
+                            </div>
+                          );
+                        })()}
+                        <p className="font-semibold mt-1" style={{ fontSize: '11px' }}>Signature of DDO</p>
+                        <p style={{ fontSize: '11px' }}>{defaultDdoDetails.fullName}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-center mt-6 pt-2 border-t border-gray-300">
+                    <p className="text-gray-600 italic" style={{ fontSize: '10px' }}>This is a computer generated document</p>
                   </div>
                 </div>
               </div>
-
-              {/* Footer */}
-              <div className="text-center mt-8 pt-4 border-t border-gray-300 text-xs text-gray-600">
-                This is a computer generated document and does not require signature
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </Modal>
     </section>
