@@ -71,6 +71,7 @@ export const API_ENDPOINTS = {
   BILL_LIST: `${API_BASE_URL}/bill/list`,
   INVOICE_DDO_LIST: `${API_BASE_URL}/invoices/list?ddoId=`,
   PROFORMA_ADVICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?ddoId=`,
+  CREATE_RECIEPT: `${API_BASE_URL}/invoices/createBulkReceipts`,
   BILL_ADD: `${API_BASE_URL}/invoices/save`,
   BILL_UPDATE: `${API_BASE_URL}/bill/update`,
   BILL_GET: `${API_BASE_URL}/bill/get/`,
