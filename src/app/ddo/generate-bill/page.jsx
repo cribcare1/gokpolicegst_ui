@@ -1767,9 +1767,11 @@ export default function GenerateBillPage() {
               <div>
                 <strong>Bank Name:</strong> ${bankDetails.bankName}
                 ${bankDetails.bankBranch ? ` | <strong>Branch:</strong> ${bankDetails.bankBranch}` : ''}
+                ${bankDetails.bankBranch ? ` | <strong>Branch:</strong> ${bankDetails.bankBranch}` : ''}
                 ${bankDetails.ifscCode ? ` | <strong>IFSC:</strong> ${bankDetails.ifscCode}` : ''}
                 ${bankDetails.accountNumber ? ` | <strong>Account No:</strong> ${bankDetails.accountNumber}` : ''}
                 ${bankDetails.accountType ? ` | ${bankDetails.accountType}` : ''}
+                  ${bankDetails.ifscCode ? ` | <strong>Issued to:</strong> ${bankDetails.ifscCode}` : ''}
               </div>
             </div>
           </div>
