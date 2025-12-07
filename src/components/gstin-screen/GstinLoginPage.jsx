@@ -153,7 +153,7 @@ export default function GstinLoginPage() {
         }
         
         setUserData(response.login_response);
-        console.log("gstid==================", response.login_response.gstId);
+        console.log("gstid============", response.login_response.gstId);
         localStorage.setItem(LOGIN_CONSTANT.GSTID, response.login_response.gstId);
         localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);
