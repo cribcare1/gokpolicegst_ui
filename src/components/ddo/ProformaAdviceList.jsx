@@ -474,8 +474,28 @@ export default function ProformaAdviceList({
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
                       <span>${formatCurrency(data.totalAdviceAmountReceivable)}</span>
+
                     </div>
+                  
+                    <div class="signature-box" 
+     style="display: block; width: 100%; text-align: center; margin-top: 10px;">
+
+  ${signatureUrl 
+    ? `<img src="${signatureUrl}" 
+           alt="DDO Signature" 
+           class="signature-image"
+           style="max-height: 50px; max-width: 150px; object-fit: contain; margin-bottom: 4px;"
+           onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
+    : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto 4px auto;"></div>`
+  }
+
+  <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
+  <div style="font-size: 10px;">${defaultDdoDetails.fullName}</div>
+</div>
+
+                 
                   </td>
+                  
                 </tr>
               </table>
             </div>
@@ -483,6 +503,13 @@ export default function ProformaAdviceList({
             <!-- Bank Details and Signature on same page -->
             <div class="print-section" style="page-break-inside: avoid;">
               <table style="border: none; margin-bottom: 10px;">
+              <tr>
+                <td style="border: 1px solid #000; padding: 6px; width: 60%;">
+                    <h3 >DD / Cheque Issued to : ${defaultDdoDetails.fullName}</h3>
+                 
+                  </td>
+              
+              </tr>
                 <tr>
                   <td style="border: 1px solid #000; padding: 6px; width: 60%;">
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Bank Details</h3>
@@ -493,20 +520,7 @@ export default function ProformaAdviceList({
                       <div><strong>Account No:</strong> ${defaultBankDetails.accountNumber}</div>
                     </div>
                   </td>
-                  <td style="border: none; width: 40%; vertical-align: top; text-align: right; padding-left: 10px;">
-                    <div class="signature-box" style="display: inline-block; text-align: center;">
-                      ${signatureUrl 
-                        ? `<img src="${signatureUrl}" 
-                             alt="DDO Signature" 
-                             class="signature-image"
-                             style="max-height: 50px; max-width: 150px; object-fit: contain; margin-bottom: 4px;"
-                             onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
-                        : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin-bottom: 4px;"></div>`
-                      }
-                      <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
-                      <div style="font-size: 10px;">${defaultDdoDetails.fullName}</div>
-                    </div>
-                  </td>
+                  
                 </tr>
               </table>
               
@@ -1095,24 +1109,9 @@ export default function ProformaAdviceList({
                         <span>Total amount payable:</span>
                         <span>{formatCurrency(data.totalAdviceAmountReceivable)}</span>
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Bank Details and Signature */}
-                <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakInside: 'avoid' }}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
-                      <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
-                        <div><strong>Bank:</strong> {defaultBankDetails.bankName}</div>
-                        <div><strong>Branch:</strong> {defaultBankDetails.bankBranch}</div>
-                        <div><strong>IFSC:</strong> {defaultBankDetails.ifscCode}</div>
-                        <div><strong>Account No:</strong> {defaultBankDetails.accountNumber}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
+
+                       <div className="text-right">
                       <div className="text-center inline-block">
                         {(() => {
                           const signaturePath = data.signature || (previewData.raw && previewData.raw.signature);
@@ -1145,6 +1144,40 @@ export default function ProformaAdviceList({
                         <p style={{ fontSize: '11px' }}>{defaultDdoDetails.fullName}</p>
                       </div>
                     </div>
+                    </div>
+                  </div>
+                </div>
+          {/* <h3>DD/Cheque Issued to </h3> */}
+                {/* Bank Details and Signature */}
+                <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakInside: 'avoid' }}>
+                  <div >
+
+                     {/* <div>
+                                
+                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>DD / Cheque issued to : {defaultDdoDetails.fullName}</h3>
+                     
+                    </div> */}
+
+                    <div>
+
+                        <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px'  , marginBottom: '10px' }}>
+                        <div><strong>DD / Cheque Issued to :</strong>{defaultDdoDetails.fullName}</div>
+                      
+                      </div>
+
+                      
+                         
+                                
+                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
+                      <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
+                        <div><strong>Bank:</strong> {defaultBankDetails.bankName}</div>
+                        <div><strong>Branch:</strong> {defaultBankDetails.bankBranch}</div>
+                        <div><strong>IFSC:</strong> {defaultBankDetails.ifscCode}</div>
+                        <div><strong>Account No:</strong> {defaultBankDetails.accountNumber}</div>
+                      </div>
+                    </div>
+                    
+                   
                   </div>
 
                   <div className="text-center mt-6 pt-2 border-t border-gray-300">

@@ -65,7 +65,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
   }, [darkMode]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('userToken');
+    localStorage.removeItem('token');
     localStorage.removeItem('userId');
     if (role === 'admin') {
       router.push('/adminlogin');

@@ -163,7 +163,7 @@ router.replace('/ddo/quarterly_tds_list');
   const infoItems = [
     { label: "DDO Code", value: ddoInfo.ddoCode || "—", icon: <Hash className="text-blue-500" size={20} /> },
     { label: "Office Name", value: ddoInfo.officeName || "—", icon: <Building2 className="text-green-500" size={20} /> },
-    { label: "TAN / GSTIN", value: ddoInfo.gstin || "—", icon: <IndianRupee className="text-purple-500" size={20} /> },
+    { label: "TAN", value: ddoInfo.ddoTan || "—", icon: <Hash className="text-purple-500" size={20} /> },
   ];
 
   return (

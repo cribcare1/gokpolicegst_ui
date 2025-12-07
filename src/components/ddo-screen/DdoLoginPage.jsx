@@ -126,7 +126,7 @@ export default function LoginPage() {
     setError(null);
     console.log("username : "+username);
     console.log("password : "+password);
-    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
     
     
     const requestBody = {
@@ -195,7 +195,7 @@ export default function LoginPage() {
     setError(null);
     console.log("username : "+username);
     console.log("password : "+password);
-    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
     const requestBody = {
       userName: username, password: password,
     };
