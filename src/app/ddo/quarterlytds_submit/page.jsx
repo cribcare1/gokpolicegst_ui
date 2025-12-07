@@ -34,12 +34,16 @@ export default function TDSQuarterlyCreate() {
   // Load DDO info
   useEffect(() => {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+    console.log("storeed  profile :: "+storedProfile);
+    
     if (storedProfile) {
       const profile = JSON.parse(storedProfile);
+      console.log("ddo tan :: "+profile.ddoTan);
+      
       setDdoInfo({
         ddoCode: profile.ddoCode || "",
         officeName: profile.address || "",
-        gstin: profile.gstNumber || profile.gstId || "",
+        gstin: profile.ddoTan || "",
       });
     }
   }, []);
@@ -163,7 +167,7 @@ router.replace('/ddo/quarterly_tds_list');
   const infoItems = [
     { label: "DDO Code", value: ddoInfo.ddoCode || "—", icon: <Hash className="text-blue-500" size={20} /> },
     { label: "Office Name", value: ddoInfo.officeName || "—", icon: <Building2 className="text-green-500" size={20} /> },
-    { label: "TAN", value: ddoInfo.ddoTan || "—", icon: <Hash className="text-purple-500" size={20} /> },
+    { label: "TAN", value: ddoInfo.gstin || "—", icon: <Hash className="text-purple-500" size={20} /> },
   ];
 
   return (
