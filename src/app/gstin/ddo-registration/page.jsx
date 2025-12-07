@@ -14,6 +14,7 @@ import { validateGSTIN, validateEmail, validateMobile, validateDDOCode, validate
 
 export default function GstinDDORegistrationPage() {
   const [ddos, setDdos] = useState([]);
+  const [ddoTan, setDdoTan] = useState('');
   const [filteredDdos, setFilteredDdos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +34,8 @@ export default function GstinDDORegistrationPage() {
     mobile: '',
     email: '',
     password: '',
+    ddoTan : '',
+
     
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -109,7 +112,7 @@ export default function GstinDDORegistrationPage() {
           ddo.ddoName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ddo.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ddo.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ddo.city?.toLowerCase().includes(searchTerm.toLowerCase())
+          ddo.city?.toLowerCase().includes(searchTerm.toLowerCase()) 
       );
     }
 
@@ -128,6 +131,7 @@ export default function GstinDDORegistrationPage() {
       mobile: '',
       email: '',
       password: '',
+      ddoTan : '',
     });
     setShowPassword(false);
     setFieldErrors({});
@@ -146,6 +150,7 @@ export default function GstinDDORegistrationPage() {
       mobile: ddo.mobile|| '',
       email: ddo.email || '',
       id: ddo.userId || '',
+      ddoTan : ddo.ddoTan || '',
      // password: '', // Password field is empty by default, user can set new password
     });
     setShowPassword(false);
@@ -304,6 +309,7 @@ export default function GstinDDORegistrationPage() {
         email: formData.email || '',
         gstId: gstId || '',
         gstInUserId: userId || '',
+        ddoTan : formData.ddoTan || '',
       };
 
       // Include userId when editing - try multiple possible field names
@@ -566,6 +572,18 @@ export default function GstinDDORegistrationPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="premium-input w-full"
+                />
+              </div>
+                <div>
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                  DDO Tan <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.ddoTan}
+                  onChange={(e) => setFormData({ ...formData, ddoTan: e.target.value })}
+                  className="premium-input w-full"
+                  required
                 />
               </div>
             </div>

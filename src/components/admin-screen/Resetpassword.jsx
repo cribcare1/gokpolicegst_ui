@@ -31,7 +31,7 @@ export default function ResetPasswordForm() {
     setErrors({});
     console.log("username : "+userEmail);
     console.log("password : "+newPassword);
-    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
     const requestBody = {
       email: userEmail, 
       password: newPassword,

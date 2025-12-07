@@ -274,7 +274,7 @@ static async handlePostMultiPartFileRequest(url, req, file) {
 // }
 static async handlePostDownloadZipRequest(url, requestData, fileType = "pdf") {
   try {
-    const token = localStorage.getItem("userToken");
+    const token = localStorage.getItem("token");
     console.log("request body::"+JSON.stringify(requestData));
     console.log("fileType ::"+fileType) 
     const headers = {

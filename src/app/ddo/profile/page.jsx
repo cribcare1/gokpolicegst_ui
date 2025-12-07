@@ -299,6 +299,7 @@ export default function DDOProfilePage() {
   };
 
   const gstinValue = formData.gstinNumber || formData.gstNumber || formData.gstin || '';
+  const ddoTanNumer=formData.ddoTan || formData.tanNumber || formData.tan || '';
   const gstinBankDetails = formatBankDetails(formData.bankDetailsResponse || formData.bankDetails);
 
   return (
@@ -397,6 +398,25 @@ export default function DDOProfilePage() {
                         <p className="text-[var(--color-text-primary)] font-medium">{formData.fullName}</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+               {/* ddo tan Number (Read Only) */}
+              <div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg mt-1">
+                    <FileText className="text-cyan-600 dark:text-cyan-400" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                      DDO Tan
+                    </label>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                      <p className="text-[var(--color-text-primary)] font-medium font-mono uppercase tracking-wide">
+                        {ddoTanNumer || '-'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

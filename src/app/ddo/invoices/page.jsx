@@ -61,7 +61,7 @@ export default function InvoiceListPage() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('userToken') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
         signal: controller.signal
       });

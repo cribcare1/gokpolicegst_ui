@@ -1013,7 +1013,7 @@ export default function GenerateBillPage() {
       validateBillDate(billDetails.date),
       { valid: selectedCustomer, message: t('bill.selectCustomerRequired') },
       { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') },
-      { valid: ddoSignature, message: 'Digital signature is required to save Proforma Advice. Please add your signature.' }
+      // { valid: ddoSignature, message: 'Digital signature is required to save Proforma Advice. Please add your signature.' }
     ];
 
     for (const validation of validations) {
@@ -1771,7 +1771,7 @@ export default function GenerateBillPage() {
                 ${bankDetails.ifscCode ? ` | <strong>IFSC:</strong> ${bankDetails.ifscCode}` : ''}
                 ${bankDetails.accountNumber ? ` | <strong>Account No:</strong> ${bankDetails.accountNumber}` : ''}
                 ${bankDetails.accountType ? ` | ${bankDetails.accountType}` : ''}
-                  ${bankDetails.ifscCode ? ` | <strong>Issued to:</strong> ${bankDetails.ifscCode}` : ''}
+                
               </div>
             </div>
           </div>
@@ -2027,11 +2027,11 @@ export default function GenerateBillPage() {
             </button>
             
             {/* Warning message */}
-            {!ddoSignature && (
+            {/* {!ddoSignature && (
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
                 ⚠️ Signature is required to save this Proforma Advice
               </p>
-            )}
+            )} */}
           </div>
         </div>
       </div>
