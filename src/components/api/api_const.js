@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   FORM16_DOWNLOAD_PDF:`${API_BASE_URL}/form16/uploadFormFilesWithZIPFolder`,
   DDO_REFRESH_COUNT: `${API_BASE_URL}/user/viewDashboardData?tanNumber=`,
   DDO_DETAILS_EDITBUTTON: `${API_BASE_URL}/user/editDdo/`,
+  INVOICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?ddoId=`,
   
   IMAGE_BASE_URL: `${API_BASE_URL}/auth/getImage/gst/`,
 

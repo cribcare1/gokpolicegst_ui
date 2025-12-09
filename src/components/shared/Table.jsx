@@ -40,7 +40,19 @@ const Table = memo(function Table({ columns, data, onRowClick, actions, classNam
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [totalPages]);
-  
+  const isNumberOrDate = (value) => {
+  if (!value) return false;
+
+  const str = String(value).trim();
+
+  if (/^(₹|Rs\.?|INR)/i.test(str)) return true;
+
+  if (!isNaN(Number(str))) return true;
+
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(str) || !isNaN(Date.parse(str))) return true;
+
+  return false;
+};
   return (
     <>
       <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] overflow-hidden">
@@ -69,14 +81,26 @@ const Table = memo(function Table({ columns, data, onRowClick, actions, classNam
                 `}
               >
                 {columns.map((col) => (
+                  // <div key={col.key} className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
+                  //   <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">
+                  //     {col.label}:
+                  //   </span>
+                  //   <span className="text-sm font-medium text-[var(--color-text-primary)] text-right flex-1 break-words">
+                  //     {col.render ? col.render(row[col.key], row) : String(row[col.key] || 'N/A')}
+                  //   </span>
+                  // </div>
                   <div key={col.key} className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
-                    <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase">
-                      {col.label}:
-                    </span>
-                    <span className="text-sm font-medium text-[var(--color-text-primary)] text-right flex-1 break-words">
-                      {col.render ? col.render(row[col.key], row) : String(row[col.key] || 'N/A')}
-                    </span>
-                  </div>
+  <span className="text-sm font-medium text-gray-500">{col.title}:</span>
+  <span
+    className={`text-sm font-medium ${
+      isNumberOrDate(col.render ? col.render(row[col.key], row) : row[col.key])
+        ? "text-right"
+        : "text-left"
+    }`}
+  >
+    {col.render ? col.render(row[col.key], row) : row[col.key] || "N/A"}
+  </span>
+</div>
                 ))}
                 {actions && (
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-2 border-t border-[var(--color-border)]">
@@ -136,9 +160,19 @@ const Table = memo(function Table({ columns, data, onRowClick, actions, classNam
                   `}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border)]">
-                      {col.render ? col.render(row[col.key], row) : row[col.key]}
-                    </td>
+                    // <td key={col.key} className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border)]">
+                    //   {col.render ? col.render(row[col.key], row) : row[col.key]}
+                    // </td>
+                    <td
+  key={col.key}
+  className={`px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border)] ${
+    isNumberOrDate(col.render ? col.render(row[col.key], row) : row[col.key])
+      ? "text-right"
+      : "text-left"
+  }`}
+>
+  {col.render ? col.render(row[col.key], row) : row[col.key] || "N/A"}
+</td>
                   ))}
                   {actions && (
                     <td className="px-3 sm:px-6 py-3 sm:py-4 border border-[var(--color-border)]">

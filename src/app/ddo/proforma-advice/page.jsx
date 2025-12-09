@@ -20,6 +20,9 @@ export default function ProformaAdvicePage() {
   const [editedValues, setEditedValues] = useState({});
   const [loading, setLoading] = useState(false); 
 
+
+  const countrecords = receiptsData.length;
+
   useEffect(() => {
     setFromDate("");
     setToDate("");
@@ -78,6 +81,7 @@ export default function ProformaAdvicePage() {
           amountPayable: invoice.grandTotal,
           amountReceived: 0,
           paymentMode: "Bank",
+
           paymentRef: "",
           paymentDate: invoice.invoiceDate,
         }));
@@ -205,6 +209,42 @@ export default function ProformaAdvicePage() {
         );
       },
     },
+      {
+      key: "difference",
+      label: "Difference",
+      render: (v, row) => {
+        const received = editedValues[row.id]?.amountReceived ?? row.amountReceived;
+        const diff = row.amountPayable - received;
+        return (
+          <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
+            {formatCurrency(diff)}
+          </span>
+        );
+      },
+    },
+   {
+  key: "differencereson",
+  label: "Difference Reason",
+  render: (v, row) => {
+    const isChecked = selectedReceipts.includes(row.id);
+    const edited = editedValues[row.id]?.differencereson ?? "";
+
+    if (!isChecked) return <span>{v || "-"}</span>;
+
+    return (
+      <select
+        className="border rounded px-2 py-1"
+        value={edited}
+        onChange={(e) => updateField(row.id, "differencereson", e.target.value)}
+      >
+        <option value="">Select</option>
+        <option value="Shortfall Payment">Shortfall Payment</option>
+        <option value="Discount Payment">Discount Payment</option>
+      </select>
+    );
+  },
+}
+,
     {
       key: "paymentMode",
       label: "Payment Mode",
@@ -219,8 +259,8 @@ export default function ProformaAdvicePage() {
             value={edited}
             onChange={(e) => updateField(row.id, "paymentMode", e.target.value)}
           >
-            <option>Bank</option>
-            <option>Cash</option>
+            <option>Bank/ DD/ Cheque</option>
+            <option>Other</option>
           </select>
         );
       },
@@ -243,37 +283,36 @@ export default function ProformaAdvicePage() {
         );
       },
     },
-    {
-      key: "paymentDate",
-      label: "Payment Date",
-      render: (v, row) => {
-        const isChecked = selectedReceipts.includes(row.id);
-        const edited = editedValues[row.id]?.paymentDate ?? v;
-        if (!isChecked) return <span>{v}</span>;
+   {
+  key: "paymentDate",
+  label: "Payment Date",
+  render: (v, row) => {
+    const isChecked = selectedReceipts.includes(row.id);
+    const edited = editedValues[row.id]?.paymentDate ?? v;
 
-        return (
-          <input
-            type="date"
-            className="border rounded px-2 py-1"
-            value={edited}
-            onChange={(e) => updateField(row.id, "paymentDate", e.target.value)}
-          />
-        );
-      },
-    },
-    {
-      key: "difference",
-      label: "Difference",
-      render: (v, row) => {
-        const received = editedValues[row.id]?.amountReceived ?? row.amountReceived;
-        const diff = row.amountPayable - received;
-        return (
-          <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
-          </span>
-        );
-      },
-    },
+    // Format date to DD-MM-YYYY
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      const [y, m, d] = dateStr.split("-");
+      return `${d}-${m}-${y}`;
+    };
+
+    if (!isChecked) {
+      return <span>{formatDate(v)}</span>;
+    }
+
+    return (
+      <input
+        type="date"
+        className="border rounded px-2 py-1"
+        value={edited} // must stay in YYYY-MM-DD for the input
+        onChange={(e) => updateField(row.id, "paymentDate", e.target.value)}
+      />
+    );
+  },
+}
+,
+  
   ];
 
   return (
@@ -282,7 +321,15 @@ export default function ProformaAdvicePage() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold">Receipts & Payment Entry</h1>
+          {/* <h1 className="text-2xl font-bold">Receipts & Payment Entry</h1> */}
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+              <span className="gradient-text">Receipts & Payment Entry</span>
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                     translate-y-1">
+                {countrecords ?? 0}
+              </span>
+            </h1>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex flex-col">
               <label>From Date</label>

@@ -297,12 +297,12 @@ export const canSubmitBill = (totalAmount, receivedAmount) => {
 /**
  * Formats currency for display
  */
-export const formatCurrency = (amount) => {
+export const formatCurrency = (amount , isRound = false ) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: isRound ? 0:2,
+    maximumFractionDigits: isRound ? 0:2,
   }).format(amount);
 };
 
@@ -355,9 +355,9 @@ export const validateName = (name, fieldName = 'Name') => {
 export const validateAddress = (address) => {
   if (!address) return { valid: false, message: 'Address is required' };
   const cleaned = address.trim();
-  if (cleaned.length < 10) {
-    return { valid: false, message: 'Address must be at least 10 characters' };
-  }
+  // if (cleaned.length < 10) {
+  //   return { valid: false, message: 'Address must be at least 10 characters' };
+  // }
   if (cleaned.length > 500) {
     return { valid: false, message: 'Address must be less than 500 characters' };
   }
@@ -518,5 +518,29 @@ export const validateExemptionCert = (certNumber) => {
     return { valid: false, message: 'Exemption certificate number contains invalid characters' };
   }
   return { valid: true, cleaned };
+};
+
+const getValueText = (value) => {
+  // If value is JSX or object → convert to readable string
+  if (typeof value === "object") return "";
+
+  return String(value || "").trim();
+};
+
+const shouldRightAlign = (value) => {
+  const str = getValueText(value);
+
+  if (!str) return false;
+
+  // Currency check (₹, Rs, INR)
+  if (/^(₹|Rs\.?|INR)/i.test(str)) return true;
+
+  // Numbers (integer or decimals)
+  if (!isNaN(Number(str))) return true;
+
+  // Dates (10/10/2024, 2024-10-10, etc.)
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(str) || !isNaN(Date.parse(str))) return true;
+
+  return false;
 };
 

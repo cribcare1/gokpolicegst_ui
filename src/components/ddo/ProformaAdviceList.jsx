@@ -9,7 +9,8 @@ import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import Image from 'next/image';
 import { API_ENDPOINTS } from '@/components/api/api_const';
-
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
+import { formatDateDDMMYYYY } from '@/components/utils/dateUtils';
 export default function ProformaAdviceList({
   proformaSearchTerm,
   setProformaSearchTerm,
@@ -18,11 +19,12 @@ export default function ProformaAdviceList({
   onShowForm,
   onUpdateProforma,
   // New required props for consistent preview
-  gstDetails = {},
-  ddoDetails = {},
-  bankDetails = {},
+
+  bankDetails ,
   numberToWords,
-  formatDate
+  formatDate,
+  gstDetails,
+  ddoDetails
 }) {
   const router = useRouter();
   const [editingRowId, setEditingRowId] = useState(null);
@@ -30,35 +32,23 @@ export default function ProformaAdviceList({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [printOptimizedView, setPrintOptimizedView] = useState(false);
+  const [listCount, setListCount] = useState([]);
+  const count = listCount.length || 0;
+
   const printRef = useRef();
 
-  // Set default values if props are not provided
-  const defaultGstDetails = {
-    gstName: 'Government of Karnataka Police Department',
-    address: 'Police Headquarters, Bangalore',
-    gstNumber: '29AAAAA0000A1Z5',
-    ...gstDetails
-  };
-
-  const defaultDdoDetails = {
-    ddoCode: 'DDO001',
-    fullName: 'Karnataka Police Department',
-    city: 'Bengaluru',
-    ...ddoDetails
-  };
-
-  const defaultBankDetails = {
-    bankName: 'State Bank of India',
-    bankBranch: 'Bangalore Main',
-    ifscCode: 'SBIN0001234',
-    accountNumber: '1234567890',
-    ...bankDetails
-  };
 
   const handleProformaClick = (row) => {
     setPreviewData(row);
     setShowPreviewModal(true);
   };
+
+  useEffect(() => {
+    console.log("bank details in use effect in proforma :", bankDetails);
+    setListCount(filteredProformaList);
+
+    console.log("bank details in use effect in filteredProformaList :", filteredProformaList);
+  }, [bankDetails,numberToWords,formatDate,gstDetails,ddoDetails]);
 
   // Fix signature URL
   const getSignatureUrl = (signaturePath) => {
@@ -380,10 +370,10 @@ export default function ProformaAdviceList({
                   </td>
                   <td style="border: none; width: 60%; vertical-align: top; padding-left: 10px;">
                     <h1 style="margin: 0; font-size: 13px; font-weight: bold; color: #000;">
-                      ${defaultGstDetails.gstName}
+                      ${gstDetails.gstName}
                     </h1>
-                    <p style="margin: 1px 0; font-size: 10px;">${defaultGstDetails.address}</p>
-                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${defaultGstDetails.gstNumber}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">${gstDetails.address}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${gstDetails.gstNumber}</p>
                   </td>
                   <td style="border: none; width: 20%; vertical-align: top; text-align: right;">
                     <h2 style="margin: 0; font-size: 15px; font-weight: bold; color: #2C5F2D;">PROFORMA ADVISE</h2>
@@ -408,10 +398,10 @@ export default function ProformaAdviceList({
                   </td>
                   <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Advice Details</h3>
-                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Code:</strong> ${defaultDdoDetails.ddoCode}</p>
-                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Name:</strong> ${defaultDdoDetails.fullName}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Code:</strong> ${ddoDetails.ddoCode}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Name:</strong> ${ddoDetails.fullName}</p>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>Place of Supply:</strong> ${data.billDetails.placeOfSupply || 'Bengaluru'}</p>
-                    <p style="margin: 1px 0; font-size: 10px;"><strong>City/District:</strong> ${defaultDdoDetails.city}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>City/District:</strong> ${ddoDetails.city}</p>
                   </td>
                 </tr>
               </table>
@@ -473,7 +463,7 @@ export default function ProformaAdviceList({
                     ${gstCalcHTML}
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
-                      <span>${formatCurrency(data.totalAdviceAmountReceivable)}</span>
+                      <span>${formatCurrency(Math.round(data.totalAdviceAmountReceivable),true)}</span>
 
                     </div>
                   
@@ -490,7 +480,7 @@ export default function ProformaAdviceList({
   }
 
   <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
-  <div style="font-size: 10px;">${defaultDdoDetails.fullName}</div>
+  <div style="font-size: 10px;">${ddoDetails.fullName}</div>
 </div>
 
                  
@@ -505,19 +495,19 @@ export default function ProformaAdviceList({
               <table style="border: none; margin-bottom: 10px;">
               <tr>
                 <td style="border: 1px solid #000; padding: 6px; width: 60%;">
-                    <h3 >DD / Cheque Issued to : ${defaultDdoDetails.fullName}</h3>
+                    <h3 >${LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO} ${ddoDetails.fullName}</h3>
                  
                   </td>
               
               </tr>
                 <tr>
                   <td style="border: 1px solid #000; padding: 6px; width: 60%;">
-                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Bank Details</h3>
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;"> Details For Bank Transfer</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px;">
-                      <div><strong>Bank:</strong> ${defaultBankDetails.bankName}</div>
-                      <div><strong>Branch:</strong> ${defaultBankDetails.bankBranch}</div>
-                      <div><strong>IFSC:</strong> ${defaultBankDetails.ifscCode}</div>
-                      <div><strong>Account No:</strong> ${defaultBankDetails.accountNumber}</div>
+                      <div><strong>Bank:</strong> ${bankDetails.bankName}</div>
+                      <div><strong>Branch:</strong> ${bankDetails.bankBranch}</div>
+                      <div><strong>IFSC:</strong> ${bankDetails.ifscCode}</div>
+                      <div><strong>Account No:</strong> ${bankDetails.accountNumber}</div>
                     </div>
                   </td>
                   
@@ -772,47 +762,47 @@ export default function ProformaAdviceList({
     {
       key: 'proformaDate',
       label: 'Proforma Advice Date',
-      render: (value) => value ? new Date(value).toLocaleDateString('en-IN') : '-',
+      render: (value) => value ?formatDateDDMMYYYY(value): '-',
     },
-    {
-      key: 'signature',
-      label: 'Signature',
-      render: (_, row) => {
-        const signaturePath = row.signature || (row.raw && row.raw.signature);
-        const signatureUrl = getSignatureUrl(signaturePath);
+    // {
+    //   key: 'signature',
+    //   label: 'Signature',
+    //   render: (_, row) => {
+    //     const signaturePath = row.signature || (row.raw && row.raw.signature);
+    //     const signatureUrl = getSignatureUrl(signaturePath);
         
-        return signatureUrl ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-20 h-12 border border-gray-300 bg-white flex items-center justify-center overflow-hidden p-1">
-              <img 
-                src={signatureUrl} 
-                alt="DDO Signature" 
-                className="max-h-full max-w-full object-contain"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = `
-                    <div class="text-red-500 text-xs text-center p-1">
-                      <svg class="w-4 h-4 mx-auto mb-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
-                      </svg>
-                      Signature
-                    </div>
-                  `;
-                }}
-              />
-            </div>
-            <span className="text-xs text-green-700 font-medium">Signed</span>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-20 h-12 border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-              <span className="text-xs text-gray-500">No Signature</span>
-            </div>
-            <span className="text-xs text-gray-500">Not Signed</span>
-          </div>
-        );
-      },
-    },
+    //     return signatureUrl ? (
+    //       <div className="flex flex-col items-center gap-1">
+    //         <div className="w-20 h-12 border border-gray-300 bg-white flex items-center justify-center overflow-hidden p-1">
+    //           <img 
+    //             src={signatureUrl} 
+    //             alt="DDO Signature" 
+    //             className="max-h-full max-w-full object-contain"
+    //             onError={(e) => {
+    //               e.target.style.display = 'none';
+    //               e.target.parentElement.innerHTML = `
+    //                 <div class="text-red-500 text-xs text-center p-1">
+    //                   <svg class="w-4 h-4 mx-auto mb-1" fill="currentColor" viewBox="0 0 20 20">
+    //                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+    //                   </svg>
+    //                   Signature
+    //                 </div>
+    //               `;
+    //             }}
+    //           />
+    //         </div>
+    //         <span className="text-xs text-green-700 font-medium">Signed</span>
+    //       </div>
+    //     ) : (
+    //       <div className="flex flex-col items-center gap-1">
+    //         <div className="w-20 h-12 border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+    //           <span className="text-xs text-gray-500">No Signature</span>
+    //         </div>
+    //         <span className="text-xs text-gray-500">Not Signed</span>
+    //       </div>
+    //     );
+    //   },
+    // },
   ];
 
   const renderProformaActions = (row) => (
@@ -827,7 +817,7 @@ export default function ProformaAdviceList({
         className="px-3 py-1.5 text-xs sm:text-sm"
       >
         <Edit size={14} className="mr-1" />
-        Edit
+      
       </Button>
     </div>
   );
@@ -837,14 +827,20 @@ export default function ProformaAdviceList({
       <PrintStyles />
       
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-blue-400">
-            Proforma Advice List
-          </h2>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Search existing Proforma Advice entries and quickly jump back to the creation form.
-          </p>
-        </div>
+    <div className="flex-1 min-w-0">
+  <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 flex items-baseline gap-3 flex-wrap">
+    <span className="gradient-text">Proforma Advice List</span>
+    <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold 
+                     rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] 
+                     border border-[var(--color-primary)]/30 align-baseline">
+      {count ?? 0}
+    </span>
+  </h1>
+  <p className="text-sm text-[var(--color-text-secondary)]">
+    Search existing Proforma Advice entries and quickly jump back to the creation form.
+  </p>
+</div>
+
         <Button
           onClick={() => onShowForm(null)}
           variant="primary"
@@ -950,10 +946,10 @@ export default function ProformaAdviceList({
                       </div>
                       <div className="flex-1">
                         <h1 className="font-bold text-gray-800 leading-tight" style={{ fontSize: '14px' }}>
-                          {defaultGstDetails.gstName}
+                          {gstDetails.gstName}
                         </h1>
-                        <p className="text-gray-600 leading-tight" style={{ fontSize: '11px', marginTop: '2px' }}>{defaultGstDetails.address}</p>
-                        <p className="text-gray-600" style={{ fontSize: '11px', marginTop: '2px' }}>GSTIN: {defaultGstDetails.gstNumber}</p>
+                        <p className="text-gray-600 leading-tight" style={{ fontSize: '11px', marginTop: '2px' }}>{gstDetails.address}</p>
+                        <p className="text-gray-600" style={{ fontSize: '11px', marginTop: '2px' }}>GSTIN: {gstDetails.gstNumber}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -980,10 +976,10 @@ export default function ProformaAdviceList({
                   <div className="border border-gray-300 p-3 rounded">
                     <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Advice Details</h3>
                     <div className="space-y-1" style={{ fontSize: '11px' }}>
-                      <p><strong>DDO Code:</strong> {defaultDdoDetails.ddoCode}</p>
-                      <p><strong>DDO Name:</strong> {defaultDdoDetails.fullName}</p>
+                      <p><strong>DDO Code:</strong> {ddoDetails.ddoCode}</p>
+                      <p><strong>DDO Name:</strong> {ddoDetails.fullName}</p>
                       <p><strong>Place of Supply:</strong> {data.billDetails.placeOfSupply || 'Bengaluru'}</p>
-                      <p><strong>City/District:</strong> {defaultDdoDetails.city}</p>
+                      <p><strong>City/District:</strong> {ddoDetails.city}</p>
                     </div>
                   </div>
                 </div>
@@ -1107,7 +1103,7 @@ export default function ProformaAdviceList({
 
                       <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                         <span>Total amount payable:</span>
-                        <span>{formatCurrency(data.totalAdviceAmountReceivable)}</span>
+                        <span>{formatCurrency(Math.round(data.totalAdviceAmountReceivable),true)}</span>
                       </div>
 
 
@@ -1141,7 +1137,7 @@ export default function ProformaAdviceList({
                           );
                         })()}
                         <p className="font-semibold mt-1" style={{ fontSize: '11px' }}>Signature of DDO</p>
-                        <p style={{ fontSize: '11px' }}>{defaultDdoDetails.fullName}</p>
+                        <p style={{ fontSize: '11px' }}>{ddoDetails.fullName}</p>
                       </div>
                     </div>
                     </div>
@@ -1161,19 +1157,19 @@ export default function ProformaAdviceList({
                     <div>
 
                         <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px'  , marginBottom: '10px' }}>
-                        <div><strong>DD / Cheque Issued to :</strong>{defaultDdoDetails.fullName}</div>
+                        <div><strong>{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO}</strong>{ddoDetails.fullName}</div>
                       
                       </div>
 
                       
                          
                                 
-                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
+                      <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Details For Bank Transfer</h3>
                       <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
-                        <div><strong>Bank:</strong> {defaultBankDetails.bankName}</div>
-                        <div><strong>Branch:</strong> {defaultBankDetails.bankBranch}</div>
-                        <div><strong>IFSC:</strong> {defaultBankDetails.ifscCode}</div>
-                        <div><strong>Account No:</strong> {defaultBankDetails.accountNumber}</div>
+                        <div><strong>Bank:</strong> {bankDetails.bankName}</div>
+                        <div><strong>Branch:</strong> {bankDetails.branchName}</div>
+                        <div><strong>IFSC:</strong> {bankDetails.ifscCode}</div>
+                        <div><strong>Account No:</strong> {bankDetails.accountNumber}</div>
                       </div>
                     </div>
                     

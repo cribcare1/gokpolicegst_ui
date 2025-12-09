@@ -28,6 +28,7 @@ SOMETHING_WENT_WRONG: "Something went wrong",
 DDO_CODE:'DDO Code',
 GST_CODE:'GST Code',
 OFFICE_ADDRESS:'Office Address',
+DD_CHEQUE_ISSUED_TO:'DD/ Cheque to be issued in favour of :',
 
 }
 export const FOOTER_TEXT = "© 2025 Dravinlabs Technology Pvt. Ltd. All rights reserved.";

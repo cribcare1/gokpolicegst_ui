@@ -1,5 +1,4 @@
 "use client";
-
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from 'react';
 import Layout from '@/components/shared/Layout';
@@ -377,17 +376,30 @@ function CustomersPageContent() {
     }
   };
 
+  // const columns = [
+  //   { key: 'name', label: 'Customer Name' },
+  //   { key: 'gstNumber', label: t('label.gstin') },
+  //   { key: 'address', label: t('label.address') },
+  //   { key: 'city', label: 'City' },
+  //   { key: 'stateCode', label: 'State Code', render: (value) => value || '-' },
+  //   { key: 'pin', label: 'PIN Code' },
+  //   { key: 'customerType', label: 'Type' },
+  //   { key: 'mobile', label: t('label.mobile') },
+  //   { key: 'email', label: t('label.email') },
+  // ];
+
   const columns = [
-    { key: 'name', label: 'Customer Name' },
-    { key: 'gstNumber', label: t('label.gstin') },
-    { key: 'address', label: t('label.address') },
-    { key: 'city', label: 'City' },
-    { key: 'stateCode', label: 'State Code', render: (value) => value || '-' },
-    { key: 'pin', label: 'PIN Code' },
-    { key: 'customerType', label: 'Type' },
-    { key: 'mobile', label: t('label.mobile') },
-    { key: 'email', label: t('label.email') },
-  ];
+  { key: 'name', label: 'Customer Name', render: (v) => v || '-' },
+  { key: 'gstNumber', label: t('label.gstin'), render: (v) => v || '-' },
+  { key: 'address', label: t('label.address'), render: (v) => v || '-' },
+  { key: 'city', label: 'City', render: (v) => v || '-' },
+  { key: 'stateCode', label: 'State Code', render: (value) => value || '-' },
+  { key: 'pin', label: 'PIN Code', render: (v) => v || '-' },
+  { key: 'customerType', label: 'Type', render: (v) => v || '-' },
+  { key: 'mobile', label: t('label.mobile'), render: (v) => v || '-' },
+  { key: 'email', label: t('label.email'), render: (v) => v || '-' },
+];
+
 
   const tableActions = (row) => (
     <>
@@ -549,7 +561,7 @@ function CustomersPageContent() {
                   )}
                 </select>
               </div>
-              {!(formData.gstNumber && formData.gstNumber.trim() !== '') && (
+              {!(formData.gstNumber && formData.gstNumber.trim() !== ''  ) && (
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Notification
