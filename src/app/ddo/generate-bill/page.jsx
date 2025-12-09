@@ -19,7 +19,7 @@ import { useGstinList } from '@/hooks/useGstinList';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 import ProformaAdviceList from '@/components/ddo/ProformaAdviceList';
 import ProformaAdviceForm from '@/components/ddo/ProformaAdviceForm';
-
+import { formatDateDDMMYYYY } from '@/components/utils/dateUtils';
 export default function GenerateBillPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState([]);
@@ -195,6 +195,7 @@ export default function GenerateBillPage() {
       setFilteredProformaList(proformaList);
       return;
     }
+console.log("proformaList ::::::::::::::::::: " ,proformaList);
 
     const term = proformaSearchTerm.toLowerCase();
     const filtered = proformaList.filter((record) => {
@@ -202,7 +203,7 @@ export default function GenerateBillPage() {
         record.proformaNumber,
         record.customerName,
         record.serviceType,
-        record.taxInvoiceAmount,
+        record,
       ].some((value) => {
         if (value === null || value === undefined) return false;
         return value.toString().toLowerCase().includes(term);
@@ -236,6 +237,8 @@ export default function GenerateBillPage() {
         const trimmedValue = storedProfile.trim();
         if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
           const userProfile = JSON.parse(storedProfile);
+          console.log("user data :: ",userProfile);
+          
           if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
             setDdoDetails(userProfile);
             return;
@@ -284,6 +287,7 @@ export default function GenerateBillPage() {
         const url = `${API_ENDPOINTS.BANK_LIST}?ddoId=` + localStorage.getItem(LOGIN_CONSTANT.USER_ID);
         const response = await ApiService.handleGetRequest(url);
         if (response && response.status === 'success') {
+          console.log("bank details ::    " , response.data[0] );
           
             setBankDetails(response.data[0] || null);
 
@@ -333,7 +337,7 @@ export default function GenerateBillPage() {
 
       const mappedRecords = (payloadArray || []).map((item) => {
         const items = Array.isArray(item.items) ? item.items : [];
-        const proformaAmount = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0) || item.totalAmount || item.grandTotal || 0;
+        const proformaAmount =item.grandTotal || 0;
 
         // Extract complete customer information
         const customerResponse = item.customerResponse || item.customer || {};
@@ -1903,12 +1907,12 @@ export default function GenerateBillPage() {
     { 
       key: 'proformaDate', 
       label: 'Proforma Advice Date',
-      render: (value) => value ? formatDate(value) : '-',
+      render: (value) => value ? formatDateDDMMYYYY(value) : '-',
     },
     { 
       key: 'invoiceDate', 
       label: 'Invoice Date',
-      render: (value) => value ? formatDate(value) : '-',
+      render: (value) => value ? formatDateDDMMYYYY(value) : '-',
     },
   ];
 
@@ -2169,6 +2173,9 @@ export default function GenerateBillPage() {
             proformaLoading={proformaLoading}
             onShowForm={handleOpenEditProforma}
             onUpdateProforma={handleUpdateProformaInline}
+              ddoDetails={ddoDetails}
+               gstDetails={gstDetails}
+                bankDetails={bankDetails}
           />
         )}
 

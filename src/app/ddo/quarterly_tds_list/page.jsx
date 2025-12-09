@@ -14,7 +14,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
-
+import { formatCurrency } from '@/lib/gstUtils';
 export default function TDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -22,6 +22,7 @@ export default function TDSQuarterlyListPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const countrecords = filtered.length;
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
@@ -60,7 +61,7 @@ export default function TDSQuarterlyListPage() {
           deducteeCount: item.deducteeCount,
           challanAmount: item.totalChallanAmount,
           taxDeducted: item.totalTaxDeducted,
-          revision: item.anyRevisionFiled ? "Yes" : "No",
+          revision: item.anyRevisionFiled ? "Yes" : "-",
           ackFile: item.ackDocument,
         }));
         setRecords(mapped);
@@ -103,9 +104,9 @@ export default function TDSQuarterlyListPage() {
     { key: "quarter", label: "Quarter", style: { minWidth: "80px" } },
     { key: "filingDate", label: "Filing Date", style: { minWidth: "120px" } },
     { key: "receiptNo", label: "Receipt No.", style: { minWidth: "150px" } },
-    { key: "deducteeCount", label: "Deductee Count", style: { minWidth: "120px" } },
-    { key: "challanAmount", label: "Challan Amount", style: { minWidth: "120px" } },
-    { key: "taxDeducted", label: "Tax Deducted", style: { minWidth: "120px" } },
+    { key: "deducteeCount", label: "Deductee Count", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
+    { key: "challanAmount", label: "Challan Amount", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
+    { key: "taxDeducted", label: "Tax Deducted", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
     { key: "revision", label: "Revision", style: { minWidth: "100px" } },
     {
       key: "ackFile",
@@ -129,8 +130,16 @@ export default function TDSQuarterlyListPage() {
         {/* Page Title + Add Button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
+            {/* <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
               <span className="gradient-text">{t("nav.tdsquarterlyreports")}</span>
+            </h1> */}
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+              <span className="gradient-text">{t("nav.tdsquarterlyreports")}</span>
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                     translate-y-1">
+                {countrecords ?? 0}
+              </span>
             </h1>
             <p className="text-sm text-gray-500">
               View all submitted quarterly TDS filings and acknowledgement documents

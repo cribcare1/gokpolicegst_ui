@@ -56,8 +56,8 @@ export default function GSTTDSMonthlyCreate() {
   useEffect(() => {
     const current = new Date().getFullYear();
     const arr = [];
-    for (let i = 5; i >= -5; i--) {
-      const s = current - i;
+     for (let i = 0; i >= 0; i--) {
+      let s = current - i;
       arr.push(`${s}-${String(s + 1).slice(2)}`);
     }
     setFyList(arr);
@@ -216,11 +216,11 @@ export default function GSTTDSMonthlyCreate() {
       value: ddoInfo.officeName || "—",
       icon: <Building2 className="text-green-500" size={20} />,
     },
-    {
-      label: "GSTIN",
-      value: ddoInfo.gstId || "—",
-      icon: <IndianRupee className="text-purple-500" size={20} />,
-    },
+    // {
+    //   label: "GSTIN",
+    //   value: ddoInfo.gstId || "—",
+    //   icon: <IndianRupee className="text-purple-500" size={20} />,
+    // },
   ];
 
   return (
@@ -252,7 +252,7 @@ export default function GSTTDSMonthlyCreate() {
           </div>
 
           {/* DDO INFO */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {infoItems.map((item, idx) => (
               <div
                 key={idx}

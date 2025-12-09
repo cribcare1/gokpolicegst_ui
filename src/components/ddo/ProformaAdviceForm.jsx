@@ -101,6 +101,8 @@ export default function ProformaAdviceForm({
 
   // Validate form whenever required fields change
   useEffect(() => {
+    console.log("ProformaAdviceForm  useEffect :: ddoDetails",ddoDetails.fullName);
+    
     validateForm();
   }, [selectedCustomer, lineItems, hsnList, ddoSignature]);
 
@@ -384,10 +386,10 @@ export default function ProformaAdviceForm({
                   </td>
                   <td style="border: none; width: 60%; vertical-align: top; padding-left: 10px;">
                     <h1 style="margin: 0; font-size: 13px; font-weight: bold; color: #000;">
-                      ${gstDetails?.gstName || 'Government of Karnataka Police Department'}
+                      ${gstDetails?.gstName || ''}
                     </h1>
-                    <p style="margin: 1px 0; font-size: 10px;">${gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
-                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">${gstDetails?.address || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;">GSTIN: ${gstDetails?.gstNumber || ''}</p>
                   </td>
                   <td style="border: none; width: 20%; vertical-align: top; text-align: right;">
                     <h2 style="margin: 0; font-size: 15px; font-weight: bold; color: #2C5F2D;">PROFORMA ADVISE</h2>
@@ -477,7 +479,7 @@ export default function ProformaAdviceForm({
                     ${gstCalcHTML}
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
-                      <span>${formatCurrency(totalAdviceAmountReceivable)}</span>
+                      <span>${formatCurrency(totalAdviceAmountReceivable,true)}</span>
                     </div>
 
                 <div class="signature-box" 
@@ -507,14 +509,14 @@ export default function ProformaAdviceForm({
               <table style="border: none; margin-bottom: 10px;">
                <tr>
                 <td style="border: 1px solid #000; padding: 6px; width: 60%;">
-                    <h3 >DD / Cheque Issued to : ${ddoDetails?.fullName}</h3>
+                    <h3 >${LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO} ${ddoDetails?.fullName}</h3>
                  
                   </td>
               
               </tr>
                 <tr>
                   <td style="border: 1px solid #000; padding: 6px; width: 60%;">
-                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Bank Details</h3>
+                    <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;"> Details For Bank Transfer</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px;">
                       <div><strong>Bank:</strong> ${bankDetails?.bankName || 'State Bank of India'}</div>
                       <div><strong>Branch:</strong> ${bankDetails?.bankBranch || 'Bangalore Main'}</div>
@@ -1027,7 +1029,7 @@ export default function ProformaAdviceForm({
                   <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded-lg px-4 mt-4 font-semibold mobile-text-sm">
                     <span className="text-base mobile-text-sm">Total amount payable</span>
                     <span className="text-base mobile-text-sm">
-                      {formatCurrency(totalAdviceAmountReceivable)}
+                      {formatCurrency(totalAdviceAmountReceivable,true)}
                     </span>
                   </div>
 
@@ -1047,11 +1049,11 @@ export default function ProformaAdviceForm({
 
 
               <div className="mobile-full">
-                <span className="font-medium text-[var(--color-text-primary)] mobile-text-sm">DD / Cheque issued to :</span>
+                <span className="font-medium text-[var(--color-text-primary)] mobile-text-sm">{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO}</span>
                 <span className="font-semibold mobile-text-sm">{ddoDetails.fullName}</span>
               </div>
 
-              <h4 className="font-semibold mb-3 text-[var(--color-text-primary)]">Bank Details</h4>
+              <h4 className="font-semibold mb-3 text-[var(--color-text-primary)]"> Details For Bank Transfer</h4>
               <div className="bg-[var(--color-muted)]/20 p-3 rounded-lg border border-[var(--color-border)]">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mobile-grid-1 mobile-space-y-2">
                   <div className="mobile-full">
@@ -1372,7 +1374,7 @@ export default function ProformaAdviceForm({
                   </div>
                   <div className="flex-1">
                     <h1 className="font-bold text-gray-800 leading-tight" style={{ fontSize: '14px' }}>
-                      {gstDetails?.gstName || 'Government of Karnataka Police Department'}
+                      {gstDetails?.gstName || ''}
                     </h1>
                     <p className="text-gray-600 leading-tight" style={{ fontSize: '11px', marginTop: '2px' }}>{gstDetails?.address || 'Police Headquarters, Bangalore'}</p>
                     <p className="text-gray-600" style={{ fontSize: '11px', marginTop: '2px' }}>GSTIN: {gstDetails?.gstNumber || '29AAAAA0000A1Z5'}</p>
@@ -1511,7 +1513,7 @@ export default function ProformaAdviceForm({
 
                   <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                     <span>Total amount payable:</span>
-                    <span>{formatCurrency(totalAdviceAmountReceivable)}</span>
+                    <span>{formatCurrency(Math.round(totalAdviceAmountReceivable),true)}</span>
                   </div>
                   {/* Signature Section */}
                   <div className="signature-section print-section mt-6" style={{ pageBreakInside: 'avoid' }}>
@@ -1554,8 +1556,8 @@ export default function ProformaAdviceForm({
 
             {/* Bank Details - Should appear on separate page */}
             <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakBefore: 'always' }}>
-              <h3 style={{ marginTop: "10px", marginBottom: "10px" }} >DD / Cheque Issued to : {ddoDetails?.fullName}</h3>
-              <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Bank Details</h3>
+              <h3 style={{ marginTop: "10px", marginBottom: "10px" }} >{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO} {ddoDetails?.fullName}</h3>
+              <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}> Details For Bank Transfer</h3>
               <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
                 <div><strong>Bank:</strong> {bankDetails?.bankName || 'State Bank of India'}</div>
                 <div><strong>Branch:</strong> {bankDetails?.bankBranch || 'Bangalore Main'}</div>

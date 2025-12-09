@@ -16,6 +16,7 @@ export default function ReceiptListPage() {
   const [receiptsData, setReceiptsData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const recordCount = receiptsData.length;
   useEffect(() => {
     fetchCustomers();
     fetchReceipts();
@@ -48,7 +49,7 @@ export default function ReceiptListPage() {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
 
       const response = await ApiService.handleGetRequest(
-        `https://api.gokpolicegst.com:8443/tds/invoices/invoiceListDetails?ddoId=16&status=RECEIPT`
+        `${API_ENDPOINTS.INVOICE_LIST}${ddoId}&status=RECEIPT`
       );
 
       if (response && response.success === "success") {
@@ -86,17 +87,40 @@ export default function ReceiptListPage() {
     return matchesCustomer && matchesFrom && matchesTo;
   });
 
-  const receiptColumns = [
-    { key: "receiptNo", label: "Receipt Number" },
-    { key: "receiptDate", label: "Receipt Date" },
-    // { key: "paNumber", label: "Proforma Advice No" },
-    { key: "customerName", label: "Customer Name" },
-    { key: "amountPayable", label: "Amount Payable", render: v => formatCurrency(v) },
-    { key: "amountReceived", label: "Amount Received", render: v => formatCurrency(v) },
-    { key: "balance", label: "Balance", render: v => formatCurrency(v) },
-    { key: "paymentMode", label: "Payment Mode" },
-    { key: "paymentRef", label: "Reference No" }
-  ];
+  // const receiptColumns = [
+  //   { key: "receiptNo", label: "Receipt Number" },
+  //   { key: "receiptDate", label: "Receipt Date" },
+  //   // { key: "paNumber", label: "Proforma Advice No" },
+  //   { key: "customerName", label: "Customer Name" },
+  //   { key: "amountPayable", label: "Amount Payable", render: v => formatCurrency(v) },
+  //   { key: "amountReceived", label: "Amount Received", render: v => formatCurrency(v) },
+  //   { key: "balance", label: "Balance", render: v => formatCurrency(v) },
+  //   { key: "paymentMode", label: "Payment Mode" },
+  //   { key: "paymentRef", label: "Reference No" }
+  // ];
+const receiptColumns = [
+  { key: "receiptNo", label: "Invoice Number" },
+  {
+    key: "receiptDate",
+    label: "Invoice Date",
+    render: (v) => {
+      if (!v) return "-";
+      const date = new Date(v);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    },
+  },
+  // { key: "paNumber", label: "Proforma Advice No" },
+  { key: "customerName", label: "Customer Name" },
+  { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v) },
+  { key: "amountReceived", label: "Amount Received", render: (v) => formatCurrency(v) },
+  // { key: "balance", label: "Balance", render: (v) => formatCurrency(v) },
+  { key: "paymentMode", label: "Payment Mode" },
+  { key: "paymentRef", label: "Reference No" },
+  { key: "paymentRef", label: "Status" },
+];
 
   return (
     <Layout role="ddo">
@@ -104,9 +128,19 @@ export default function ReceiptListPage() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold">
-            Invoice List</h1>
-
+          {/* <h1 className="text-2xl font-bold">
+            Invoice List</h1> */}
+  {/* <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
+              <span className="gradient-text"> Invoice List</span>
+            </h1> */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+              <span className="gradient-text">Invoice List</span>
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                     translate-y-1">
+                {recordCount ?? 0}
+              </span>
+            </h1>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex flex-col">
               <label>From Date</label>

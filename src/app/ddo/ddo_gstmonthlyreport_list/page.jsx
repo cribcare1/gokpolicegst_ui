@@ -11,13 +11,15 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
-
+import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode, isGovernmentGSTIN, isGovernmentPAN } from '@/lib/gstUtils';
 export default function GstTdsMonthlyReportPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const countrecords = filtered.length;
 
   // Format date DD-MM-YYYY
   const formatDate = (dateStr) => {
@@ -92,9 +94,9 @@ export default function GstTdsMonthlyReportPage() {
     { key: "month", label: "Month of Filing", style: { minWidth: "150px" } },
     { key: "arnNo", label: "ARN No", style: { minWidth: "180px" } },
     { key: "arnDate", label: "ARN Date", style: { minWidth: "180px" } },
-    { key: "tdsDeclared", label: "GST-TDS Declared", style: { minWidth: "140px" } },
-    { key: "tdsPaid", label: "GST-TDS Paid", style: { minWidth: "140px" } },
-    { key: "penalty", label: "Penalty & Interest", style: { minWidth: "140px" } },
+    { key: "tdsDeclared", label: "GST-TDS Declared", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
+    { key: "tdsPaid", label: "GST-TDS Paid", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
+    { key: "penalty", label: "Penalty & Interest", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
     {
       key: "ackDocument",
       label: "Acknowledgement File",
@@ -117,8 +119,16 @@ export default function GstTdsMonthlyReportPage() {
         {/* Page Title + Add Button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
-              <span className="gradient-text">{t("nav.gstmonthlyreports")} {t("nav.reports")}</span>
+            {/* <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
+              <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
+            </h1> */}
+               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+              <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                     translate-y-1">
+                {countrecords ?? 0}
+              </span>
             </h1>
             <p className="text-sm text-gray-500">
               View monthly GST-TDS filings and acknowledgement documents

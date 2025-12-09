@@ -18,7 +18,7 @@ export const translations = {
   "nav.generateBill": { en: "Proforma Advice", kn: "ಬಿಲ್ ರಚಿಸಿ" },
   "nav.invoiceList": { en: "Invoice List", kn: "ಚಲಾನ್ ಪಟ್ಟಿ" },
   "nav.reports": { en: "Reports", kn: "ವರದಿಗಳು" },
-  "nav.gstmonthlyreports": { en: "Monthly GST-TDS", kn: " ಮಾಸಿಕ GST - TDS  " },
+  "nav.gstmonthlyreports": { en: "Monthly GST-TDS Reports", kn: " ಮಾಸಿಕ GST - TDS ವರದಿಗಳು " },
   "nav.tdsquarterlyreports": { en: "Quarterly TDS Reports", kn: " ತ್ರೈಮಾಸಿಕ TDS ವರದಿಗಳು" },
   "nav.settings": { en: "Settings", kn: "ಸೆಟ್ಟಿಂಗ್" },
   "nav.creditNote": { en: "Credit Note", kn: "ಕ್ರೆಡಿಟ್ ನೋಟ್" },

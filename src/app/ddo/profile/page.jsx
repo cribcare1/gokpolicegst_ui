@@ -226,13 +226,14 @@ export default function DDOProfilePage() {
     setLoading(true);
     try {
       const payload = {
+        id: localStorage.getItem(LOGIN_CONSTANT.USER_ID) || '',
         ddoCode: formData.ddoCode,
         fullName: formData.fullName,
         area: formData.area || '',
         address: formData.address || '',
         city: formData.city || '',
         pinCode: formData.pinCode || '',
-        mobileNumber: formData.mobileNumber || '',
+        mobile: formData.mobileNumber || '',
         email: formData.email || '',
       };
 
@@ -245,6 +246,7 @@ export default function DDOProfilePage() {
         toast.success('DDO profile updated successfully');
         setIsEditing(false);
         localStorage.setItem('ddoCode', formData.ddoCode);
+       localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.login_response));
       } else {
         toast.error(response?.message || 'Failed to update DDO profile');
       }
@@ -298,10 +300,38 @@ export default function DDOProfilePage() {
     return String(details);
   };
 
+ function cleanGstinBankDetails(details) {
+  if (!details) return "";
+
+  let parts = details.split("|").map(p => p.trim());
+
+  // Remove unwanted fields
+  parts = parts.filter(p =>
+    !p.toLowerCase().startsWith("is editable") &&
+    !p.toLowerCase().startsWith("effective date")
+  );
+
+  // Normalize IFSC key safely
+  parts = parts.map(p => {
+    const lower = p.toLowerCase();
+
+    if (lower.startsWith("ifsc code") || lower.startsWith("ifsc") || lower.startsWith("ifsc  code")) {
+      const [key, value] = p.split(":");
+      return `${key.trim().toUpperCase()}: ${value.trim().toUpperCase()}`;
+    }
+
+    return p;
+  });
+
+  return parts.join(" | ");
+}
+
+
+
   const gstinValue = formData.gstinNumber || formData.gstNumber || formData.gstin || '';
   const ddoTanNumer=formData.ddoTan || formData.tanNumber || formData.tan || '';
   const gstinBankDetails = formatBankDetails(formData.bankDetailsResponse || formData.bankDetails);
-
+ const cleanedBankDetails = cleanGstinBankDetails(gstinBankDetails);
   return (
     <Layout role="ddo">
       <div className="space-y-6 sm:space-y-8">
@@ -508,7 +538,7 @@ export default function DDOProfilePage() {
                     </label>
                     <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
                       <p className="text-[var(--color-text-primary)] font-medium">
-                        {gstinBankDetails}
+                        {cleanedBankDetails}
                       </p>
                     </div>
                   </div>
