@@ -463,7 +463,7 @@ export default function ProformaAdviceList({
                     ${gstCalcHTML}
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
-                      <span>${formatCurrency(Math.round(data.totalAdviceAmountReceivable),true)}</span>
+                      <span>${formatCurrency(data.totalAdviceAmountReceivable,true)}</span>
 
                     </div>
                   

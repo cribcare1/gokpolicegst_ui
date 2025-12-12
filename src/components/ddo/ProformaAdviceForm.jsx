@@ -1513,7 +1513,7 @@ export default function ProformaAdviceForm({
 
                   <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                     <span>Total amount payable:</span>
-                    <span>{formatCurrency(Math.round(totalAdviceAmountReceivable),true)}</span>
+                    <span>{formatCurrency(totalAdviceAmountReceivable,true)}</span>
                   </div>
                   {/* Signature Section */}
                   <div className="signature-section print-section mt-6" style={{ pageBreakInside: 'avoid' }}>

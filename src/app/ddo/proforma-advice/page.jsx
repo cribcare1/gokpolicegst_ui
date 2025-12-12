@@ -323,7 +323,7 @@ export default function ProformaAdvicePage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* <h1 className="text-2xl font-bold">Receipts & Payment Entry</h1> */}
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-              <span className="gradient-text">Receipts & Payment Entry</span>
+              <span className="gradient-text">Receipts </span>
               <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
                      bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
                      translate-y-1">
