@@ -88,7 +88,7 @@ export default function ProformaAdviceList({
         stateCode: customerResponse.stateCode || ''
       },
       invoiceType: raw.invoiceType || raw.serviceType || 'EXEMPTED',
-      note: raw.note || raw.invoiceRemarks || '',
+      remarks: raw.note || raw.remarks || '',
       notificationDetails: raw.notificationDetails || '',
       gstCalculation: raw.gstCalculation || null,
       billDetails: {
@@ -442,7 +442,7 @@ export default function ProformaAdviceList({
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Additional Information</h3>
                     <div style="margin-bottom: 6px;">
                       <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Invoice Remarks:</p>
-                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0;">${data.note || '-'}</p>
+                      <p style="padding: 4px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 10px; margin: 0;">${data?.remarks || '-'}</p>
                     </div>
                     <div style="margin-bottom: 6px;">
                       <p style="font-weight: bold; font-size: 10px; margin-bottom: 2px;">Notification Details:</p>
@@ -1028,7 +1028,7 @@ export default function ProformaAdviceList({
                     <div className="space-y-2" style={{ fontSize: '11px' }}>
                       <div>
                         <p className="font-semibold">Invoice Remarks:</p>
-                        <p className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>{data.note || '-'}</p>
+                        <p className="mt-1 p-2 bg-gray-50 rounded border" style={{ fontSize: '11px' }}>{data?.remarks || '-'}</p>
                       </div>
                       <div>
                         <p className="font-semibold">Notification Details:</p>
