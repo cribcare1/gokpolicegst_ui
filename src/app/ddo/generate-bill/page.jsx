@@ -391,6 +391,32 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     }
   };
 
+   const handleDeleteOrCancel = async (item, action) => {
+  const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
+  console.log('[DEBUG] Calling URL:', url);
+
+  // if (!confirm(`Are you sure you want to ${action} this record?`)) return;
+
+  try {
+    setProformaLoading(true);
+    const response = await ApiService.handlePostRequest(url, {});
+    console.log('[DEBUG] Raw response:', response);
+
+    if (response?.status === 'success' || response?.status === 'SUCCESS') {
+      toast.success(t('alert.success'));
+       await fetchProformaAdviceDetails();
+      
+    } else {
+         setProformaLoading(false);
+      toast.error(response?.message || 'Something went wrong');
+    }
+  } catch (error) {
+     setProformaLoading(false);
+    console.error('[ERROR] API call failed:', error);
+   
+  }
+};
+
   const fetchGSTDetails = async () => { 
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -1010,7 +1036,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
   const handleSaveBill = async () => {
     console.log('=== handleSaveBill called ===');
     const validations = [
-      validateGSTIN(billDetails.gstinNumber),
+      // validateGSTIN(billDetails.gstinNumber),
       { valid: billDetails.gstAddress?.trim(), message: t('bill.gstAddressRequired') },
       { valid: ddoDetails.ddoCode?.trim(), message: t('bill.ddoCodeRequired') },
       validateBillNumber(invoiceNumber),
@@ -2042,6 +2068,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     </div>
   );
 
+
+ 
+
   return (
     <Layout role="ddo">
       <div className="space-y-3">
@@ -2176,6 +2205,42 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               ddoDetails={ddoDetails}
                gstDetails={gstDetails}
                 bankDetails={bankDetails}
+
+
+                    onDeleteProforma={async (item) => {
+      // try {
+      //   setProformaLoading(true);
+      //   // Call your delete API here
+      //   await deleteProformaAPI(proformaId); // Replace with your API function
+      //   // Refresh the list after deletion
+      //   const updatedList = filteredProformaList.filter(item => item.id !== proformaId);
+      //   setFilteredProformaList(updatedList);
+      // } catch (error) {
+      //   console.error('Error deleting proforma:', error);
+      // } finally {
+      //   setProformaLoading(false);
+      // }
+      handleDeleteOrCancel(item, 'delete');                     
+    }}
+
+    onCancelProforma={async (item) => {
+      // try {
+      //   setProformaLoading(true);
+      //   // Call your cancel API here
+      //   await cancelProformaAPI(proformaId); // Replace with your API function
+      //   // Update the list if needed
+      //   const updatedList = filteredProformaList.map(item =>
+      //     item.id === proformaId ? { ...item, status: 'Cancelled' } : item
+      //   );
+      //   setFilteredProformaList(updatedList);
+      // } catch (error) {
+      //   console.error('Error cancelling proforma:', error);
+      // } finally {
+      //   setProformaLoading(false);
+      // }
+         handleDeleteOrCancel(item, 'cancel');
+    }}
+
           />
         )}
 

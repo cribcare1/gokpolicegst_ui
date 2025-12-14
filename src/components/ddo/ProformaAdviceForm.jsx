@@ -88,7 +88,7 @@ export default function ProformaAdviceForm({
   // Form validation state
   const [formValidation, setFormValidation] = useState({
     hasCustomer: false,
-    hasLineItems: false,
+    // hasLineItems: false,
     hasValidAmounts: false,
     // hasSignature: false,
     isValid: false

@@ -186,7 +186,7 @@ export default function ProformaAdvicePage() {
         />
       ),
     },
-    { key: "paNo", label: "Proforma Advice Number" },
+    { key: "paNo", label: "Proforma Number" },
     { key: "customerName", label: "Customer Name" },
     { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v) },
     {
@@ -239,7 +239,7 @@ export default function ProformaAdvicePage() {
       >
         <option value="">Select</option>
         <option value="Shortfall Payment">Shortfall Payment</option>
-        <option value="Discount Payment">Discount Payment</option>
+        <option value="Discount Payment">Waver Amount</option>
       </select>
     );
   },

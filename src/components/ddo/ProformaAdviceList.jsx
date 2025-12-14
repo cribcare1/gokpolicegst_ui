@@ -1,6 +1,9 @@
+"use client"
+
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Eye, Printer, FileText, Edit, Download, X } from 'lucide-react';
+import { Plus, Search, Eye, Printer, FileText, Edit, Download, X ,Trash2 } from 'lucide-react';
+// import { Edit, Trash2, Eye } from 'lucide-react';
 import Button from '@/components/shared/Button';
 import Table from '@/components/shared/Table';
 import Modal from '@/components/shared/Modal';
@@ -8,9 +11,12 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import Image from 'next/image';
+
+import ApiService from '@/components/api/api_service';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 import { formatDateDDMMYYYY } from '@/components/utils/dateUtils';
+import { toast } from 'sonner';
 export default function ProformaAdviceList({
   proformaSearchTerm,
   setProformaSearchTerm,
@@ -24,12 +30,15 @@ export default function ProformaAdviceList({
   numberToWords,
   formatDate,
   gstDetails,
-  ddoDetails
+  ddoDetails,
+    onDeleteProforma,  // callback from parent
+  onCancelProforma,  // callback from parent
 }) {
   const router = useRouter();
   const [editingRowId, setEditingRowId] = useState(null);
   const [inlineValue, setInlineValue] = useState('');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [printOptimizedView, setPrintOptimizedView] = useState(false);
   const [listCount, setListCount] = useState([]);
@@ -727,100 +736,196 @@ export default function ProformaAdviceList({
     });
   };
 
-  const proformaColumns = [
-    { 
-      key: 'customerName', 
-      label: 'Customer Name' 
-    },
-    {
-      key: 'serviceType',
-      label: 'Service Type',
-      render: (value) => value || '-',
-    },
-    {
-      key: 'proformaNumber',
-      label: 'Proforma Advice',
-      render: (value, row) => (
-        <div 
-          className="cursor-pointer text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 hover:underline font-medium flex items-center gap-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleProformaClick(row);
-          }}
-          title="Click to preview details"
-        >
-          <Eye size={16} />
-          {value}
-        </div>
-      ),
-    },
-    {
-      key: 'proformaAmount',
-      label: 'Proforma Advice Amount',
-      render: (value) => formatCurrency(value || 0),
-    },
-    {
-      key: 'proformaDate',
-      label: 'Proforma Advice Date',
-      render: (value) => value ?formatDateDDMMYYYY(value): '-',
-    },
-    // {
-    //   key: 'signature',
-    //   label: 'Signature',
-    //   render: (_, row) => {
-    //     const signaturePath = row.signature || (row.raw && row.raw.signature);
-    //     const signatureUrl = getSignatureUrl(signaturePath);
-        
-    //     return signatureUrl ? (
-    //       <div className="flex flex-col items-center gap-1">
-    //         <div className="w-20 h-12 border border-gray-300 bg-white flex items-center justify-center overflow-hidden p-1">
-    //           <img 
-    //             src={signatureUrl} 
-    //             alt="DDO Signature" 
-    //             className="max-h-full max-w-full object-contain"
-    //             onError={(e) => {
-    //               e.target.style.display = 'none';
-    //               e.target.parentElement.innerHTML = `
-    //                 <div class="text-red-500 text-xs text-center p-1">
-    //                   <svg class="w-4 h-4 mx-auto mb-1" fill="currentColor" viewBox="0 0 20 20">
-    //                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
-    //                   </svg>
-    //                   Signature
-    //                 </div>
-    //               `;
-    //             }}
-    //           />
-    //         </div>
-    //         <span className="text-xs text-green-700 font-medium">Signed</span>
-    //       </div>
-    //     ) : (
-    //       <div className="flex flex-col items-center gap-1">
-    //         <div className="w-20 h-12 border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-    //           <span className="text-xs text-gray-500">No Signature</span>
-    //         </div>
-    //         <span className="text-xs text-gray-500">Not Signed</span>
-    //       </div>
-    //     );
-    //   },
-    // },
-  ];
+  // const proformaColumns = [
+  //   { 
+  //     key: 'customerName', 
+  //     label: 'Customer Name' 
+  //   },
+  //   {
+  //     key: 'serviceType',
+  //     label: 'Service Type',
+  //     render: (value) => value || '-',
+  //   },
+  //   {
+  //     key: 'proformaNumber',
+  //     label: 'Proforma Advice',
+  //     render: (value, row) => (
+  //       <div 
+  //         className="cursor-pointer text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 hover:underline font-medium flex items-center gap-2"
+  //         onClick={(e) => {
+  //           e.stopPropagation();
+  //           handleProformaClick(row);
+  //         }}
+  //         title="Click to preview details"
+  //       >
+  //         <Eye size={16} />
+  //         {value}
+  //       </div>
+  //     ),
+  //   },
+  //   {
+  //     key: 'proformaAmount',
+  //     label: 'Proforma Advice Amount',
+  //     render: (value) => formatCurrency(value || 0),
+  //   },
+  //   {
+  //     key: 'proformaDate',
+  //     label: 'Proforma Advice Date',
+  //     render: (value) => value ?formatDateDDMMYYYY(value): '-',
+  //   },
+    
+  // ];
 
-  const renderProformaActions = (row) => (
-    <div className="flex gap-2">
-      <Button
-        variant="secondary"
-        size="sm"
+
+  const proformaColumns = [
+  {
+    key: 'customerName',
+    label: 'Customer Name',
+  },
+  {
+    key: 'serviceType',
+    label: 'Service Type',
+    render: (value) => value || '-',
+  },
+  {
+    key: 'proformaNumber',
+    label: 'Proforma Advice',
+    render: (value, row) => (
+      <div
+        className="cursor-pointer text-[var(--color-primary)] hover:underline font-medium flex items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
-          onShowForm && onShowForm(row);
+          handleProformaClick(row);
         }}
-        className="px-3 py-1.5 text-xs sm:text-sm"
+        title="Click to preview details"
       >
-        <Edit size={14} className="mr-1" />
-      
-      </Button>
+        <Eye size={16} />
+        {value}
+      </div>
+    ),
+  },
+  {
+    key: 'proformaAmount',
+    label: 'Proforma Advice Amount',
+    render: (value) => formatCurrency(value || 0),
+  },
+  {
+    key: 'proformaDate',
+    label: 'Proforma Advice Date',
+    render: (value) =>
+      value ? formatDateDDMMYYYY(value) : '-',
+  },
+ 
+];
+
+
+// const handleDeleteOrCancel = async (item, action) => {
+//   // Validate action
+//   if (!['delete', 'cancle'].includes(action)) {
+//     console.error('Invalid action:', action);
+//     return;
+//   }
+
+//   // Confirm with user
+//   if (!confirm(`Are you sure you want to ${action} this record?`)) return;
+
+//   // Construct the URL
+//   const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
+//   console.log('[DEBUG] Calling URL:', url);
+
+//   try {
+//     const response = await ApiService.handlePostRequest(url, {});
+//     console.log('[DEBUG] Response:', response);
+
+//     if (response && response.status === 'success') {
+//       toast.success(t('alert.success'));
+//       fetchData(); // Refresh data
+//     } else {
+//       toast.error(response?.message || t('alert.error'));
+//     }
+//   } catch (error) {
+//     console.error('[ERROR] API call failed:', error);
+//     toast.error(t('alert.error'));
+//   }
+// };
+
+const handleDeleteOrCancel = async (item, action) => {
+  const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
+  console.log('[DEBUG] Calling URL:', url);
+
+  if (!confirm(`Are you sure you want to ${action} this record?`)) return;
+
+  if(action==='delete'){
+    onDeleteProforma(item);
+  }else{
+       onCancelProforma(item);
+  }
+
+  
+};
+
+
+
+
+ 
+
+
+
+const renderProformaActions = (row) => {
+
+  const maxId = Math.max(...filteredProformaList.map((item) => item.id));
+  const isMaxId = row.id === maxId;
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onShowForm(row);
+        }}
+        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition hover:scale-110"
+        title="Edit"
+        aria-label="Edit"
+      >
+        <Edit size={16} />
+      </button>
+
+      {isMaxId ? (
+     
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+        handleDeleteOrCancel(row, 'delete');
+          }}
+          className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition hover:scale-110"
+          title="Delete"
+          aria-label="Delete"
+        >
+          <Trash2 size={16} />
+        </button>
+      ) : (
+   
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+          handleDeleteOrCancel(row, 'cancel');
+          }}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition hover:scale-110"
+          title="Cancel"
+          aria-label="Cancel"
+        >
+          <X size={20} />
+        </button>
+      )}
     </div>
   );
+};
+
+
+
+
+
+
 
   return (
     <section className="space-y-4 sm:space-y-6">
@@ -863,7 +968,7 @@ export default function ProformaAdviceList({
       </div>
 
       <div className="premium-card overflow-hidden">
-        {proformaLoading ? (
+        {proformaLoading  || loading? (
           <div className="p-8 sm:p-16">
             <LoadingProgressBar message="Loading proforma advices..." variant="primary" />
           </div>

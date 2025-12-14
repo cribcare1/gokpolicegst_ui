@@ -255,6 +255,15 @@ function CustomersPageContent() {
       }
     }
 
+
+ if (updatedFormData.customerType != 'Government' && upperValue.length >= 6) {
+      if (upperValue.charAt(5) === 'G') {
+        errorMessage =
+          'Entered GSTIN  belong to Govt, correct GSTIN or remove to proceed';
+      }
+    }
+    
+
     setGstinError(errorMessage);
 
     // UPDATE service type properly
