@@ -89,7 +89,7 @@ export default function ProformaAdviceForm({
   const [formValidation, setFormValidation] = useState({
     hasCustomer: false,
     // hasLineItems: false,
-    hasValidAmounts: false,
+    // hasValidAmounts: false,
     // hasSignature: false,
     isValid: false
   });
@@ -121,12 +121,12 @@ export default function ProformaAdviceForm({
     // Signature validation - check if ddoSignature prop is available and not empty
     const hasSignature = ddoSignature && ddoSignature.trim() !== '';
 
-    const isValid = hasCustomer && hasLineItems && hasValidAmounts ;
+    const isValid = hasCustomer && hasLineItems ;
 
     setFormValidation({
       hasCustomer,
       hasLineItems,
-      hasValidAmounts,
+      // hasValidAmounts,
       // hasSignature,
       isValid
     });
@@ -408,7 +408,7 @@ export default function ProformaAdviceForm({
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Service Receiver Details</h3>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>Name:</strong> M/s ${selectedCustomer?.customerName || ''}</p>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>GSTIN:</strong> ${selectedCustomer?.gstNumber || 'Not provided'}</p>
-                    <p style="margin: 1px 0; font-size: 10px;"><strong>Address:</strong> ${selectedCustomer?.address || ''}</p>
+                    <p style="margin: 1px 0; font-size: 10px;"><strong>Address:</strong> ${selectedCustomer?.address || '-'}</p>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>State Code:</strong> ${selectedCustomer?.stateCode || ''}</p>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>Type:</strong> ${invoiceType}</p>
                   </td>
@@ -1121,8 +1121,8 @@ export default function ProformaAdviceForm({
                 <ul className="mt-1 text-amber-700 space-y-1 mobile-text-sm">
                   {!formValidation.hasCustomer && <li>• Select or add a customer</li>}
                   {!formValidation.hasLineItems && <li>• Add at least one line item</li>}
-                  {!formValidation.hasValidAmounts && <li>• Fill description and amount for all line items</li>}
-                  {!formValidation.hasSignature && <li>• Add your digital signature to authenticate the document</li>}
+                  {/* {!formValidation.hasValidAmounts && <li>• Fill description and amount for at least one line items</li>} */}
+                  {/* {!formValidation.hasSignature && <li>• Add your digital signature to authenticate the document</li>} */}
                 </ul>
               </div>
             )}
