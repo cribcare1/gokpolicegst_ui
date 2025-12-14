@@ -1,8 +1,8 @@
 
-"use client";
 
+"use client";
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
 import { formatCurrency } from "@/lib/gstUtils";
@@ -11,24 +11,21 @@ import { API_ENDPOINTS } from "@/components/api/api_const";
 import { toast } from "sonner";
 
 export default function ReceiptPreviewPage() {
-//   const searchParams = useSearchParams();
   const router = useRouter();
-
   const [data, setData] = useState([]);
   const [editedValues, setEditedValues] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Read data from query params
   useEffect(() => {
-    const paramData = searchParams.get("data");
+    const storedData = localStorage.getItem("shortfallData");
 
-    if (!paramData) {
+    if (!storedData) {
       router.push("/ddo/shortfall_payment_list");
       return;
     }
 
     try {
-      const parsed = JSON.parse(decodeURIComponent(paramData));
+      const parsed = JSON.parse(storedData);
       setData(parsed);
 
       const initialEdits = {};
@@ -52,7 +49,6 @@ export default function ReceiptPreviewPage() {
     setEditedValues((prev) => {
       const updated = { ...prev, [id]: { ...prev[id], [field]: value } };
 
-      // Auto-clear differenceReason if difference <= 0
       if (field === "amountReceived") {
         const row = data.find((r) => r.invoiceId === id);
         const diff = row.amountPayable - value;
@@ -67,11 +63,6 @@ export default function ReceiptPreviewPage() {
 
   const columns = [
     { key: "paNo", label: "Proforma Number", render: (v) => v || "-" },
-    // {
-    //   key: "amountPayable",
-    //   label: "Amount Payable",
-    //   render: (v) => (v !== undefined && v !== null ? formatCurrency(v) : "-"),
-    // },
     {
       key: "amountReceived",
       label: "Amount Received",
@@ -82,11 +73,7 @@ export default function ReceiptPreviewPage() {
           className="border rounded px-2 py-1 w-28"
           value={editedValues[row.invoiceId]?.amountReceived ?? v}
           onChange={(e) =>
-            updateField(
-              row.invoiceId,
-              "amountReceived",
-              parseFloat(e.target.value) || 0
-            )
+            updateField(row.invoiceId, "amountReceived", parseFloat(e.target.value) || 0)
           }
         />
       ),
@@ -117,9 +104,7 @@ export default function ReceiptPreviewPage() {
 
           return (
             <select
-              className={`border rounded px-2 py-1 ${
-                isMandatoryEmpty ? "border-red-500" : ""
-              }`}
+              className={`border rounded px-2 py-1 ${isMandatoryEmpty ? "border-red-500" : ""}`}
               value={selectedReason}
               onChange={(e) =>
                 updateField(row.invoiceId, "differenceReason", e.target.value)
@@ -192,7 +177,6 @@ export default function ReceiptPreviewPage() {
   ];
 
   const handleSaveAndGenerate = async () => {
-    // Validate mandatory payment ref & difference reason
     for (let item of data) {
       const edited = editedValues[item.invoiceId];
       const diff = item.amountPayable - edited.amountReceived;
@@ -239,13 +223,8 @@ export default function ReceiptPreviewPage() {
       <div className="space-y-6">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
           <span className="gradient-text">Shortfall Preview</span>
-          <span
-            className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-              bg-[var(--color-primary)]/10 
-              text-[var(--color-primary)] 
-              border border-[var(--color-primary)]/30
-              translate-y-1"
-          >
+          <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+              bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1">
             {data.length}
           </span>
         </h1>

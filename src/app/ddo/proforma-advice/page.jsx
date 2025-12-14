@@ -1,16 +1,18 @@
 
+
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
-import { formatCurrency } from '@/lib/gstUtils';
+import { formatCurrency } from "@/lib/gstUtils";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { toast } from 'sonner';
 import { LoadingProgressBar } from "@/components/shared/ProgressBar"; 
 import { useRouter } from "next/navigation";
-export default function ProformaAdvicePage() {
+
+export default function ShortfallPaymentPage() {
   const router = useRouter();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -21,18 +23,15 @@ export default function ProformaAdvicePage() {
   const [editedValues, setEditedValues] = useState({});
   const [loading, setLoading] = useState(false); 
 
-
   const countrecords = receiptsData.length;
 
   useEffect(() => {
     setFromDate("");
     setToDate("");
     fetchCustomers();
-    if(Object.keys(editedValues).length == 0){
-
- fetchInvoices();
+    if(Object.keys(editedValues).length === 0){
+      fetchInvoices();
     }
-   
   }, []);
 
   const fetchCustomers = async () => {
@@ -55,7 +54,51 @@ export default function ProformaAdvicePage() {
     }
   };
 
-  const fetchInvoices = async () => {
+  // const fetchInvoices = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+  //     const storedProfileRaw = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+  //     let gstId = 0;
+
+  //     if (storedProfileRaw) {
+  //       const storedProfile = JSON.parse(storedProfileRaw);
+  //       if (Array.isArray(storedProfile) && storedProfile.length > 0) {
+  //         gstId = storedProfile[0].gstId;
+  //       } else if (typeof storedProfile === "object" && storedProfile.gstId) {
+  //         gstId = storedProfile.gstId;
+  //       }
+  //     }
+
+  //     if (!gstId) return;
+
+  //     const response = await ApiService.handleGetRequest(
+  //       `${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=${status}`
+  //     );
+
+  //     if (response && response.success === "success") {
+  //       const invoices = (response.data || []).map((invoice) => ({
+  //         id: invoice.invoiceId,
+  //         paNo: invoice.invoiceNumber,
+  //         customerName: invoice.customerResponse?.name || "",
+  //         amountPayable: invoice.grandTotal,
+  //         amountReceived: 0,
+  //         paymentMode: "Bank",
+  //         paymentRef: "",
+  //         paymentDate: invoice.invoiceDate,
+  //       }));
+
+  //       setReceiptsData(invoices);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching invoices:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+   const fetchInvoices = async () => {
     try {
       setLoading(true);
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -134,94 +177,57 @@ export default function ProformaAdvicePage() {
     setEditedValues({});
   };
 
-
-
-const handleNext = () => {
-  if (selectedReceipts.length === 0) {
-    toast.error("Please select at least one receipt");
-    return;
-  }
-
-  // Validate selected rows
-  for (const id of selectedReceipts) {
-    const edited = editedValues[id] || {};
-    const original = receiptsData.find((r) => r.id === id);
-
-    if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
-      toast.error(`Amount Received is required for PA No: ${original.paNo}`);
-      return;
-    }
-
-    if (!edited.paymentDate) {
-      toast.error(`Payment Date is required for PA No: ${original.paNo}`);
-      return;
-    }
-
-    if (!edited.paymentMode) {
-      toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
-      return;
-    }
-  }
-
-  // Prepare selected data
-  const selectedData = selectedReceipts.map((id) => {
-    const original = receiptsData.find((r) => r.id === id);
-    const edited = editedValues[id] || {};
-
-    return {
-      invoiceId: original.id,
-      paNo: original.paNo,
-      customerName: original.customerName,
-      amountPayable: original.amountPayable,
-      amountReceived: edited.amountReceived,
-      difference: original.amountPayable - edited.amountReceived,
-      differenceReason: edited.differencereson || "",
-      paymentMode: edited.paymentMode,
-      paymentRef: edited.paymentRef || "",
-      paymentDate: edited.paymentDate,
-    };
-  });
-
-  const encodedData = encodeURIComponent(JSON.stringify(selectedData));
-  router.push(`/ddo/receipt-preview?data=${encodedData}`);
-};
-
-
-  const handleSaveAndGenerate = async () => {
+  const handleNext = () => {
     if (selectedReceipts.length === 0) {
-      alert("Please select at least one receipt to save.");
+      toast.error("Please select at least one receipt");
       return;
     }
 
-    const receiptsPayload = selectedReceipts.map((id) => {
+    // Validate selected rows
+    for (const id of selectedReceipts) {
+      const edited = editedValues[id] || {};
+      const original = receiptsData.find((r) => r.id === id);
+
+      if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
+        toast.error(`Amount Received is required for PA No: ${original.paNo}`);
+        return;
+      }
+
+      if (!edited.paymentDate) {
+        toast.error(`Payment Date is required for PA No: ${original.paNo}`);
+        return;
+      }
+
+      if (!edited.paymentMode) {
+        toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
+        return;
+      }
+    }
+
+    // Prepare selected data
+    const selectedData = selectedReceipts.map((id) => {
       const original = receiptsData.find((r) => r.id === id);
       const edited = editedValues[id] || {};
+
       return {
         invoiceId: original.id,
-        type: edited.paymentMode === "Cash" ? "CASH" : "BANK_TRANSFER",
-        referenceNumber: edited.paymentRef || "",
-        amountPaid: parseFloat(edited.amountReceived ?? 0),
-        paymentDate: edited.paymentDate || original.paymentDate,
+        paNo: original.paNo,
+        customerName: original.customerName,
+        amountPayable: original.amountPayable,
+        amountReceived: edited.amountReceived,
+        difference: original.amountPayable - edited.amountReceived,
+        differenceReason: edited.differencereson || "",
+        paymentMode: edited.paymentMode,
+        paymentRef: edited.paymentRef || "",
+        paymentDate: edited.paymentDate,
       };
     });
 
-    const payload = { receipts: receiptsPayload };
+    // Store data in localStorage
+    localStorage.setItem("shortfallData", JSON.stringify(selectedData));
 
-    try {
-      setLoading(true);
-      const apiUrl = `${API_ENDPOINTS.CREATE_RECIEPT}`;
-      const response = await ApiService.handlePostRequest(apiUrl, payload);
-
-      toast.success("Receipts saved successfully!");
-
-      fetchInvoices();
-      handleClear();
-    } catch (error) {
-      console.error("Error saving receipts:", error);
-      toast.error("Failed to save receipts.");
-    } finally {
-      setLoading(false);
-    }
+    // Navigate to preview page
+    router.push("/ddo/receipt-preview");
   };
 
   const filteredReceipts = receiptsData.filter((r) => {
@@ -231,8 +237,6 @@ const handleNext = () => {
     const matchesTo = toDate ? paymentDate <= new Date(toDate) : true;
     return matchesCustomer && matchesFrom && matchesTo;
   });
-
-  
 
   const receiptColumns = [
     {
@@ -269,7 +273,7 @@ const handleNext = () => {
         );
       },
     },
-      {
+    {
       key: "difference",
       label: "Difference",
       render: (v, row) => {
@@ -282,7 +286,6 @@ const handleNext = () => {
         );
       },
     },
-
   ];
 
   return (
@@ -291,15 +294,14 @@ const handleNext = () => {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* <h1 className="text-2xl font-bold">Receipts & Payment Entry</h1> */}
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-              <span className="gradient-text">Receipts </span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
-                     translate-y-1">
-                {countrecords ?? 0}
-              </span>
-            </h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+            <span className="gradient-text">Receipt </span>
+            <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                   bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                   translate-y-1">
+              {countrecords ?? 0}
+            </span>
+          </h1>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex flex-col">
               <label>From Date</label>
@@ -340,7 +342,7 @@ const handleNext = () => {
           </div>
         </div>
 
-        {/* Table with same loading design as GST-TDS page */}
+        {/* Table */}
         <div className="premium-card overflow-x-auto w-full">
           {loading ? (
             <div className="p-16">
@@ -352,43 +354,27 @@ const handleNext = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
-          {/* {!loading && (
-            <div className="flex justify-center gap-4 mt-4">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={handleNext}
-              >
-                Next
-              </button>
-              <button
-                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                onClick={handleClear}
-              >
-                Clear
-              </button>
-            </div>
-          )} */}
+          
         </div>
 
-        <div className="flex justify-end gap-4">
-          {!loading && (
-            <div className="flex justify-center gap-4 mt-4">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={handleNext}
-              >
-                Next
-              </button>
-              <button
-                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                onClick={handleClear}
-              >
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="flex justify-end gap-4 mt-4">
+            {!loading && (
+              <>
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  onClick={handleNext}
+                >
+                  Next
+                </button>
+                <button
+                  className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                  onClick={handleClear}
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
       </div>
     </Layout>
   );
