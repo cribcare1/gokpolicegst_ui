@@ -255,6 +255,8 @@ export default function BankDetailsPage() {
   };
 
   const handleSubmit = async (e) => {
+     setLoading(true);
+     
     e.preventDefault();
     const dataCopy = { ...formData };
 
@@ -280,6 +282,7 @@ export default function BankDetailsPage() {
       const validation = validateForm(dataCopy);
       if (!validation.valid) {
         toast.error(validation.message || t('validation.required'));
+         setLoading(false);
         return;
       }
     }
@@ -297,6 +300,7 @@ export default function BankDetailsPage() {
     // }
     console.log("Bank dataCopy data: ", dataCopy);
     try {
+        setIsModalOpen(false);
       if (editingItem) {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
@@ -320,6 +324,7 @@ export default function BankDetailsPage() {
           };
         };
         if (!editingItem) {
+           setLoading(false);
           toast.error('No bank record selected for editing');
           return;
         }
@@ -329,12 +334,14 @@ export default function BankDetailsPage() {
         console.log("Bank inactivate response: ", response);
         if (response && response.status === 'success') {
           toast.success('Bank details updated successfully. Old record inactivated, new record created.');
-          setIsModalOpen(false);
+          // setIsModalOpen(false);
+           setLoading(false);
           fetchData();
 
         } else {
           toast.error(response?.message || t('alert.error'));
         }
+         setLoading(false);
       } else {
         // Adding new record - ensure status is Active
         dataCopy.status = 'Active';
@@ -344,16 +351,19 @@ export default function BankDetailsPage() {
 
         if (response && response.status === 'success') {
           toast.success(t('alert.success'));
-          setIsModalOpen(false);
+          // setIsModalOpen(false);
+            setLoading(false);
           fetchData();
 
         } else {
+           setLoading(false);
           toast.error(response?.message || t('alert.error'));
         }
       }
     } catch (error) {
       toast.error(t('alert.error'));
     }
+     setLoading(false);
   };
 
   const updateFormData = (field, value) => {

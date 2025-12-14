@@ -300,24 +300,74 @@ export default function DDOProfilePage() {
     return String(details);
   };
 
- function cleanGstinBankDetails(details) {
+//  function cleanGstinBankDetails(details) {
+//   if (!details) return "";
+
+//   let parts = details.split("|").map(p => p.trim());
+
+//   // Remove unwanted fields
+//   parts = parts.filter(p =>
+//     !p.toLowerCase().startsWith("is editable") &&
+//     !p.toLowerCase().startsWith("effective date")
+//   );
+
+//   // Normalize IFSC key safely
+//   parts = parts.map(p => {
+//     const lower = p.toLowerCase();
+
+//     if (lower.startsWith("ifsc code") || lower.startsWith("ifsc") || lower.startsWith("ifsc  code")) {
+//       const [key, value] = p.split(":");
+//       return `${key.trim().toUpperCase()}: ${value.trim().toUpperCase()}`;
+//     }
+
+//     return p;
+//   });
+
+//   return parts.join(" | ");
+// }
+
+
+
+function cleanGstinBankDetails(details) {
   if (!details) return "";
 
   let parts = details.split("|").map(p => p.trim());
 
-  // Remove unwanted fields
+  // Remove unwanted metadata fields
   parts = parts.filter(p =>
     !p.toLowerCase().startsWith("is editable") &&
     !p.toLowerCase().startsWith("effective date")
   );
 
-  // Normalize IFSC key safely
+  // Normalize labels
   parts = parts.map(p => {
     const lower = p.toLowerCase();
 
-    if (lower.startsWith("ifsc code") || lower.startsWith("ifsc") || lower.startsWith("ifsc  code")) {
+    // --- IFSC ---
+    if (
+      lower.startsWith("ifsc") ||
+      lower.startsWith("ifsc code") ||
+      lower.startsWith("ifsc  code")
+    ) {
+      const [, value] = p.split(":");
+      return `IFSC Code: ${value.trim().toUpperCase()}`;
+    }
+
+    // --- MICR / MICR Code ---
+    if (lower.startsWith("micr") || lower.startsWith("micr code") || lower.startsWith("Micr Code")) {
+      const [, value] = p.split(":");
+      return `MICR Code: ${value.trim()}`;
+    }
+
+    // --- Standard formatting for all other fields ---
+    if (p.includes(":")) {
       const [key, value] = p.split(":");
-      return `${key.trim().toUpperCase()}: ${value.trim().toUpperCase()}`;
+      const cleanKey =
+        key
+          .toLowerCase()
+          .replace(/\b\w/g, c => c.toUpperCase()) // capitalize words
+          .replace(/\s+/g, " "); // normalize spacing
+      return `${cleanKey}: ${value.trim()}`;
     }
 
     return p;
@@ -325,6 +375,7 @@ export default function DDOProfilePage() {
 
   return parts.join(" | ");
 }
+
 
 
 
