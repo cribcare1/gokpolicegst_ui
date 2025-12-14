@@ -1,4 +1,9 @@
 
+
+
+
+
+
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "@/components/shared/Layout";
@@ -24,39 +29,16 @@ export default function ShortfallPaymentPage() {
 
   const countrecords = receiptsData.length;
 
-//   useEffect(() => {
-//     setFromDate("");
-//     setToDate("");
-//     fetchCustomers();
-//     if(Object.keys(editedValues).length == 0){
+  useEffect(() => {
+    setFromDate("");
+    setToDate("");
+    fetchCustomers();
+    if(Object.keys(editedValues).length == 0){
 
-//  fetchInvoices();
-//     }
+ fetchInvoices();
+    }
    
-//   }, []);
-
-
-useEffect(() => {
-  const savedState = sessionStorage.getItem("shortfall_state");
-
-  if (savedState) {
-    const parsed = JSON.parse(savedState);
-
-    setReceiptsData(parsed.receiptsData || []);
-    setSelectedReceipts(parsed.selectedReceipts || []);
-    setEditedValues(parsed.editedValues || {});
-    setFromDate(parsed.filters?.fromDate || "");
-    setToDate(parsed.filters?.toDate || "");
-    setSelectedCustomer(parsed.filters?.selectedCustomer || null);
-
-    return; // ⛔ stop API calls
-  }
-
-  setFromDate("");
-  setToDate("");
-  fetchCustomers();
-  fetchInvoices();
-}, []);
+  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -152,11 +134,10 @@ useEffect(() => {
     }));
   };
 
-const handleClear = () => {
-  sessionStorage.removeItem("shortfall_state");
-  setSelectedReceipts([]);
-  setEditedValues({});
-};
+  const handleClear = () => {
+    setSelectedReceipts([]);
+    setEditedValues({});
+  };
 
 
 
@@ -168,6 +149,28 @@ const handleNext = () => {
     return;
   }
 
+  // Validate selected rows
+  for (const id of selectedReceipts) {
+    const edited = editedValues[id] || {};
+    const original = receiptsData.find((r) => r.id === id);
+
+    if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
+      toast.error(`Amount Received is required for PA No: ${original.paNo}`);
+      return;
+    }
+
+    if (!edited.paymentDate) {
+      toast.error(`Payment Date is required for PA No: ${original.paNo}`);
+      return;
+    }
+
+    if (!edited.paymentMode) {
+      toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
+      return;
+    }
+  }
+
+  // Prepare selected data
   const selectedData = selectedReceipts.map((id) => {
     const original = receiptsData.find((r) => r.id === id);
     const edited = editedValues[id] || {};
@@ -179,28 +182,16 @@ const handleNext = () => {
       amountPayable: original.amountPayable,
       amountReceived: edited.amountReceived,
       difference: original.amountPayable - edited.amountReceived,
-      differenceReason: edited.differenceReason || "",
+      differenceReason: edited.differencereson || "",
       paymentMode: edited.paymentMode,
       paymentRef: edited.paymentRef || "",
       paymentDate: edited.paymentDate,
     };
   });
 
-  // ✅ SAVE STATE (NO UI CHANGE)
-  sessionStorage.setItem(
-    "shortfall_state",
-    JSON.stringify({
-      receiptsData,
-      selectedReceipts,
-      editedValues,
-      filters: { fromDate, toDate, selectedCustomer },
-    })
-  );
-
   const encodedData = encodeURIComponent(JSON.stringify(selectedData));
   router.push(`/ddo/shortfall_payment_preview?data=${encodedData}`);
 };
-
 
 
   const handleSaveAndGenerate = async () => {
@@ -298,8 +289,96 @@ const handleNext = () => {
         );
       },
     },
+//    {
+//   key: "differencereson",
+//   label: "Difference Reason",
+//   render: (v, row) => {
+//     const isChecked = selectedReceipts.includes(row.id);
+//     const edited = editedValues[row.id]?.differencereson ?? "";
 
+//     if (!isChecked) return <span>{v || "-"}</span>;
 
+//     return (
+//       <select
+//         className="border rounded px-2 py-1"
+//         value={edited}
+//         onChange={(e) => updateField(row.id, "differencereson", e.target.value)}
+//       >
+//         <option value="">Select</option>
+//         <option value="Shortfall Payment">Shortfall Payment</option>
+//         <option value="Discount Payment">Waver Amount</option>
+//       </select>
+//     );
+//   },
+// }
+// ,
+//     {
+//       key: "paymentMode",
+//       label: "Payment Mode",
+//       render: (v, row) => {
+//         const isChecked = selectedReceipts.includes(row.id);
+//         const edited = editedValues[row.id]?.paymentMode ?? v;
+//         if (!isChecked) return <span>{v}</span>;
+
+//         return (
+//           <select
+//             className="border rounded px-2 py-1"
+//             value={edited}
+//             onChange={(e) => updateField(row.id, "paymentMode", e.target.value)}
+//           >
+//             <option>Bank/ DD/ Cheque</option>
+//             <option>Other</option>
+//           </select>
+//         );
+//       },
+//     },
+//     {
+//       key: "paymentRef",
+//       label: "Payment Ref No",
+//       render: (v, row) => {
+//         const isChecked = selectedReceipts.includes(row.id);
+//         const edited = editedValues[row.id]?.paymentRef ?? v;
+//         if (!isChecked) return <span>{v || "-"}</span>;
+
+//         return (
+//           <input
+//             type="text"
+//             className="border rounded px-2 py-1 w-32"
+//             value={edited}
+//             onChange={(e) => updateField(row.id, "paymentRef", e.target.value)}
+//           />
+//         );
+//       },
+//     },
+//    {
+//   key: "paymentDate",
+//   label: "Payment Date",
+//   render: (v, row) => {
+//     const isChecked = selectedReceipts.includes(row.id);
+//     const edited = editedValues[row.id]?.paymentDate ?? v;
+
+//     // Format date to DD-MM-YYYY
+//     const formatDate = (dateStr) => {
+//       if (!dateStr) return "";
+//       const [y, m, d] = dateStr.split("-");
+//       return `${d}-${m}-${y}`;
+//     };
+
+//     if (!isChecked) {
+//       return <span>{formatDate(v)}</span>;
+//     }
+
+//     return (
+//       <input
+//         type="date"
+//         className="border rounded px-2 py-1"
+//         value={edited} // must stay in YYYY-MM-DD for the input
+//         onChange={(e) => updateField(row.id, "paymentDate", e.target.value)}
+//       />
+//     );
+//   },
+// }
+,
   
   ];
 
@@ -371,7 +450,22 @@ const handleNext = () => {
           )}
 
           {/* Action Buttons */}
-     
+          {/* {!loading && (
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleNext}
+              >
+                Next
+              </button>
+              <button
+                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </div>
+          )} */}
         </div>
 
         <div className="flex justify-end gap-4">

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,7 +11,7 @@ import { API_ENDPOINTS } from "@/components/api/api_const";
 import { toast } from "sonner";
 
 export default function ReceiptPreviewPage() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const router = useRouter();
 
   const [data, setData] = useState([]);
@@ -225,13 +224,9 @@ export default function ReceiptPreviewPage() {
 
     try {
       setLoading(true);
-    var  response = await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
-
-    if(response && response.status === "success"){
-      sessionStorage.removeItem("proforma_state");
-        toast.success("Receipts saved & invoice generated");
+      await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
+      toast.success("Receipts saved & invoice generated");
       router.push("/ddo/proforma-advice");
-    }
     } catch (error) {
       toast.error("Failed to save receipts");
     } finally {

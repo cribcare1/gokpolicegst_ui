@@ -24,28 +24,16 @@ export default function ProformaAdvicePage() {
 
   const countrecords = receiptsData.length;
 
-useEffect(() => {
-  const savedState = sessionStorage.getItem("proforma_state");
+  useEffect(() => {
+    setFromDate("");
+    setToDate("");
+    fetchCustomers();
+    if(Object.keys(editedValues).length == 0){
 
-  if (savedState) {
-    const parsed = JSON.parse(savedState);
-
-    setReceiptsData(parsed.receiptsData || []);
-    setSelectedReceipts(parsed.selectedReceipts || []);
-    setEditedValues(parsed.editedValues || {});
-    setFromDate(parsed.filters?.fromDate || "");
-    setToDate(parsed.filters?.toDate || "");
-    setSelectedCustomer(parsed.filters?.selectedCustomer || null);
-
-    return; // ⛔ stop API calls
-  }
-
-  setFromDate("");
-  setToDate("");
-  fetchCustomers();
-  fetchInvoices();
-}, []);
-
+ fetchInvoices();
+    }
+   
+  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -140,11 +128,11 @@ useEffect(() => {
       [id]: { ...prev[id], [field]: value },
     }));
   };
-const handleClear = () => {
-  sessionStorage.removeItem("proforma_state");
-  setSelectedReceipts([]);
-  setEditedValues({});
-};
+
+  const handleClear = () => {
+    setSelectedReceipts([]);
+    setEditedValues({});
+  };
 
 
 
@@ -154,6 +142,28 @@ const handleNext = () => {
     return;
   }
 
+  // Validate selected rows
+  for (const id of selectedReceipts) {
+    const edited = editedValues[id] || {};
+    const original = receiptsData.find((r) => r.id === id);
+
+    if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
+      toast.error(`Amount Received is required for PA No: ${original.paNo}`);
+      return;
+    }
+
+    if (!edited.paymentDate) {
+      toast.error(`Payment Date is required for PA No: ${original.paNo}`);
+      return;
+    }
+
+    if (!edited.paymentMode) {
+      toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
+      return;
+    }
+  }
+
+  // Prepare selected data
   const selectedData = selectedReceipts.map((id) => {
     const original = receiptsData.find((r) => r.id === id);
     const edited = editedValues[id] || {};
@@ -165,27 +175,17 @@ const handleNext = () => {
       amountPayable: original.amountPayable,
       amountReceived: edited.amountReceived,
       difference: original.amountPayable - edited.amountReceived,
-      differenceReason: edited.differenceReason || "",
+      differenceReason: edited.differencereson || "",
       paymentMode: edited.paymentMode,
       paymentRef: edited.paymentRef || "",
       paymentDate: edited.paymentDate,
     };
   });
 
-  // ✅ SAVE STATE (NO UI CHANGE)
-  sessionStorage.setItem(
-    "proforma_state",
-    JSON.stringify({
-      receiptsData,
-      selectedReceipts,
-      editedValues,
-      filters: { fromDate, toDate, selectedCustomer },
-    })
-  );
-
   const encodedData = encodeURIComponent(JSON.stringify(selectedData));
   router.push(`/ddo/receipt-preview?data=${encodedData}`);
 };
+
 
   const handleSaveAndGenerate = async () => {
     if (selectedReceipts.length === 0) {
@@ -283,7 +283,6 @@ const handleNext = () => {
       },
     },
 
-  
   ];
 
   return (
@@ -353,7 +352,23 @@ const handleNext = () => {
             </div>
           )}
 
-         
+          {/* Action Buttons */}
+          {/* {!loading && (
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleNext}
+              >
+                Next
+              </button>
+              <button
+                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </div>
+          )} */}
         </div>
 
         <div className="flex justify-end gap-4">
