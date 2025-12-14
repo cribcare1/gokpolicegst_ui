@@ -43,8 +43,8 @@ export default function GenerateBillPage() {
   // Customer
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [gstDetails, setGstDetails] = useState(null);
-  const [customerType, setCustomerType] = useState('Govt');
-  const [invoiceType, setInvoiceType] = useState('FCM');
+  const [customerType, setCustomerType] = useState('');
+  const [invoiceType, setInvoiceType] = useState('');
   const [taxPayableReverseCharge, setTaxPayableReverseCharge] = useState('YES');
   const [exemptionNo, setExemptionNo] = useState('');
   const [newCustomer, setNewCustomer] = useState({
@@ -161,34 +161,38 @@ export default function GenerateBillPage() {
     }
   }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList, gstDetails]);
 
-  useEffect(() => {
-    if (lineItems.length === 0) return;
-    
-    let needsUpdate = false;
-    const updated = lineItems.map(item => {
-      const newItem = { ...item };
-      
-      if (hsnList.length === 1) {
-        const defaultHsn =  hsnList[0].hsnCode  || '';
-        if (item.hsnNumber !== defaultHsn) {
-          newItem.hsnNumber = defaultHsn;
-          needsUpdate = true;
-        }
-      }
-      
-      const currentQty = parseInt(item.quantity) || 0;
-      if (currentQty !== 1) {
-        newItem.quantity = 1;
+ useEffect(() => {
+  if (!lineItems.length) return;
+
+  let needsUpdate = false;
+
+  const updated = lineItems.map(item => {
+    const newItem = { ...item };
+
+    // Auto-assign HSN if only one exists
+    if (hsnList.length === 1) {
+      const defaultHsn = hsnList[0]?.hsnCode ?? '';
+      if (item.hsnNumber !== defaultHsn) {
+        newItem.hsnNumber = defaultHsn;
         needsUpdate = true;
       }
-      
-      return newItem;
-    });
-    
-    if (needsUpdate) {
-      setLineItems(updated);
     }
-  }, [hsnList.length, hsnList, lineItems.length]);
+
+    // Force quantity = 1
+    const currentQty = Number(item.quantity) || 0;
+    if (currentQty !== 1) {
+      newItem.quantity = 1;
+      needsUpdate = true;
+    }
+
+    return newItem;
+  });
+
+  if (needsUpdate) {
+    setLineItems(updated);
+  }
+}, [hsnList, lineItems]); // ✅ THIS IS THE KEY FIX
+
 
   useEffect(() => {
     if (!proformaSearchTerm.trim()) {
@@ -349,9 +353,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           gstNumber: customerResponse.gstNumber || customerResponse.gstinNumber || '',
           address: customerResponse.address || '',
           city: customerResponse.city || '',
-          stateCode: customerResponse.stateCode || '',
+          stateCode: customerResponse.stateCode || customerResponse.sateCode || '',
           pin: customerResponse.pinCode || customerResponse.pin || '',
-          customerType: customerResponse.customerType || customerResponse.type || 'Govt',
+          customerType: customerResponse.customerType || customerResponse.type || '-',
           mobile: customerResponse.mobile || '',
           email: customerResponse.customerEmail || customerResponse.email || '',
           exemptionNumber: customerResponse.exemptionNumber || customerResponse.exemptionCertNumber || ''
@@ -557,8 +561,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     setPaidAmount(0);
     setDdoSignature(null);
     setNote('');
-    setInvoiceType('FCM');
-    setCustomerType('Govt');
+    setInvoiceType('');
+    setCustomerType('');
     setGstCalculation(null);
     setLineItems([
       { serialNo: 1, description: '', amount: "", hsnNumber: '', quantity: 1 },
@@ -628,6 +632,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       console.log('⚠️ No customer data found in record.raw');
       console.log('🔍 Record raw keys:', Object.keys(record.raw || {}));
     }
+
+    console.log('🧾 Setting line items for editing invoice:', record);
     
     // Set line items from raw data if available
     if (record.raw && record.raw.items && Array.isArray(record.raw.items) && record.raw.items.length > 0) {
@@ -721,23 +727,22 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       console.log('gstRate (IGST):', gstRate);
     }
     
-    if (invoiceType === 'EXEMPTED') {
-      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
-        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
-        setNote('GST is Exempted with Notification');
-        setNotificationDetails(`Notification No. ${exemptionNo} - GST is Exempted`);
-      } else {
-        setNote('GST is Exempted with Notification');
-        setNotificationDetails('Entry 6 of Notification No. 12/2017-CT (Rate) - Exempted from GST');
-      }
-    } else if (invoiceType === 'RCM') {
-      setNote('Reverse Charge Mechanism - Tax payable by recipient');
-      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
-        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
+    if (invoiceType.toString().trim().toUpperCase() === 'EXEMPTED') {
+      if (selectedCustomer?.exemptionNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber;
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
       } else {
-        setNotificationDetails('Notification No. 13/2017-CT (Rate) Sl. No. 5 - Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity');
+        // setNote('GST is Exempted with Notification');
+        setNotificationDetails('Exempted from GST :  under Entry 6 of Notification No. 12/2017-CT (Rate) — no GST');
       }
+    } else if (invoiceType.toString().trim().toUpperCase() === 'RCM') {
+      // setNote('');
+      if (selectedCustomer?.exemptionNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber;
+        setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
+      } else {
+        setNotificationDetails('Reverse Charge under Notification No. 13/2017-CT (Rate) Sl. No. 5 covers:Services supplied by the Central Government, State Government, Union Territory, or local authority to a business entity, excluding (i) renting of immovable property, and (ii) services specified in Notification No. 12/2017-CT (Rate).');
+       }
       
       // Ensure RCM fields are populated for display
       if (!isRCMExempted) {
@@ -745,20 +750,12 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         // Make sure the calculation includes all tax components
         console.log('RCM Calculation - will be handled by the calculation logic below');
       }
-    } else if (invoiceType === 'FCM') {
-      if (selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber) {
-        const exemptionNo = selectedCustomer.exemptionNumber || selectedCustomer.exemptionCertNumber;
-        setNote('GST is Exempted with Notification');
+    } else if (invoiceType.toString().trim().toUpperCase() === 'FCM') {
+      if (selectedCustomer?.exemptionNumber) {
+        const exemptionNo = selectedCustomer.exemptionNumber;
         setNotificationDetails(`Customer Declared Notification: ${exemptionNo}`);
       } else {
-        if (isSameState) {
-          const totalRate = (cgstRate || 0) + (sgstRate || 0);
-          setNote('Forward Charge Mechanism - Taxable @' + totalRate + '% (CGST @' + cgstRate + '% + SGST @' + sgstRate + '%)');
-          setNotificationDetails('Same State - CGST and SGST applicable');
-        } else {
-          setNote('Forward Charge Mechanism - Taxable @' + gstRate + '% (IGST)');
-          setNotificationDetails('Different State - IGST applicable');
-        }
+          setNotificationDetails(' Foward Charge under under Section 7 of the CGST Act, 2017 . Taxable @18% Refer : Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
       }
     }
 
@@ -1109,20 +1106,19 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         totalIgst: totalIgst,
         grandTotal: grandTotal,
         
-
+        notificationDetails: notificationDetails || '',
         paidAmount: parseFloat(paidAmount) || 0,
         balanceAmount: balanceAmount,
         
         items: lineItems.map((item) => {
+          console.log('Mapping hsnList item for billData:', hsnList, item);
           const hsnData = hsnList.find(h => 
-            h.hsnNumber === item.hsnNumber || 
-            h.hsnCode === item.hsnNumber || 
-            h.code === item.hsnNumber
+            h.hsnCode === item.hsnNumber
           );
           
           return {
             hsnId: hsnData?.id || null,
-            serviceName: item.description,
+            serviceName: item.serviceName,
             quantity: 1,
             rate: parseFloat(item.amount) || 0,
             amount: parseFloat(item.amount) || 0,
@@ -1957,115 +1953,25 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
   );
 
   const renderDDOSignatureSection = () => (
-    <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)]">
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-        {/* Left side - Instructions */}
-        <div className="lg:flex-1 lg:max-w-xs">
-          <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-            Digital Signature Required
-          </p>
-          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-            Your digital signature is required to authenticate this Proforma Advice document. 
-            {ddoSignature ? ' You can change your signature if needed.' : ' Please add your signature to proceed.'}
-          </p>
-        </div>
-        
-        {/* Right side - Signature area */}
-        <div className="lg:flex-1 lg:flex lg:flex-col lg:items-end">
-          <div className="w-full lg:max-w-sm">
-            {/* Name and Title */}
-            <div className="text-center lg:text-right mb-3">
-              <p className="text-sm font-semibold text-[var(--color-text-primary)] break-words">
-                {ddoDetails?.fullName || 'DDO Name'}
-              </p>
-              <p className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase">
-                {t('bill.signatureOfDdo')}
-              </p>
-            </div>
-            
-            {/* Signature Display Area */}
-            <div className="relative">
-              <div 
-                className={`h-20 border-2 border-dashed rounded-lg bg-white flex items-center justify-center transition-all duration-200 overflow-hidden ${
-                  ddoSignature 
-                    ? 'border-green-300 bg-green-50/30' 
-                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-muted)]/20'
-                }`}
-                onClick={() => setShowSignaturePad(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && setShowSignaturePad(true)}
-              >
-                {ddoSignature ? (
-                  <div className="relative group w-full h-full">
-                    <img 
-                      src={ddoSignature} 
-                      alt="DDO Signature" 
-                      className="max-h-full max-w-full object-contain mx-auto p-2 w-full h-full"
-                      style={{ imageRendering: 'crisp-edges' }}
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">Click to change</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center p-2">
-                    <svg className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    <span className="text-xs text-[var(--color-text-secondary)]">Click to add signature</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Success indicator */}
-              {ddoSignature && (
-                <div className="absolute top-1 right-1">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Action Button */}
-            <button
-              onClick={() => setShowSignaturePad(true)}
-              className={`w-full mt-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                ddoSignature
-                  ? 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90 border border-[var(--color-accent)]'
-                  : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90'
-              }`}
-            >
-              {ddoSignature ? (
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Change Signature
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Add Signature
-                </div>
-              )}
-            </button>
-            
-            {/* Warning message */}
-            {/* {!ddoSignature && (
-              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
-                ⚠️ Signature is required to save this Proforma Advice
-              </p>
-            )} */}
-          </div>
-        </div>
-      </div>
+   <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)] flex justify-center lg:justify-end">
+  <div className="flex flex-col items-center lg:items-end">
+
+    {/* Label + Name */}
+    <div className="flex items-center gap-1 mb-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+        {t('bill.signatureOfDdo')} :
+      </span>
+      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+        {ddoDetails?.fullName || '-'}
+      </p>
     </div>
+
+    {/* Signature Box */}
+    <div className="w-64 h-20 border-2 border-gray-400 rounded-sm"></div>
+
+  </div>
+</div>
+
   );
 
 
