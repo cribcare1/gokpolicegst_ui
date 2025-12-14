@@ -9,8 +9,9 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { toast } from 'sonner';
 import { LoadingProgressBar } from "@/components/shared/ProgressBar"; 
-
+import { useRouter } from "next/navigation";
 export default function ProformaAdvicePage() {
+  const router = useRouter();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -23,12 +24,28 @@ export default function ProformaAdvicePage() {
 
   const countrecords = receiptsData.length;
 
-  useEffect(() => {
-    setFromDate("");
-    setToDate("");
-    fetchCustomers();
-    fetchInvoices();
-  }, []);
+useEffect(() => {
+  const savedState = sessionStorage.getItem("proforma_state");
+
+  if (savedState) {
+    const parsed = JSON.parse(savedState);
+
+    setReceiptsData(parsed.receiptsData || []);
+    setSelectedReceipts(parsed.selectedReceipts || []);
+    setEditedValues(parsed.editedValues || {});
+    setFromDate(parsed.filters?.fromDate || "");
+    setToDate(parsed.filters?.toDate || "");
+    setSelectedCustomer(parsed.filters?.selectedCustomer || null);
+
+    return; // ⛔ stop API calls
+  }
+
+  setFromDate("");
+  setToDate("");
+  fetchCustomers();
+  fetchInvoices();
+}, []);
+
 
   const fetchCustomers = async () => {
     try {
@@ -123,11 +140,104 @@ export default function ProformaAdvicePage() {
       [id]: { ...prev[id], [field]: value },
     }));
   };
+const handleClear = () => {
+  sessionStorage.removeItem("proforma_state");
+  setSelectedReceipts([]);
+  setEditedValues({});
+};
 
-  const handleClear = () => {
-    setSelectedReceipts([]);
-    setEditedValues({});
-  };
+
+
+
+
+// const handleNext = () => {
+//   if (selectedReceipts.length === 0) {
+//     toast.error("Please select at least one receipt");
+//     return;
+//   }
+
+//   // Validate selected rows
+//   for (const id of selectedReceipts) {
+//     const edited = editedValues[id] || {};
+//     const original = receiptsData.find((r) => r.id === id);
+
+//     if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
+//       toast.error(`Amount Received is required for PA No: ${original.paNo}`);
+//       return;
+//     }
+
+//     if (!edited.paymentDate) {
+//       toast.error(`Payment Date is required for PA No: ${original.paNo}`);
+//       return;
+//     }
+
+//     if (!edited.paymentMode) {
+//       toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
+//       return;
+//     }
+//   }
+
+//   // Prepare selected data
+//   const selectedData = selectedReceipts.map((id) => {
+//     const original = receiptsData.find((r) => r.id === id);
+//     const edited = editedValues[id] || {};
+
+//     return {
+//       invoiceId: original.id,
+//       paNo: original.paNo,
+//       customerName: original.customerName,
+//       amountPayable: original.amountPayable,
+//       amountReceived: edited.amountReceived,
+//       difference: original.amountPayable - edited.amountReceived,
+//       differenceReason: edited.differencereson || "",
+//       paymentMode: edited.paymentMode,
+//       paymentRef: edited.paymentRef || "",
+//       paymentDate: edited.paymentDate,
+//     };
+//   });
+
+//   const encodedData = encodeURIComponent(JSON.stringify(selectedData));
+//   router.push(`/ddo/receipt-preview?data=${encodedData}`);
+// };
+
+const handleNext = () => {
+  if (selectedReceipts.length === 0) {
+    toast.error("Please select at least one receipt");
+    return;
+  }
+
+  const selectedData = selectedReceipts.map((id) => {
+    const original = receiptsData.find((r) => r.id === id);
+    const edited = editedValues[id] || {};
+
+    return {
+      invoiceId: original.id,
+      paNo: original.paNo,
+      customerName: original.customerName,
+      amountPayable: original.amountPayable,
+      amountReceived: edited.amountReceived,
+      difference: original.amountPayable - edited.amountReceived,
+      differenceReason: edited.differenceReason || "",
+      paymentMode: edited.paymentMode,
+      paymentRef: edited.paymentRef || "",
+      paymentDate: edited.paymentDate,
+    };
+  });
+
+  // ✅ SAVE STATE (NO UI CHANGE)
+  sessionStorage.setItem(
+    "proforma_state",
+    JSON.stringify({
+      receiptsData,
+      selectedReceipts,
+      editedValues,
+      filters: { fromDate, toDate, selectedCustomer },
+    })
+  );
+
+  const encodedData = encodeURIComponent(JSON.stringify(selectedData));
+  router.push(`/ddo/receipt-preview?data=${encodedData}`);
+};
 
   const handleSaveAndGenerate = async () => {
     if (selectedReceipts.length === 0) {
@@ -173,6 +283,8 @@ export default function ProformaAdvicePage() {
     const matchesTo = toDate ? paymentDate <= new Date(toDate) : true;
     return matchesCustomer && matchesFrom && matchesTo;
   });
+
+  
 
   const receiptColumns = [
     {
@@ -222,96 +334,7 @@ export default function ProformaAdvicePage() {
         );
       },
     },
-   {
-  key: "differencereson",
-  label: "Difference Reason",
-  render: (v, row) => {
-    const isChecked = selectedReceipts.includes(row.id);
-    const edited = editedValues[row.id]?.differencereson ?? "";
 
-    if (!isChecked) return <span>{v || "-"}</span>;
-
-    return (
-      <select
-        className="border rounded px-2 py-1"
-        value={edited}
-        onChange={(e) => updateField(row.id, "differencereson", e.target.value)}
-      >
-        <option value="">Select</option>
-        <option value="Shortfall Payment">Shortfall Payment</option>
-        <option value="Discount Payment">Waver Amount</option>
-      </select>
-    );
-  },
-}
-,
-    {
-      key: "paymentMode",
-      label: "Payment Mode",
-      render: (v, row) => {
-        const isChecked = selectedReceipts.includes(row.id);
-        const edited = editedValues[row.id]?.paymentMode ?? v;
-        if (!isChecked) return <span>{v}</span>;
-
-        return (
-          <select
-            className="border rounded px-2 py-1"
-            value={edited}
-            onChange={(e) => updateField(row.id, "paymentMode", e.target.value)}
-          >
-            <option>Bank/ DD/ Cheque</option>
-            <option>Other</option>
-          </select>
-        );
-      },
-    },
-    {
-      key: "paymentRef",
-      label: "Payment Ref No",
-      render: (v, row) => {
-        const isChecked = selectedReceipts.includes(row.id);
-        const edited = editedValues[row.id]?.paymentRef ?? v;
-        if (!isChecked) return <span>{v || "-"}</span>;
-
-        return (
-          <input
-            type="text"
-            className="border rounded px-2 py-1 w-32"
-            value={edited}
-            onChange={(e) => updateField(row.id, "paymentRef", e.target.value)}
-          />
-        );
-      },
-    },
-   {
-  key: "paymentDate",
-  label: "Payment Date",
-  render: (v, row) => {
-    const isChecked = selectedReceipts.includes(row.id);
-    const edited = editedValues[row.id]?.paymentDate ?? v;
-
-    // Format date to DD-MM-YYYY
-    const formatDate = (dateStr) => {
-      if (!dateStr) return "";
-      const [y, m, d] = dateStr.split("-");
-      return `${d}-${m}-${y}`;
-    };
-
-    if (!isChecked) {
-      return <span>{formatDate(v)}</span>;
-    }
-
-    return (
-      <input
-        type="date"
-        className="border rounded px-2 py-1"
-        value={edited} // must stay in YYYY-MM-DD for the input
-        onChange={(e) => updateField(row.id, "paymentDate", e.target.value)}
-      />
-    );
-  },
-}
-,
   
   ];
 
@@ -383,13 +406,32 @@ export default function ProformaAdvicePage() {
           )}
 
           {/* Action Buttons */}
-          {!loading && (
-            <div className="flex justify-end gap-4 mt-4">
+          {/* {!loading && (
+            <div className="flex justify-center gap-4 mt-4">
               <button
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={handleSaveAndGenerate}
+                onClick={handleNext}
               >
-                Save & Generate Invoice
+                Next
+              </button>
+              <button
+                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </div>
+          )} */}
+        </div>
+
+        <div className="flex justify-end gap-4">
+          {!loading && (
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleNext}
+              >
+                Next
               </button>
               <button
                 className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
