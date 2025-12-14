@@ -14,23 +14,74 @@ import { getStateCodeFromGSTIN, isSameState } from './stateCodes';
  * - 15th character: Alpha/Number Digit randomly allotted
  */
 export const validateGSTIN = (gstin) => {
-  if (!gstin) return { valid: false, message: 'GSTIN is required' };
-  
-  // Remove spaces and convert to uppercase
-  const cleaned = gstin.trim().toUpperCase().replace(/\s/g, '');
-  
-  // Basic length check
+  if (!gstin) return { valid: false, message: "GSTIN is required" };
+
+  // Remove spaces and uppercase
+  const cleaned = gstin.trim().toUpperCase().replace(/\s/g, "");
+
+  // Must be exactly 15 characters
   if (cleaned.length !== 15) {
-    return { valid: false, message: 'GSTIN must be 15 characters long' };
+    return { valid: false, message: "GSTIN must be 15 characters long" };
   }
-  
-  // Alphanumeric check
+
+  // Must be alphanumeric
   if (!/^[0-9A-Z]{15}$/.test(cleaned)) {
-    return { valid: false, message: 'GSTIN must be alphanumeric' };
+    return { valid: false, message: "GSTIN must be alphanumeric" };
   }
-  
+
+  // ---- 1️⃣ Validate State Code (1–2 digits) ----
+  const stateCode = parseInt(cleaned.substring(0, 2), 10);
+  if (isNaN(stateCode) || stateCode < 1 || stateCode > 37) {
+    return { valid: false, message: "Invalid State Code in GSTIN" };
+  }
+
+  // ---- 2️⃣ Validate PAN inside GSTIN (3–12) ----
+  const pan = cleaned.substring(2, 12);
+
+  // PAN pattern: AAAAA9999A
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+    return { valid: false, message: "Invalid PAN structure inside GSTIN" };
+  }
+
+  // ---- 3️⃣ Entity Code (13th char) ----
+  if (!/^[0-9A-Z]$/.test(cleaned.charAt(12))) {
+    return { valid: false, message: "Invalid entity code in GSTIN" };
+  }
+
+  // ---- 4️⃣ 14th Character must be "Z" ----
+  if (cleaned.charAt(13) !== "Z") {
+    return { valid: false, message: "14th character of GSTIN must be 'Z'" };
+  }
+
+  // ---- 5️⃣ Checksum Validation (15th char) ----
+  const checkChar = cleaned.charAt(14);
+
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let sum = 0;
+  let factor = 2;
+
+  // Loop on first 14 characters
+  for (let i = 13; i >= 0; i--) {
+    const codePoint = chars.indexOf(cleaned[i]);
+    let digit = factor * codePoint;
+
+    // Add digits (base 36)
+    digit = Math.floor(digit / 36) + (digit % 36);
+    sum += digit;
+
+    factor = factor === 2 ? 1 : 2;
+  }
+
+  const checksum = (36 - (sum % 36)) % 36;
+
+  if (chars[checksum] !== checkChar) {
+    return { valid: false, message: "Invalid GSTIN checksum (last character incorrect)" };
+  }
+
+  // All checks passed
   return { valid: true, cleaned };
 };
+
 
 /**
  * Checks if GSTIN is a government entity
