@@ -102,7 +102,6 @@ export default function GenerateBillPage() {
   const [isProformaFormOpen, setIsProformaFormOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isInvoiceCreation, setIsInvoiceCreation] = useState(false);
-
   useEffect(() => {
     fetchProformaAdviceDetails();
     fetchGSTDetails();
@@ -133,7 +132,6 @@ export default function GenerateBillPage() {
       }
     };
   }, []);
-
   useEffect(() => {
     console.log('selectedCustomer changed:', selectedCustomer);
     if (selectedCustomer) {
@@ -149,7 +147,6 @@ export default function GenerateBillPage() {
       }
     }
   }, [selectedCustomer]);
-
   useEffect(() => {
     
     if (selectedCustomer && lineItems.length > 0) {
@@ -160,15 +157,11 @@ export default function GenerateBillPage() {
       setGstCalculation(null);
     }
   }, [selectedCustomer, lineItems, billDetails.gstinNumber, invoiceType, customerType, hsnList, gstDetails]);
-
  useEffect(() => {
   if (!lineItems.length) return;
-
   let needsUpdate = false;
-
   const updated = lineItems.map(item => {
     const newItem = { ...item };
-
     // Auto-assign HSN if only one exists
     if (hsnList.length === 1) {
       const defaultHsn = hsnList[0]?.hsnCode ?? '';
@@ -177,30 +170,24 @@ export default function GenerateBillPage() {
         needsUpdate = true;
       }
     }
-
     // Force quantity = 1
     const currentQty = Number(item.quantity) || 0;
     if (currentQty !== 1) {
       newItem.quantity = 1;
       needsUpdate = true;
     }
-
     return newItem;
   });
-
   if (needsUpdate) {
     setLineItems(updated);
   }
 }, [hsnList, lineItems]); // ✅ THIS IS THE KEY FIX
-
-
   useEffect(() => {
     if (!proformaSearchTerm.trim()) {
       setFilteredProformaList(proformaList);
       return;
     }
 console.log("proformaList ::::::::::::::::::: " ,proformaList);
-
     const term = proformaSearchTerm.toLowerCase();
     const filtered = proformaList.filter((record) => {
       return [
@@ -215,7 +202,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     });
     setFilteredProformaList(filtered);
   }, [proformaSearchTerm, proformaList]);
-
   // Update RCM IGST, CGST, and SGST fields when gstCalculation changes
   useEffect(() => {
     if (invoiceType === 'RCM' && gstCalculation) {
@@ -233,7 +219,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       setRcmSgst(0);
     }
   }, [gstCalculation, invoiceType]);
-
   function getDdoDetails() {
     const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
     if (storedProfile) {
@@ -253,7 +238,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }
     }
   }
-
   const fetchCustomers = async () => {
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -263,7 +247,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         // setLoading(false);
         return;
       }
-
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`);
       if (response && response.status === 'success') {
         const customersWithStateCode = (response.data || []).map(customer => {
@@ -284,7 +267,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       // setLoading(false);
     }
   };
-
   const fetchDdoBankData = async () => {
       try {
         // setLoading(true);
@@ -294,7 +276,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           console.log("bank details ::    " , response.data[0] );
           
             setBankDetails(response.data[0] || null);
-
         }
       } catch (error) {
         console.log('Error fetching bank data:', error);
@@ -314,13 +295,10 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         setFilteredProformaList([]);
         return;
       }
-
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=SAVED`);
-
       // Handle multiple possible shapes from backend
       const okStatus = response && (response.status === 'success' || response.status === 'SUCCESS' || response.status === true);
       let payloadArray = [];
-
       if (okStatus) {
         if (Array.isArray(response.data)) {
           payloadArray = response.data;
@@ -338,11 +316,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           payloadArray = response.data;
         }
       }
-
       const mappedRecords = (payloadArray || []).map((item) => {
         const items = Array.isArray(item.items) ? item.items : [];
         const proformaAmount =item.grandTotal || 0;
-
         // Extract complete customer information
         const customerResponse = item.customerResponse || item.customer || {};
         
@@ -362,7 +338,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         };
         
         
-
         return {
           id: item.invoiceId || item.id || item.proformaId || null,
           proformaNumber: item.invoiceNumber || item.proformaNumber || `INV-${item.invoiceId || item.id || ''}`,
@@ -382,7 +357,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           },
         };
       });
-
       setProformaList(mappedRecords);
       setFilteredProformaList(mappedRecords);
       setProformaLoading(false);
@@ -394,18 +368,14 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       setProformaLoading(false);
     }
   };
-
    const handleDeleteOrCancel = async (item, action) => {
   const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
   console.log('[DEBUG] Calling URL:', url);
-
   // if (!confirm(`Are you sure you want to ${action} this record?`)) return;
-
   try {
     setProformaLoading(true);
     const response = await ApiService.handlePostRequest(url, {});
     console.log('[DEBUG] Raw response:', response);
-
     if (response?.status === 'success' || response?.status === 'SUCCESS') {
       toast.success(t('alert.success'));
        await fetchProformaAdviceDetails();
@@ -420,7 +390,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
    
   }
 };
-
   const fetchGSTDetails = async () => { 
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -430,7 +399,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         // setLoading(false);
         return;
       }
-
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GET_CURRENT_GST_OF_DDO}?ddoId=${ddoId}`);
       if (response) {
         setGstDetails(response || []);
@@ -442,7 +410,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       // setLoading(false);
     }
   };
-
   const fetchInvoiceNumber = async (gstId) => {
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -452,7 +419,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         // setLoading(false);
         return;
       }
-
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`);
       if (response && response.status === 'success') {
         setInvoiceNumber(response?.invoiceNumber || '');
@@ -463,7 +429,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       // setLoading(false);
     }
   };
-
   const fetchHSNList = async () => {
     console.log('hsn code...........')
     try {
@@ -476,24 +441,19 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       console.error('Error fetching HSN list:', error);
     }
   };
-
   const fetchProformaRecords = async () => {
     
-
     // setProformaList(demoRecords);
     // setFilteredProformaList(demoRecords);
     // setProformaLoading(false);
-
     try {
       if (typeof window === 'undefined') {
         return;
       }
-
       const ddoCode = localStorage.getItem('ddoCode') || '';
       if (!ddoCode) {
         return;
       }
-
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.BILL_LIST}?ddoCode=${ddoCode}`);
       if (response?.status === 'success' && Array.isArray(response.data)) {
         const mappedRecords = response.data.map((item, index) => ({
@@ -506,7 +466,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           proformaDate: item.billDate || item.createdAt || item.createdDate || null,
           invoiceDate: item.invoiceDate || item.updatedAt || null,
         }));
-
        // setProformaList(mappedRecords);
         // setFilteredProformaList(mappedRecords);
       }
@@ -514,7 +473,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       console.error('Error fetching proforma advices:', error);
     }
   };
-
   const handleScrollToForm = () => {
     setIsProformaFormOpen(true);
     if (typeof window === 'undefined') return;
@@ -524,7 +482,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       formSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
   };
-
   const handleCreateInvoiceFromProforma = (record) => {
     if (!record) return;
     
@@ -532,12 +489,10 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
       ? Number(record.taxInvoiceAmount)
       : (record.paidAmount != null ? Number(record.paidAmount) : (record.raw && (record.raw.paidAmount || record.raw.invoiceAmount) ? Number(record.raw.paidAmount || record.raw.invoiceAmount) : 0));
-
     if (!taxInvoiceAmount || Number.isNaN(taxInvoiceAmount) || taxInvoiceAmount <= 0) {
       toast.error('Tax Invoice Amount is required to create an invoice');
       return;
     }
-
     // Set invoice creation flag first
     setIsInvoiceCreation(true);
     
@@ -546,7 +501,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     
     toast.success('Opening Proforma Advice form for invoice creation');
   };
-
   // Helper function to get signature URL - consistent with ProformaAdviceList
   const getSignatureUrl = (signaturePath) => {
     if (!signaturePath) return null;
@@ -554,7 +508,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     if (signaturePath.startsWith('/')) return signaturePath;
     return API_ENDPOINTS.IMAGE_BASE_URL + signaturePath;
   };
-
   // Reset form to initial state for new Proforma Advice
   const resetFormState = () => {
     setSelectedCustomer(null);
@@ -570,7 +523,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     ]);
     setIsInvoiceCreation(false);
   };
-
   const handleOpenEditProforma = (record) => {
     // If no record is passed, reset form for new entry
     if (!record) {
@@ -583,7 +535,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     const taxInvoiceAmount = (record.taxInvoiceAmount != null && record.taxInvoiceAmount !== '')
       ? Number(record.taxInvoiceAmount)
       : (record.paidAmount != null ? Number(record.paidAmount) : (record.raw && (record.raw.paidAmount || record.raw.invoiceAmount) ? Number(record.raw.paidAmount || record.raw.invoiceAmount) : 0));
-
     setPaidAmount(Number.isFinite(taxInvoiceAmount) ? Math.floor(taxInvoiceAmount) : 0);
     
     // Set signature data if available - use consistent URL handling
@@ -632,7 +583,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       console.log('⚠️ No customer data found in record.raw');
       console.log('🔍 Record raw keys:', Object.keys(record.raw || {}));
     }
-
     console.log('🧾 Setting line items for editing invoice:', record);
     
     // Set line items from raw data if available
@@ -659,22 +609,18 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }
       if (record.raw.gstType) setInvoiceType(record.raw.gstType);
     }
-
     setShowForm(true);
   };
-
   const handleUpdateProformaInline = (id, updatedFields) => {
     setProformaList(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
     setFilteredProformaList(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
   };
-
   const calculateGSTAmount = () => {
     console.log('=== calculateGSTAmount called ===');  
     if (!selectedCustomer) {
       setGstCalculation(null);
       return;
     }
-
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     console.log('=== taxableValue called ===',lineItems);
     if (taxableValue <= 0) {
@@ -685,7 +631,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
     const isRCMExempted = invoiceType === 'RCM' && hasExemption;
     const isFCMExempted = invoiceType === 'FCM' && hasExemption;
-
     const supplierGSTIN = billDetails.gstinNumber;
     const customerGSTIN = selectedCustomer.gstNumber || '';
     const customerPAN = selectedCustomer.pan || '';
@@ -758,7 +703,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           setNotificationDetails(' Foward Charge under under Section 7 of the CGST Act, 2017 . Taxable @18% Refer : Sl. No. 5, Notif. 13/2017 + Sec. 9(1) of CGST Act on Bandobast/Security charges');
       }
     }
-
     if (invoiceType === 'EXEMPTED' || isRCMExempted || isFCMExempted) {
       console.log('Exempted invoice type');
       setGstCalculation({
@@ -846,12 +790,10 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     console.log(calculation);
     return calculation;
   };
-
   const handleNavigateToAddCustomer = () => {
     setIsNavigatingToCustomer(true);
     router.push('/ddo/customers?add=true');
   };
-
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     
@@ -907,7 +849,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       toast.error(mobileValidation.message);
       return;
     }
-
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
@@ -915,7 +856,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         toast.error('DDO ID not found. Please login again.');
         return;
       }
-
       const payload = {
         customerName: newCustomer.name,
         customerType: newCustomer.customerType === 'Govt' ? 'gov' : 'non-gov',
@@ -929,7 +869,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         exemptionNumber: newCustomer.exemptionCertNumber || '',
         ddoId: parseInt(ddoId, 10),
       };
-
       const response = await ApiService.handlePostRequest(
         API_ENDPOINTS.CUSTOMER_ADD_OR_EDIT,
         payload
@@ -993,7 +932,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       toast.error(t('alert.error'));
     }
   };
-
   const handleAddLineItem = () => {
     const defaultHsn = hsnList.length === 1 ? ( hsnList[0].hsnCode ||  '') : '';
     setLineItems([
@@ -1007,7 +945,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       },
     ]);
   };
-
   const handleRemoveLineItem = (index) => {
     if (lineItems.length > 1) {
       const updated = lineItems.filter((_, i) => i !== index);
@@ -1017,7 +954,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       setLineItems(updated);
     }
   };
-
   const handleLineItemChange = (index, field, value) => {
     console.log('handleLineItemChange called:', { index, field, value });
     
@@ -1029,7 +965,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     console.log('Updated lineItems:', updated);
     setLineItems(updated);
   };
-
   const handleSaveBill = async () => {
     console.log('=== handleSaveBill called ===');
     const validations = [
@@ -1042,7 +977,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       { valid: lineItems.length > 0, message: t('bill.addLineItemRequired') },
       // { valid: ddoSignature, message: 'Digital signature is required to save Proforma Advice. Please add your signature.' }
     ];
-
     for (const validation of validations) {
       if (!validation.valid) {
         toast.error(validation.message);
@@ -1050,7 +984,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         return;
       }
     }
-
     for (let i = 0; i < lineItems.length; i++) {
       const item = lineItems[i];
       const descValidation = validateDescription(item.description);
@@ -1067,14 +1000,12 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         return;
       }
     }
-
     const taxableValue = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
     if (taxableValue <= 0) {
       toast.error(t('bill.totalTaxableValueGreater'));
       console.log('Validation failed: Total taxable value must be greater than zero');
       return;
     }
-
     try {
       setSaving(true);
       
@@ -1088,7 +1019,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       const totalIgst = gstCalculation?.igst || 0;
       const grandTotal = gstCalculation?.finalAmount || totalTaxableValue;
       const balanceAmount = grandTotal - (parseFloat(paidAmount) || 0);
-
       const billData = {
         invoiceId: null,
         ddoId: ddoId,
@@ -1148,7 +1078,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           mismatchAmount: 0,
           reason: '',
         },
-
       };
       
          let signatureFile = null;
@@ -1189,7 +1118,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       setSaving(false);
     }
   };
-
   const handlePrintBill = () => {
     const logoImg = document.querySelector('#bill-preview-content img');
     const logoSrc = logoImg ? logoImg.src : '/1.png';
@@ -1210,25 +1138,21 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     }
     
     console.log('Signature for print:', signatureForPrint ? 'Available' : 'Not available');
-
     const gstSectionHTML = (function() {
       const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
       const isRCMExempted = invoiceType === 'RCM' && hasExemption;
       const isFCMExempted = invoiceType === 'FCM' && hasExemption;
       const showGSTCalculationUI = invoiceType === 'FCM' && !isFCMExempted;
       const showRCMGST = invoiceType === 'RCM' && !isRCMExempted;
-
       let rcmGSTSection = '';
       if (showRCMGST) {
         rcmGSTSection = '<div class="calc-row"><strong>GST Payable Under RCM by the Recipient = </strong><span>IGST: ' + (latestCalculation?.igst ? formatCurrency(latestCalculation.igst) : '-') + '  CGST: ' + (latestCalculation?.cgst ? formatCurrency(latestCalculation.cgst) : '-') + ' SGST: ' + (latestCalculation?.sgst ? formatCurrency(latestCalculation.sgst) : '-') + '</span></div>';
       }
-
       let gstCalcSection = '';
       if (showGSTCalculationUI) {
         const displayGstRate = (latestCalculation && (latestCalculation.gstRate || (latestCalculation.cgstRate && latestCalculation.sgstRate && (latestCalculation.cgstRate + latestCalculation.sgstRate)))) || 18;
         const displayCgstRate = (latestCalculation && (typeof latestCalculation.cgstRate === 'number' ? latestCalculation.cgstRate : undefined)) ?? (displayGstRate / 2);
         const displaySgstRate = (latestCalculation && (typeof latestCalculation.sgstRate === 'number' ? latestCalculation.sgstRate : undefined)) ?? (displayGstRate / 2);
-
         gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4>' +
           '<div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div>' +
           '<div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div>' +
@@ -1239,10 +1163,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           '<div class="calc-row total"><span><strong>' + t('bill.totalInvoiceAmount') + '</strong></span><span><strong>' + formatCurrency(totalAdviceAmountReceivable) + '</strong></span></div>' +
           '<div class="signature-row"><div class="signature-block"></div><div class="signature-block" style="display: flex; flex-direction: column;"><div class="signature-value">' + (ddoDetails?.fullName || '-') + '</div><span>' + t('bill.signatureOfDdo') + '</span>' + (signatureForPrint ? '<div style="margin-top: 8px;"><img src="' + signatureForPrint + '" alt="DDO Signature" style="max-height: 40px; max-width: 200px; object-fit: contain;" onerror="this.style.display=\'none\'" /></div>' : '<div class="signature-line"></div>') + '</div></div></div>';
       }
-
       return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
     })();
-
     const printHTML = `
       <!DOCTYPE html>
       <html>
@@ -1547,7 +1469,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               font-style: italic;
               font-weight: bold;
             }
-
             /* Print-specific optimizations for single page */
             @media print {
               .header-section {
@@ -1681,10 +1602,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               <div class="gstin">GSTIN : ${gstDetails?.gstNumber || ''}</div>
             </div>
           </div>
-
           <!-- Invoice Title -->
           <div class="invoice-title">TAX INVOICE</div>
-
           <!-- Bill Details -->
           <div class="bill-details">
             <div class="bill-section">
@@ -1707,7 +1626,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               <div class="section-content"><strong>DDO City/District:</strong> ${ddoDetails.city}</div>
             </div>
           </div>
-
           <!-- Line Items Table -->
           <table class="invoice-table" style="table-layout: fixed; width: 100%;">
             <colgroup>
@@ -1751,7 +1669,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               </tr>
             </tbody>
           </table>
-
           <!-- GST Calculation -->
           ${(function() {
             const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
@@ -1771,7 +1688,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               const displayGstRate = (gstCalculation && (gstCalculation.gstRate || (gstCalculation.cgstRate && gstCalculation.sgstRate && (gstCalculation.cgstRate + gstCalculation.sgstRate)))) || 18;
               const displayCgstRate = (gstCalculation && (typeof gstCalculation.cgstRate === 'number' ? gstCalculation.cgstRate : undefined)) ?? (displayGstRate / 2);
               const displaySgstRate = (gstCalculation && (typeof gstCalculation.sgstRate === 'number' ? gstCalculation.sgstRate : undefined)) ?? (displayGstRate / 2);
-
               gstCalcSection = '<div class="calc-section"><h4>GST Calculation</h4>' +
                 '<div class="calc-row"><span><strong>Total Taxable Value</strong></span><span><strong>' + formatCurrency(totalAmount) + '</strong></span></div>' +
                 '<div class="calc-row"><span><strong>GST Collectable Under FCM</strong></span><span>-</span></div>' +
@@ -1785,7 +1701,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     
             return '<div class="gst-calculation"><div class="calc-section"><h4>Additional Information</h4><div class="calc-row"><strong>Tax is Payable on Reverse Charges:</strong> ' + taxPayableReverseCharge + '</div><div class="calc-row"><strong>Invoice Remarks:</strong></div><div class="calc-row compact-field">' + (note || '-') + '</div><div class="calc-row"><strong>Notification Details:</strong></div><div class="calc-row compact-field-small">' + (notificationDetails || '-') + '</div>' + (invoiceType === 'RCM' ? '<div class="calc-row"><strong>RCM IGST:</strong> <span>₹' + formatCurrency(rcmIgst) + '</span></div><div class="calc-row"><strong>RCM CGST:</strong> <span>₹' + formatCurrency(rcmCgst) + '</span></div>' : '') + '<div class="calc-row"><strong>Total Invoice Value in Words:</strong></div><div class="calc-row compact-field-italic">' + amountInWords(totalAdviceAmountReceivable) + '</div>' + rcmGSTSection + '</div>' + gstCalcSection + '</div>';
           })()}
-
           <!-- Bank Details -->
           <div class="bank-section">
             <h3>Bank Details</h3>
@@ -1801,7 +1716,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               </div>
             </div>
           </div>
-
           <!-- Footer -->
           <div class="footer">
             ** This is a computer generated invoice **
@@ -1819,7 +1733,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }, 500);
     };
   };
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -1828,30 +1741,24 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       year: 'numeric'
     });
   };
-
   function numberToWords(num) {
     if (num === 0) return "Zero";
-
     const words = [
       "", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
       "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
       "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
     ];
-
     const tens = [
       "", "", "Twenty", "Thirty", "Forty", "Fifty",
       "Sixty", "Seventy", "Eighty", "Ninety"
     ];
-
     const units = [
       { value: 10000000, str: "Crore" },
       { value: 100000, str: "Lakh" },
       { value: 1000, str: "Thousand" },
       { value: 100, str: "Hundred" }
     ];
-
     let result = "";
-
     for (const unit of units) {
       if (num >= unit.value) {
         const quotient = Math.floor(num / unit.value);
@@ -1859,7 +1766,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         num %= unit.value;
       }
     }
-
     if (num > 0) {
       if (num < 20) {
         result += words[num] + " ";
@@ -1868,7 +1774,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         if (num % 10 > 0) result += words[num % 10] + " ";
       }
     }
-
     return result.trim();
   }
 
@@ -1892,6 +1797,14 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
 
   // Calculate totals
   const totalQuantity = lineItems.length;
+
+    
+          
+            
+    
+
+      
+  
   const totalAmount = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
   const totalAdviceAmountReceivable = invoiceType === 'RCM' ? totalAmount : (gstCalculation?.finalAmount || totalAmount);
   
@@ -1932,7 +1845,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       render: (value) => value ? formatDateDDMMYYYY(value) : '-',
     },
   ];
-
   const renderProformaActions = (row) => (
     <Button
       variant="primary"
@@ -1970,8 +1882,16 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
   );
 
 
- 
+    
+          
+            
+    
 
+
+    
+    
+  
+ 
   return (
     <Layout role="ddo">
       <div className="space-y-3">
@@ -2025,7 +1945,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
             </div>
           </div>
         )}
-
         {showForm ? (
           <ProformaAdviceForm
             loading={proformaLoading}
@@ -2106,8 +2025,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               ddoDetails={ddoDetails}
                gstDetails={gstDetails}
                 bankDetails={bankDetails}
-
-
                     onDeleteProforma={async (item) => {
       // try {
       //   setProformaLoading(true);
@@ -2123,7 +2040,6 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       // }
       handleDeleteOrCancel(item, 'delete');                     
     }}
-
     onCancelProforma={async (item) => {
       // try {
       //   setProformaLoading(true);
@@ -2141,10 +2057,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       // }
          handleDeleteOrCancel(item, 'cancel');
     }}
-
           />
         )}
-
         {showSignaturePad && (
           <SignaturePad
             onSignatureSave={(signatureData) => {

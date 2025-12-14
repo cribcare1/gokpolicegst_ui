@@ -1,5 +1,4 @@
 "use client"
-
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Eye, Printer, FileText, Edit, Download, X ,Trash2 } from 'lucide-react';
@@ -11,7 +10,6 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { t } from '@/lib/localization';
 import { formatCurrency } from '@/lib/gstUtils';
 import Image from 'next/image';
-
 import ApiService from '@/components/api/api_service';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
@@ -25,7 +23,6 @@ export default function ProformaAdviceList({
   onShowForm,
   onUpdateProforma,
   // New required props for consistent preview
-
   bankDetails ,
   numberToWords,
   formatDate,
@@ -43,22 +40,16 @@ export default function ProformaAdviceList({
   const [printOptimizedView, setPrintOptimizedView] = useState(false);
   const [listCount, setListCount] = useState([]);
   const count = listCount.length || 0;
-
   const printRef = useRef();
-
-
   const handleProformaClick = (row) => {
     setPreviewData(row);
     setShowPreviewModal(true);
   };
-
   useEffect(() => {
     console.log("bank details in use effect in proforma :", bankDetails);
     setListCount(filteredProformaList);
-
     console.log("bank details in use effect in filteredProformaList :", filteredProformaList);
   }, [bankDetails,numberToWords,formatDate,gstDetails,ddoDetails]);
-
   // Fix signature URL
   const getSignatureUrl = (signaturePath) => {
     if (!signaturePath) return null;
@@ -66,7 +57,6 @@ export default function ProformaAdviceList({
     if (signaturePath.startsWith('/')) return signaturePath;
     return API_ENDPOINTS.IMAGE_BASE_URL + signaturePath;
   };
-
   // Extract data from previewData to match Form format
   const extractPreviewData = () => {
     if (!previewData) return null;
@@ -96,7 +86,6 @@ export default function ProformaAdviceList({
         address: customerResponse.address || '',
         stateCode: customerResponse.stateCode || '',
         type: customerResponse.customerType || '',
-
       },
       invoiceType: raw.invoiceType || raw.serviceType || 'EXEMPTED',
       remarks: raw.note || raw.remarks || '',
@@ -114,7 +103,6 @@ export default function ProformaAdviceList({
       totalAdviceAmountReceivable: raw.totalAdviceAmountReceivable || raw.grandTotal || totalAmount
     };
   };
-
   const handlePrint = () => {
     if (!previewData) return;
     
@@ -475,12 +463,10 @@ export default function ProformaAdviceList({
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
                       <span>${formatCurrency(data.totalAdviceAmountReceivable,true)}</span>
-
                     </div>
                   
                     <div class="signature-box" 
      style="display: block; width: 100%; text-align: center; margin-top: 10px;">
-
   ${signatureUrl 
     ? `<img src="${signatureUrl}" 
            alt="DDO Signature" 
@@ -489,11 +475,9 @@ export default function ProformaAdviceList({
            onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
     : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto 4px auto;"></div>`
   }
-
   <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
   <div style="font-size: 10px;">${ddoDetails.fullName}</div>
 </div>
-
                  
                   </td>
                   
@@ -609,6 +593,17 @@ export default function ProformaAdviceList({
   // Print-specific styles for modal preview
   const PrintStyles = () => (
     <style jsx global>{`
+
+    
+          
+            
+    
+
+          
+          Expand Down
+    
+    
+  
       @media print {
         body * {
           visibility: hidden;
@@ -710,7 +705,6 @@ export default function ProformaAdviceList({
       }
     `}</style>
   );
-
   // Format date function
   const formatDateLocal = (dateString) => {
     if (formatDate) return formatDate(dateString);
@@ -723,7 +717,6 @@ export default function ProformaAdviceList({
       year: 'numeric'
     });
   };
-
   // const proformaColumns = [
   //   { 
   //     key: 'customerName', 
@@ -763,8 +756,6 @@ export default function ProformaAdviceList({
   //   },
     
   // ];
-
-
   const proformaColumns = [
   {
     key: 'customerName',
@@ -805,26 +796,20 @@ export default function ProformaAdviceList({
   },
  
 ];
-
-
 // const handleDeleteOrCancel = async (item, action) => {
 //   // Validate action
 //   if (!['delete', 'cancle'].includes(action)) {
 //     console.error('Invalid action:', action);
 //     return;
 //   }
-
 //   // Confirm with user
 //   if (!confirm(`Are you sure you want to ${action} this record?`)) return;
-
 //   // Construct the URL
 //   const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
 //   console.log('[DEBUG] Calling URL:', url);
-
 //   try {
 //     const response = await ApiService.handlePostRequest(url, {});
 //     console.log('[DEBUG] Response:', response);
-
 //     if (response && response.status === 'success') {
 //       toast.success(t('alert.success'));
 //       fetchData(); // Refresh data
@@ -836,34 +821,21 @@ export default function ProformaAdviceList({
 //     toast.error(t('alert.error'));
 //   }
 // };
-
 const handleDeleteOrCancel = async (item, action) => {
   const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
   console.log('[DEBUG] Calling URL:', url);
-
   if (!confirm(`Are you sure you want to ${action} this record?`)) return;
-
   if(action==='delete'){
     onDeleteProforma(item);
   }else{
        onCancelProforma(item);
   }
-
   
 };
-
-
-
-
  
-
-
-
 const renderProformaActions = (row) => {
-
   const maxId = Math.max(...filteredProformaList.map((item) => item.id));
   const isMaxId = row.id === maxId;
-
   return (
     <div className="flex items-center justify-end gap-2">
       <button
@@ -877,7 +849,6 @@ const renderProformaActions = (row) => {
       >
         <Edit size={16} />
       </button>
-
       {isMaxId ? (
      
         <button
@@ -908,13 +879,6 @@ const renderProformaActions = (row) => {
     </div>
   );
 };
-
-
-
-
-
-
-
   return (
     <section className="space-y-4 sm:space-y-6">
       <PrintStyles />
@@ -933,7 +897,6 @@ const renderProformaActions = (row) => {
     Search existing Proforma Advice entries and quickly jump back to the creation form.
   </p>
 </div>
-
         <Button
           onClick={() => onShowForm(null)}
           variant="primary"
@@ -943,7 +906,6 @@ const renderProformaActions = (row) => {
           Proforma Advice
         </Button>
       </div>
-
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" size={18} />
         <input
@@ -954,7 +916,6 @@ const renderProformaActions = (row) => {
           className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
         />
       </div>
-
       <div className="premium-card overflow-hidden">
         {proformaLoading  || loading? (
           <div className="p-8 sm:p-16">
@@ -969,7 +930,6 @@ const renderProformaActions = (row) => {
           />
         )}
       </div>
-
       {/* Enhanced Preview Modal with One-Page Print Format */}
       <Modal
         isOpen={showPreviewModal}
@@ -1052,7 +1012,6 @@ const renderProformaActions = (row) => {
                     </div>
                   </div>
                 </div>
-
                 {/* Customer and Invoice Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
                   <div className="border border-gray-300 p-3 rounded">
@@ -1065,7 +1024,6 @@ const renderProformaActions = (row) => {
                       <p><strong>Type:</strong> {data.customer.type || '-'}</p>
                     </div>
                   </div>
-
                   <div className="border border-gray-300 p-3 rounded">
                     <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Advice Details</h3>
                     <div className="space-y-1" style={{ fontSize: '11px' }}>
@@ -1076,7 +1034,6 @@ const renderProformaActions = (row) => {
                     </div>
                   </div>
                 </div>
-
                 {/* Line Items Table */}
                 <div className="mb-3 print-section">
                   <table className="w-full border-collapse border border-gray-400" style={{ fontSize: '11px' }}>
@@ -1113,7 +1070,6 @@ const renderProformaActions = (row) => {
                     </tbody>
                   </table>
                 </div>
-
                 {/* Calculation and Additional Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
                   <div className="border border-gray-300 p-3 rounded">
@@ -1146,7 +1102,6 @@ const renderProformaActions = (row) => {
                       </div>
                     </div>
                   </div>
-
                   <div className="border border-gray-300 p-3 rounded">
                     <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Calculation Summary</h3>
                     <div className="space-y-1" style={{ fontSize: '11px' }}>
@@ -1193,13 +1148,10 @@ const renderProformaActions = (row) => {
                           </>
                         );
                       })()}
-
                       <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                         <span>Total amount payable:</span>
                         <span>{formatCurrency(Math.round(data.totalAdviceAmountReceivable),true)}</span>
                       </div>
-
-
                        <div className="text-right">
                       <div className="text-center inline-block">
                         {(() => {
@@ -1240,20 +1192,16 @@ const renderProformaActions = (row) => {
                 {/* Bank Details and Signature */}
                 <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakInside: 'avoid' }}>
                   <div >
-
                      {/* <div>
                                 
                       <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>DD / Cheque issued to : {defaultDdoDetails.fullName}</h3>
                      
                     </div> */}
-
                     <div>
-
                         <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px'  , marginBottom: '10px' }}>
                         <div><strong>{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO}</strong>{ddoDetails.fullName}</div>
                       
                       </div>
-
                       
                          
                                 
@@ -1268,7 +1216,6 @@ const renderProformaActions = (row) => {
                     
                    
                   </div>
-
                   <div className="text-center mt-6 pt-2 border-t border-gray-300">
                     <p className="text-gray-600 italic" style={{ fontSize: '10px' }}>This is a computer generated document</p>
                   </div>

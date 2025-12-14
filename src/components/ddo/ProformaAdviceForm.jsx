@@ -13,7 +13,6 @@ import { Plus, Trash2, X, Download, Printer, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { IndeterminateProgressBar, LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
-
 export default function ProformaAdviceForm({
   loading,
   isNavigatingToCustomer,
@@ -84,7 +83,6 @@ export default function ProformaAdviceForm({
   setRcmSgst
 }) {
   const router = useRouter();
-
   // Form validation state
   const [formValidation, setFormValidation] = useState({
     hasCustomer: false,
@@ -94,23 +92,27 @@ export default function ProformaAdviceForm({
     isValid: false
   });
 
+    
+          
+            
+    
+
+       
+  
   const [showGstDebug, setShowGstDebug] = useState(false);
   const [lineItemErrors, setLineItemErrors] = useState({});
   const [localTaxInvoice, setLocalTaxInvoice] = useState('');
   const [printOptimizedView, setPrintOptimizedView] = useState(false);
-
   // Validate form whenever required fields change
   useEffect(() => {
     console.log("ProformaAdviceForm  useEffect :: ddoDetails",ddoDetails.fullName);
     
     validateForm();
   }, [selectedCustomer, lineItems, hsnList, ddoSignature]);
-
   // Keep localTaxInvoice in sync with paidAmount prop
   useEffect(() => {
     setLocalTaxInvoice(Number.isFinite(paidAmount) ? String(Math.floor(Number(paidAmount) || 0)) : '');
   }, [paidAmount]);
-
   const validateForm = () => {
     const hasCustomer = selectedCustomer && selectedCustomer.customerName && selectedCustomer.customerName.trim() !== '';
     const hasLineItems = lineItems && lineItems.length > 0;
@@ -130,8 +132,15 @@ export default function ProformaAdviceForm({
       // hasSignature,
       isValid
     });
-  };
 
+    
+          
+            
+    
+
+    
+  
+  };
   const handleSaveWithValidationAndNavigate = () => {
     const isValid = validateAndSetErrors(lineItems);
     if (isValid) {
@@ -143,7 +152,6 @@ export default function ProformaAdviceForm({
       }, 2000);
     }
   };
-
   // Derive display GST rates from current calculation or HSN list (fallbacks)
   const latestCalc = gstCalculation || null;
   const firstHSN = lineItems?.[0]?.hsnNumber;
@@ -151,24 +159,19 @@ export default function ProformaAdviceForm({
   const fallbackGst = currentHsnDetails?.igst ?? currentHsnDetails?.gstRate ?? 18;
   const fallbackCgst = currentHsnDetails?.cgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
   const fallbackSgst = currentHsnDetails?.sgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
-
   const displayGstRate = (latestCalc && (
     typeof latestCalc.gstRate === 'number' ? latestCalc.gstRate :
       typeof latestCalc.igst === 'number' ? latestCalc.igst :
         (typeof latestCalc.cgstRate === 'number' && typeof latestCalc.sgstRate === 'number' ? (latestCalc.cgstRate + latestCalc.sgstRate) : undefined)
   )) ?? fallbackGst;
-
   const computeRateFromAmounts = (amount, taxable) => {
     if (typeof amount !== 'number' || typeof taxable !== 'number' || taxable === 0) return null;
     return (amount / taxable) * 100;
   };
-
   const rawCgstRate = (typeof latestCalc?.cgstRate === 'number') ? latestCalc.cgstRate : computeRateFromAmounts(latestCalc?.cgst, latestCalc?.taxableValue);
   const rawSgstRate = (typeof latestCalc?.sgstRate === 'number') ? latestCalc.sgstRate : computeRateFromAmounts(latestCalc?.sgst, latestCalc?.taxableValue);
-
   const displayCgstRate = (rawCgstRate != null) ? rawCgstRate : fallbackCgst;
   const displaySgstRate = (rawSgstRate != null) ? rawSgstRate : fallbackSgst;
-
   const formatPercent = (val) => {
     if (val === null || val === undefined) return '';
     const num = Number(val);
@@ -180,23 +183,19 @@ export default function ProformaAdviceForm({
     s = s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
     return s;
   };
-
   const handleLineItemChangeWithValidation = (index, field, value) => {
     onLineItemChange(index, field, value);
-
     if ((value || field === 'amount') && lineItemErrors[index]) {
       const updatedErrors = { ...lineItemErrors };
       delete updatedErrors[index];
       setLineItemErrors(updatedErrors);
     }
   };
-
   const validateAndSetErrors = (items) => {
     const errors = {};
     items.forEach((item, idx) => {
       const descValidation = validateDescription(item.description);
       const amountValidation = validateAmount(item.amount, `Line item ${idx + 1} amount`);
-
       if (!descValidation.valid) {
         errors[`${idx}-desc`] = descValidation.message;
       }
@@ -207,25 +206,20 @@ export default function ProformaAdviceForm({
     setLineItemErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   const handleSaveWithValidation = () => {
     const isValid = validateAndSetErrors(lineItems);
     if (isValid) {
       onSaveBill();
     }
   };
-
   // Print Document Function
   const handlePrintDocument = () => {
     const printWindow = window.open('', '_blank', 'width=800,height=600');
-
     const currentDate = formatDate(billDetails.date);
     const signatureUrl = ddoSignature || '';
-
     // Get logo source
     const logoImg = document.querySelector('#bill-preview-content img');
     const logoSrc = logoImg ? logoImg.src : '/1.png';
-
     // Build line items HTML
     const lineItemsHTML = lineItems.map((item, index) => `
       <tr>
@@ -238,7 +232,6 @@ export default function ProformaAdviceForm({
         <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
       </tr>
     `).join('');
-
     // GST Calculation HTML
     let gstCalcHTML = '';
     if (invoiceType === 'FCM' && gstCalculation) {
@@ -261,7 +254,6 @@ export default function ProformaAdviceForm({
         </div>
       `;
     }
-
     // RCM Tax Details
     let rcmHTML = '';
     if (invoiceType === 'RCM') {
@@ -275,7 +267,6 @@ export default function ProformaAdviceForm({
         </div>
       `;
     }
-
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -412,6 +403,23 @@ export default function ProformaAdviceForm({
                     <p style="margin: 1px 0; font-size: 10px;"><strong>State Code:</strong> ${selectedCustomer?.stateCode || ''}</p>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>Type:</strong> ${invoiceType}</p>
                   </td>
+
+    
+          
+            
+    
+
+          
+          Expand Down
+          
+            
+    
+
+          
+          Expand Up
+    
+    @@ -1121,8 +1121,8 @@ export default function ProformaAdviceForm({
+  
                   <td style="border: 1px solid #000; width: 50%; padding: 6px; vertical-align: top;">
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;">Advice Details</h3>
                     <p style="margin: 1px 0; font-size: 10px;"><strong>DDO Code:</strong> ${ddoDetails?.ddoCode || ''}</p>
@@ -481,10 +489,8 @@ export default function ProformaAdviceForm({
                       <span>Total amount payable:</span>
                       <span>${formatCurrency(totalAdviceAmountReceivable,true)}</span>
                     </div>
-
                 <div class="signature-box" 
      style="width: 100%; text-align: center; margin-top: 30px; display: block; justify-content: center; align-items: center;">
-
     <div style="display: flex; justify-content: center; width: 100%;">
         ${signatureUrl
           ? `<img src="${signatureUrl}" 
@@ -494,11 +500,9 @@ export default function ProformaAdviceForm({
           : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto 4px auto;"></div>`
         }
     </div>
-
     <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
     <div style="font-size: 10px;">${ddoDetails.fullName}</div>
 </div>
-
                   </td>
                 </tr>
               </table>
@@ -548,10 +552,8 @@ export default function ProformaAdviceForm({
         </body>
       </html>
     `);
-
     printWindow.document.close();
   };
-
   // Print-specific styles and content
   const PrintStyles = () => (
     <style jsx global>{`
@@ -655,11 +657,9 @@ export default function ProformaAdviceForm({
       }
     `}</style>
   );
-
   return (
     <>
       <PrintStyles />
-
       {loading ? (
         <div className="premium-card p-8 sm:p-16">
           <LoadingProgressBar message="Loading bill data..." variant="primary" />
@@ -673,16 +673,13 @@ export default function ProformaAdviceForm({
               </div>
             </div>
           )}
-
           {/* Main Form Content */}
           <div className="space-y-6 mobile-p-2">
-
             {/* Bill To Section */}
             <div className="border border-[var(--color-border)] rounded-lg p-4 space-y-4 bg-[var(--color-background)]">
               <h3 className="text-lg font-semibold pb-2 border-b border-[var(--color-border)] text-[var(--color-text-primary)]">
                 {t('bill.serviceReceiver')}
               </h3>
-
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mobile-grid-1">
                 {/* Left Column - Select Customer */}
                 <div className="mobile-full">
@@ -732,7 +729,6 @@ export default function ProformaAdviceForm({
                     </Button>
                   </div>
                 </div>
-
                 {/* Right Column - Customer Information */}
                 <div className="mobile-full">
                   <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">
@@ -750,7 +746,6 @@ export default function ProformaAdviceForm({
                         </>
                       )}
                     </div>
-
                     {selectedCustomer?.stateCode && (
                       <div className="text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">State: </span>
@@ -763,14 +758,12 @@ export default function ProformaAdviceForm({
                         )}
                       </div>
                     )}
-
                     {selectedCustomer?.address && (
                       <div className="text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">Address: </span>
                         <span className="text-[var(--color-text-secondary)]">{selectedCustomer.address}</span>
                       </div>
                     )}
-
                     {/* {notificationDetails && (
                       <div className="text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">Notification: </span>
@@ -781,7 +774,6 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
             </div>
-
             {/* Line Items Section */}
             <div className="border border-[var(--color-border)] rounded-lg p-4 space-y-4 bg-[var(--color-background)]">
               <div className="mobile-table-container">
@@ -916,7 +908,6 @@ export default function ProformaAdviceForm({
                   </tfoot>
                 </table>
               </div>
-
               <div className="flex justify-end">
                 <Button
                   onClick={onAddLineItem}
@@ -928,14 +919,12 @@ export default function ProformaAdviceForm({
                 </Button>
               </div>
             </div>
-
             {/* GST Calculation and Summary Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mobile-grid-1 mobile-space-y-4">
               {/* Left Column - Additional Information */}
               <div className="space-y-4 mobile-full">
                 <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-background)]">
                   <h4 className="font-semibold mb-3 text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-2">Additional Information</h4>
-
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)] mobile-text-sm">
@@ -949,7 +938,6 @@ export default function ProformaAdviceForm({
                         placeholder="Enter any remarks or notes..."
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)] mobile-text-sm">
                         Notification Details
@@ -958,7 +946,6 @@ export default function ProformaAdviceForm({
                         {notificationDetails || 'No notification details'}
                       </div>
                     </div>
-
                     {/* RCM specific fields - only show when invoiceType is RCM */}
                     {invoiceType === 'RCM' && (
                       <div className="space-y-3">
@@ -980,7 +967,6 @@ export default function ProformaAdviceForm({
                         </div>
                       </div>
                     )}
-
                     <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)] mobile-text-sm">
                         Total Invoice Value in Words
@@ -992,17 +978,14 @@ export default function ProformaAdviceForm({
                   </div>
                 </div>
               </div>
-
               {/* Right Column - Calculation Summary */}
               <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-background)] mobile-full">
                 <h4 className="font-semibold mb-3 text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-2">Calculation Summary</h4>
-
                 <div className="space-y-2">
                   <div className="flex justify-between items-center py-2 border-b border-[var(--color-border)]">
                     <span className="text-sm font-medium mobile-text-sm">Total Taxable Value</span>
                     <span className="text-sm font-semibold mobile-text-sm">{formatCurrency(totalAmount)}</span>
                   </div>
-
                   {invoiceType === 'FCM' && (
                     <>
                       <div className="flex justify-between items-center py-2 border-b border-[var(--color-border)]">
@@ -1025,19 +1008,16 @@ export default function ProformaAdviceForm({
                       </div>
                     </>
                   )}
-
                   <div className="flex justify-between items-center py-3 bg-[var(--color-primary)] text-white rounded-lg px-4 mt-4 font-semibold mobile-text-sm">
                     <span className="text-base mobile-text-sm">Total amount payable</span>
                     <span className="text-base mobile-text-sm">
                       {formatCurrency(totalAdviceAmountReceivable,true)}
                     </span>
                   </div>
-
                   {renderDDOSignatureSection && renderDDOSignatureSection()}
                 </div>
               </div>
             </div>
-
             {/* Bank Details */}
             <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-background)]">
               {/*                        
@@ -1046,13 +1026,10 @@ export default function ProformaAdviceForm({
                       <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>DD / Cheque issued to : {ddoDetails.fullName}</h3>
                      
                     </div> */}
-
-
               <div className="mobile-full">
                 <span className="font-medium text-[var(--color-text-primary)] mobile-text-sm">{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO}</span>
                 <span className="font-semibold mobile-text-sm">{ddoDetails.fullName}</span>
               </div>
-
               <h4 className="font-semibold mb-3 text-[var(--color-text-primary)]"> Details For Bank Transfer</h4>
               <div className="bg-[var(--color-muted)]/20 p-3 rounded-lg border border-[var(--color-border)]">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mobile-grid-1 mobile-space-y-2">
@@ -1075,7 +1052,6 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
             </div>
-
             {/* Actions Section */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-4 border-t border-[var(--color-border)] mobile-stack mobile-space-y-4">
               <div className="flex flex-col gap-2 mobile-full">
@@ -1083,7 +1059,6 @@ export default function ProformaAdviceForm({
                   💡 <strong>Print Tip:</strong> Use Preview to see how your bill will look when printed
                 </p>
               </div>
-
               <div className="flex gap-3 mobile-btn-group mobile-full">
                 <Button
                   variant="outline"
@@ -1113,7 +1088,6 @@ export default function ProformaAdviceForm({
                 </Button>
               </div>
             </div>
-
             {/* Form Validation Status */}
             {!formValidation.isValid && (
               <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm mobile-text-sm">
@@ -1126,10 +1100,20 @@ export default function ProformaAdviceForm({
                 </ul>
               </div>
             )}
+
+    
+          
+            
+    
+
+          
+          Expand Down
+    
+    
+  
           </div>
         </>
       )}
-
       {/* Add Customer Modal */}
       <Modal
         isOpen={showCustomerModal}
@@ -1161,7 +1145,6 @@ export default function ProformaAdviceForm({
                 onChange={(e) => {
                   const upperValue = e.target.value.toUpperCase().slice(0, 15);
                   let updatedCustomer = { ...newCustomer, gstNumber: upperValue };
-
                   if (upperValue.length >= 2) {
                     const stateCode = getStateCodeFromGSTIN(upperValue);
                     if (stateCode) {
@@ -1172,7 +1155,6 @@ export default function ProformaAdviceForm({
                   } else {
                     updatedCustomer.stateCode = '';
                   }
-
                   setNewCustomer(updatedCustomer);
                 }}
                 className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 mobile-text-sm"
@@ -1239,7 +1221,6 @@ export default function ProformaAdviceForm({
               </select>
             </div>
           </div>
-
           <div className="mobile-full">
             <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
               Address <span className="text-red-500">*</span>
@@ -1252,7 +1233,6 @@ export default function ProformaAdviceForm({
               required
             />
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mobile-grid-1">
             <div className="mobile-full">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
@@ -1280,7 +1260,6 @@ export default function ProformaAdviceForm({
               />
             </div>
           </div>
-
           <div className="flex items-center justify-end gap-3 pt-4 mobile-btn-group">
             <Button
               type="button"
@@ -1310,7 +1289,6 @@ export default function ProformaAdviceForm({
           </div>
         </form>
       </Modal>
-
       {/* Bill Preview Modal - EXACTLY SAME AS ProformaAdviceList */}
       <Modal
         isOpen={showPreviewModal}
@@ -1344,9 +1322,7 @@ export default function ProformaAdviceForm({
             </button>
           </div>
         </div>
-
         <div className="flex flex-col h-full">
-
           {/* Preview Content - Same as ProformaAdviceList */}
           <div
             id="bill-preview-content"
@@ -1387,7 +1363,6 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
             </div>
-
             {/* Customer and Invoice Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
               <div className="border border-gray-300 p-3 rounded">
@@ -1400,7 +1375,6 @@ export default function ProformaAdviceForm({
                   <p><strong>Type:</strong> {invoiceType}</p>
                 </div>
               </div>
-
               <div className="border border-gray-300 p-3 rounded">
                 <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Advice Details</h3>
                 <div className="space-y-1" style={{ fontSize: '11px' }}>
@@ -1411,7 +1385,6 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
             </div>
-
             {/* Line Items Table */}
             <div className="mb-3 print-section">
               <table className="w-full border-collapse border border-gray-400" style={{ fontSize: '11px' }}>
@@ -1448,7 +1421,6 @@ export default function ProformaAdviceForm({
                 </tbody>
               </table>
             </div>
-
             {/* Calculation and Additional Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 print-section">
               <div className="border border-gray-300 p-3 rounded">
@@ -1462,7 +1434,6 @@ export default function ProformaAdviceForm({
                     <p className="font-semibold">Notification Details:</p>
                     <p className="mt-1 p-2 bg-gray-50 rounded border min-h-[40px]" style={{ fontSize: '11px' }}>{notificationDetails || '-'}</p>
                   </div>
-
                   {/* RCM specific fields in preview */}
                   {invoiceType === 'RCM' && (
                     <div>
@@ -1481,7 +1452,6 @@ export default function ProformaAdviceForm({
                   </div>
                 </div>
               </div>
-
               <div className="border border-gray-300 p-3 rounded">
                 <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Calculation Summary</h3>
                 <div className="space-y-1" style={{ fontSize: '11px' }}>
@@ -1489,7 +1459,6 @@ export default function ProformaAdviceForm({
                     <span>Total Taxable Value:</span>
                     <span className="font-semibold">{formatCurrency(totalAmount)}</span>
                   </div>
-
                   {invoiceType === 'FCM' && (
                     <>
                       <div className="flex justify-between border-b py-1">
@@ -1510,7 +1479,6 @@ export default function ProformaAdviceForm({
                       </div>
                     </>
                   )}
-
                   <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                     <span>Total amount payable:</span>
                     <span>{formatCurrency(totalAdviceAmountReceivable,true)}</span>
@@ -1545,7 +1513,6 @@ export default function ProformaAdviceForm({
                         <p style={{ fontSize: '11px' }}>{ddoDetails?.fullName || 'Karnataka Police Department'}</p>
                       </div>
                     </div>
-
                     <div className="text-center mt-6 pt-2 border-t border-gray-300">
                       <p className="text-gray-600 italic" style={{ fontSize: '10px' }}>This is a computer generated document</p>
                     </div>
@@ -1553,7 +1520,6 @@ export default function ProformaAdviceForm({
                 </div>
               </div>
             </div>
-
             {/* Bank Details - Should appear on separate page */}
             <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakBefore: 'always' }}>
               <h3 style={{ marginTop: "10px", marginBottom: "10px" }} >{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO} {ddoDetails?.fullName}</h3>
@@ -1565,11 +1531,7 @@ export default function ProformaAdviceForm({
                 <div><strong>Account No:</strong> {bankDetails?.accountNumber || '1234567890'}</div>
               </div>
             </div>
-
-
           </div>
-
-
         </div>
       </Modal>
     </>
