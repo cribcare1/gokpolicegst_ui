@@ -148,58 +148,6 @@ const handleClear = () => {
 
 
 
-
-
-// const handleNext = () => {
-//   if (selectedReceipts.length === 0) {
-//     toast.error("Please select at least one receipt");
-//     return;
-//   }
-
-//   // Validate selected rows
-//   for (const id of selectedReceipts) {
-//     const edited = editedValues[id] || {};
-//     const original = receiptsData.find((r) => r.id === id);
-
-//     if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
-//       toast.error(`Amount Received is required for PA No: ${original.paNo}`);
-//       return;
-//     }
-
-//     if (!edited.paymentDate) {
-//       toast.error(`Payment Date is required for PA No: ${original.paNo}`);
-//       return;
-//     }
-
-//     if (!edited.paymentMode) {
-//       toast.error(`Payment Mode is required for PA No: ${original.paNo}`);
-//       return;
-//     }
-//   }
-
-//   // Prepare selected data
-//   const selectedData = selectedReceipts.map((id) => {
-//     const original = receiptsData.find((r) => r.id === id);
-//     const edited = editedValues[id] || {};
-
-//     return {
-//       invoiceId: original.id,
-//       paNo: original.paNo,
-//       customerName: original.customerName,
-//       amountPayable: original.amountPayable,
-//       amountReceived: edited.amountReceived,
-//       difference: original.amountPayable - edited.amountReceived,
-//       differenceReason: edited.differencereson || "",
-//       paymentMode: edited.paymentMode,
-//       paymentRef: edited.paymentRef || "",
-//       paymentDate: edited.paymentDate,
-//     };
-//   });
-
-//   const encodedData = encodeURIComponent(JSON.stringify(selectedData));
-//   router.push(`/ddo/receipt-preview?data=${encodedData}`);
-// };
-
 const handleNext = () => {
   if (selectedReceipts.length === 0) {
     toast.error("Please select at least one receipt");
@@ -405,23 +353,7 @@ const handleNext = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
-          {/* {!loading && (
-            <div className="flex justify-center gap-4 mt-4">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={handleNext}
-              >
-                Next
-              </button>
-              <button
-                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                onClick={handleClear}
-              >
-                Clear
-              </button>
-            </div>
-          )} */}
+         
         </div>
 
         <div className="flex justify-end gap-4">
