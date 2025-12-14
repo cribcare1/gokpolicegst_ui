@@ -11,7 +11,7 @@ import { API_ENDPOINTS } from "@/components/api/api_const";
 import { toast } from "sonner";
 
 export default function ReceiptPreviewPage() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const router = useRouter();
 
   const [data, setData] = useState([]);
