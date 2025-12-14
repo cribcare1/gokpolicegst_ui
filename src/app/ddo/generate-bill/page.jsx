@@ -1873,27 +1873,22 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
   }
 
   const amountInWords = (amount) => {
-    if (amount === null || amount === undefined || amount === '') {
-      return '';
-    }
+  if (amount === null || amount === undefined || amount === '') {
+    return '';
+  }
 
-    const numericAmount = Number(amount);
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount)) {
+    return '';
+  }
 
-    if (isNaN(numericAmount)) {
-      return '';
-    }
+  // ✅ Round the amount first
+  const roundedAmount = Math.round(numericAmount);
 
-    const rupees = Math.floor(numericAmount);
-    const paise = Math.round((numericAmount - rupees) * 100);
+  // Convert only rounded rupees to words
+  return numberToWords(roundedAmount) + ' Rupees Only';
+};
 
-    let words = numberToWords(rupees) + ' Rupees';
-
-    if (paise > 0) {
-      words += ' and ' + numberToWords(paise) + ' Paise';
-    }
-
-    return words + ' Only';
-  };
 
   // Calculate totals
   const totalQuantity = lineItems.length;
@@ -1953,25 +1948,30 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
   );
 
   const renderDDOSignatureSection = () => (
-   <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)] flex justify-center lg:justify-end">
-  <div className="flex flex-col items-center lg:items-end">
+    <div className="mt-6 pt-4 border-t border-dashed border-[var(--color-border)]">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        
+        {/* Right side - Signature area */}
+        <div className="lg:flex-1 lg:flex lg:flex-col lg:items-end">
+          <div className="w-full lg:max-w-sm">
+            {/* Name and Title */}
+           <div className="flex justify-center lg:justify-end items-center gap-1 mb-3">
+            <span className="text-xs font-semibold tracking-wide text-[var(--color-text-secondary)] uppercase whitespace-nowrap">
+              {t('bill.signatureOfDdo')} :
+            </span>
 
-    {/* Label + Name */}
-    <div className="flex items-center gap-1 mb-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-        {t('bill.signatureOfDdo')} :
-      </span>
-      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-        {ddoDetails?.fullName || '-'}
-      </p>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
+              {ddoDetails?.fullName || '-'}
+            </p>
+          </div>
+
+           <div className="w-64 h-20 border-2 border-gray-400 rounded-sm"></div>
+            
+           
+          </div>
+        </div>
+      </div>
     </div>
-
-    {/* Signature Box */}
-    <div className="w-64 h-20 border-2 border-gray-400 rounded-sm"></div>
-
-  </div>
-</div>
-
   );
 
 
