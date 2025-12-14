@@ -551,74 +551,60 @@ export default function ProformaAdviceList({
 
   // Enhanced number to words function
   const numberToWordsEnhanced = (num) => {
-    if (numberToWords) return numberToWords(num);
-    
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
-                 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
-    if (num === 0) return 'Zero';
-    if (num > 9999999999999) return 'Number too large';
-    
-    const convertLessThanOneThousand = (n) => {
-      if (n === 0) return '';
-      
-      let result = '';
-      
-      if (n >= 100) {
-        result += ones[Math.floor(n / 100)] + ' Hundred ';
-        n %= 100;
-      }
-      
-      if (n >= 20) {
-        result += tens[Math.floor(n / 10)] + ' ';
-        n %= 10;
-      }
-      
-      if (n > 0) {
-        result += ones[n] + ' ';
-      }
-      
-      return result.trim();
-    };
-    
+  if (numberToWords) return numberToWords(Math.round(num));
+
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const roundedNum = Math.round(Number(num));
+  if (roundedNum === 0) return 'Zero Only';
+  if (roundedNum > 9999999999999) return 'Number too large';
+
+  const convertLessThanOneThousand = (n) => {
     let result = '';
-    let remaining = Math.floor(num);
-    
-    // Handle Crores
-    const crore = Math.floor(remaining / 10000000);
-    if (crore > 0) {
-      result += convertLessThanOneThousand(crore) + ' Crore ';
-      remaining %= 10000000;
+    if (n >= 100) {
+      result += ones[Math.floor(n / 100)] + ' Hundred ';
+      n %= 100;
     }
-    
-    // Handle Lakhs
-    const lakh = Math.floor(remaining / 100000);
-    if (lakh > 0) {
-      result += convertLessThanOneThousand(lakh) + ' Lakh ';
-      remaining %= 100000;
+    if (n >= 20) {
+      result += tens[Math.floor(n / 10)] + ' ';
+      n %= 10;
     }
-    
-    // Handle Thousands
-    const thousand = Math.floor(remaining / 1000);
-    if (thousand > 0) {
-      result += convertLessThanOneThousand(thousand) + ' Thousand ';
-      remaining %= 1000;
+    if (n > 0) {
+      result += ones[n] + ' ';
     }
-    
-    // Handle Hundreds and below
-    if (remaining > 0) {
-      result += convertLessThanOneThousand(remaining);
-    }
-    
-    // Handle decimal part (paise)
-    const decimal = Math.round((num - Math.floor(num)) * 100);
-    if (decimal > 0) {
-      result += ' and ' + convertLessThanOneThousand(decimal) + ' Paise';
-    }
-    
-    return result.trim() + (decimal === 0 ? ' Only' : '');
+    return result.trim();
   };
+
+  let result = '';
+  let remaining = roundedNum;
+
+  const crore = Math.floor(remaining / 10000000);
+  if (crore > 0) {
+    result += convertLessThanOneThousand(crore) + ' Crore ';
+    remaining %= 10000000;
+  }
+
+  const lakh = Math.floor(remaining / 100000);
+  if (lakh > 0) {
+    result += convertLessThanOneThousand(lakh) + ' Lakh ';
+    remaining %= 100000;
+  }
+
+  const thousand = Math.floor(remaining / 1000);
+  if (thousand > 0) {
+    result += convertLessThanOneThousand(thousand) + ' Thousand ';
+    remaining %= 1000;
+  }
+
+  if (remaining > 0) {
+    result += convertLessThanOneThousand(remaining);
+  }
+
+  return result.trim() + ' Only';
+};
+
 
   // Print-specific styles for modal preview
   const PrintStyles = () => (
