@@ -10,7 +10,7 @@ import ApiService from "@/components/api/api_service";
 import { toast } from 'sonner';
 import { LoadingProgressBar } from "@/components/shared/ProgressBar"; 
 import { useRouter } from "next/navigation";
-export default function ProformaAdvicePage() {
+export default function ShortfallPaymentPage() {
   const router = useRouter();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -24,8 +24,20 @@ export default function ProformaAdvicePage() {
 
   const countrecords = receiptsData.length;
 
+//   useEffect(() => {
+//     setFromDate("");
+//     setToDate("");
+//     fetchCustomers();
+//     if(Object.keys(editedValues).length == 0){
+
+//  fetchInvoices();
+//     }
+   
+//   }, []);
+
+
 useEffect(() => {
-  const savedState = sessionStorage.getItem("proforma_state");
+  const savedState = sessionStorage.getItem("shortfall_state");
 
   if (savedState) {
     const parsed = JSON.parse(savedState);
@@ -45,7 +57,6 @@ useEffect(() => {
   fetchCustomers();
   fetchInvoices();
 }, []);
-
 
   const fetchCustomers = async () => {
     try {
@@ -87,7 +98,7 @@ useEffect(() => {
 
       const status = "SAVED";
       const response = await ApiService.handleGetRequest(
-        `${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=${status}`
+        `https://api.gokpolicegst.com:8443/tds/invoices/invoiceListDetails?isShortfall=true&status=SAVED&ddoId=${ddoId}`
       );
 
       if (response && response.success === "success") {
@@ -140,11 +151,14 @@ useEffect(() => {
       [id]: { ...prev[id], [field]: value },
     }));
   };
+
 const handleClear = () => {
-  sessionStorage.removeItem("proforma_state");
+  sessionStorage.removeItem("shortfall_state");
   setSelectedReceipts([]);
   setEditedValues({});
 };
+
+
 
 
 
@@ -174,7 +188,7 @@ const handleNext = () => {
 
   // ✅ SAVE STATE (NO UI CHANGE)
   sessionStorage.setItem(
-    "proforma_state",
+    "shortfall_state",
     JSON.stringify({
       receiptsData,
       selectedReceipts,
@@ -184,8 +198,10 @@ const handleNext = () => {
   );
 
   const encodedData = encodeURIComponent(JSON.stringify(selectedData));
-  router.push(`/ddo/receipt-preview?data=${encodedData}`);
+  router.push(`/ddo/shortfall_payment_preview?data=${encodedData}`);
 };
+
+
 
   const handleSaveAndGenerate = async () => {
     if (selectedReceipts.length === 0) {
@@ -283,6 +299,7 @@ const handleNext = () => {
       },
     },
 
+
   
   ];
 
@@ -294,7 +311,7 @@ const handleNext = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* <h1 className="text-2xl font-bold">Receipts & Payment Entry</h1> */}
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-              <span className="gradient-text">Receipts </span>
+              <span className="gradient-text">Shortfall </span>
               <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
                      bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
                      translate-y-1">
@@ -353,7 +370,8 @@ const handleNext = () => {
             </div>
           )}
 
-         
+          {/* Action Buttons */}
+     
         </div>
 
         <div className="flex justify-end gap-4">
