@@ -196,9 +196,8 @@ export default function ReceiptPreviewPage() {
       receipts: data.map((item) => ({
         invoiceId: item.invoiceId,
         type:
-          editedValues[item.invoiceId]?.paymentMode === "Cash"
-            ? "CASH"
-            : "BANK_TRANSFER",
+          editedValues[item.invoiceId]?.paymentMode??"Other" 
+           ,
         referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
         amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
         paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
@@ -210,7 +209,7 @@ export default function ReceiptPreviewPage() {
       setLoading(true);
       await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
       toast.success("Receipts saved & invoice generated");
-      router.push("/ddo/shortfall_payment_list");
+      router.replace("/ddo/proforma-advice");
     } catch (error) {
       toast.error("Failed to save receipts");
     } finally {

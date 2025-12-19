@@ -55,49 +55,10 @@ export default function DDODashboard() {
   const fetchDashboardData = async () => {
     // Load demo data immediately for instant UI
     const demoStats = {
-      pendingBills: 12,
-      submittedBills: 48,
+      pendingBills: 0,
+      submittedBills: 0,
       recentBills: [
-        {
-          id: 'BILL-2024-001',
-          billNumber: 'BILL-2024-001',
-          customerName: 'ABC Enterprises',
-          date: new Date().toISOString(),
-          totalAmount: 125000,
-          status: 'pending'
-        },
-        {
-          id: 'BILL-2024-002',
-          billNumber: 'BILL-2024-002',
-          customerName: 'XYZ Corporation',
-          date: new Date(Date.now() - 86400000).toISOString(),
-          totalAmount: 98000,
-          status: 'submitted'
-        },
-        {
-          id: 'BILL-2024-003',
-          billNumber: 'BILL-2024-003',
-          customerName: 'Tech Solutions Pvt Ltd',
-          date: new Date(Date.now() - 172800000).toISOString(),
-          totalAmount: 156750,
-          status: 'pending'
-        },
-        {
-          id: 'BILL-2024-004',
-          billNumber: 'BILL-2024-004',
-          customerName: 'Global Industries',
-          date: new Date(Date.now() - 259200000).toISOString(),
-          totalAmount: 89500,
-          status: 'submitted'
-        },
-        {
-          id: 'BILL-2024-005',
-          billNumber: 'BILL-2024-005',
-          customerName: 'Prime Services',
-          date: new Date(Date.now() - 345600000).toISOString(),
-          totalAmount: 234000,
-          status: 'submitted'
-        }
+        
       ]
     };
     
@@ -115,15 +76,15 @@ export default function DDODashboard() {
       
       // Build API URL - try with gstId first, fallback to ddoCode if needed
       let apiUrl;
-      if (gstId) {
-        apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
-      } else if (ddoCode) {
+      // if (gstId) {
+      //   apiUrl = `${API_ENDPOINTS.ADMIN_DASHBOARD}?gstId=${gstId}`;
+      // } else if (ddoCode) {
         // If no gstId, try the DDO dashboard endpoint
         apiUrl = `${API_ENDPOINTS.DDO_DASHBOARD}?ddoCode=${ddoCode}`;
-      } else {
-        console.log('No gstId or ddoCode found, using demo data');
-        return;
-      }
+      // } else {
+      //   console.log('No gstId or ddoCode found, using demo data');
+      //   return;
+      // }
       
       // Use ApiService to fetch data
       const result = await ApiService.handleGetRequest(apiUrl, 5000);

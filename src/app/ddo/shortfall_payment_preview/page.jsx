@@ -177,46 +177,79 @@ export default function ReceiptPreviewPage() {
   ];
 
   const handleSaveAndGenerate = async () => {
-    for (let item of data) {
-      const edited = editedValues[item.invoiceId];
-      const diff = item.amountPayable - edited.amountReceived;
+  // validations (keep if required)
+  for (let item of data) {
+    const edited = editedValues[item.invoiceId];
 
-      if (edited.paymentMode === "Bank/ DD/ Cheque" && !edited.paymentRef?.trim()) {
-        toast.error(`Payment Ref No is required for invoice ${item.paNo}`);
-        return;
-      }
-
-      if (diff > 0 && !edited.differenceReason?.trim()) {
-        toast.error(`Difference Reason is required for invoice ${item.paNo}`);
-        return;
-      }
+    if (!edited || edited.amountReceived <= 0) {
+      toast.error(`Amount is required for invoice ${item.paNo}`);
+      return;
     }
+  }
 
-    const payload = {
-      receipts: data.map((item) => ({
-        invoiceId: item.invoiceId,
-        type:
-          editedValues[item.invoiceId]?.paymentMode === "Cash"
-            ? "CASH"
-            : "BANK_TRANSFER",
-        referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
-        amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
-        paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
-        differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
-      })),
-    };
+  // 🔹 EXACT payload format as required by backend
+  const payload = data.map((item) => ({
+    invoiceId: item.invoiceId,
+    amount: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
+  }));
 
-    try {
-      setLoading(true);
-      await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
-      toast.success("Receipts saved & invoice generated");
-      router.push("/ddo/shortfall_payment_list");
-    } catch (error) {
-      toast.error("Failed to save receipts");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    await ApiService.handlePostRequest(
+      API_ENDPOINTS.CREATE_SHORTFALL_INVOICE,
+      payload
+    );
+    toast.success("Shortfall invoice generated successfully");
+    router.push("/ddo/shortfall_payment_list");
+  } catch (error) {
+    toast.error("Failed to generate shortfall invoice");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+//   const handleSaveAndGenerate = async () => {
+//     for (let item of data) {
+//       const edited = editedValues[item.invoiceId];
+//       const diff = item.amountPayable - edited.amountReceived;
+
+//       if (edited.paymentMode === "Bank/ DD/ Cheque" && !edited.paymentRef?.trim()) {
+//         toast.error(`Payment Ref No is required for invoice ${item.paNo}`);
+//         return;
+//       }
+
+//       if (diff > 0 && !edited.differenceReason?.trim()) {
+//         toast.error(`Difference Reason is required for invoice ${item.paNo}`);
+//         return;
+//       }
+//     }
+
+//     const payload = {
+//       receipts: data.map((item) => ({
+//         invoiceId: item.invoiceId,
+//         type:
+//           editedValues[item.invoiceId]?.paymentMode === "Cash"
+//             ? "CASH"
+//             : "BANK_TRANSFER",
+//         referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
+//         amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
+//         paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
+//         differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
+//       })),
+//     };
+
+//     try {
+//       setLoading(true);
+//       await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
+//       toast.success("Receipts saved & invoice generated");
+//       router.push("/ddo/shortfall_payment_list");
+//     } catch (error) {
+//       toast.error("Failed to save receipts");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
   return (
     <Layout role="ddo">

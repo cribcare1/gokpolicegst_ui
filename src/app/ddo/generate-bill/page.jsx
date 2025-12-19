@@ -29,6 +29,7 @@ export default function GenerateBillPage() {
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [ddoSignature, setDdoSignature] = useState(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceId, setInvoiceId] = useState(0);
   
   // Bill Details
   const [billDetails, setBillDetails] = useState({
@@ -64,14 +65,14 @@ export default function GenerateBillPage() {
   const [lineItems, setLineItems] = useState([
     { 
       serialNo: 1, 
-      description: '', 
+      serviceName: '', 
       amount: "", 
       hsnNumber: '',
       quantity: 1
     },
     { 
       serialNo: 2, 
-      description: '', 
+      serviceName: '', 
       amount: "", 
       hsnNumber: '',
       quantity: 1
@@ -318,7 +319,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }
       const mappedRecords = (payloadArray || []).map((item) => {
         const items = Array.isArray(item.items) ? item.items : [];
-        const proformaAmount =item.grandTotal || 0;
+       const proformaAmount = Math.round(item.totalAmount || 0);
         // Extract complete customer information
         const customerResponse = item.customerResponse || item.customer || {};
         
@@ -411,6 +412,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     }
   };
   const fetchInvoiceNumber = async (gstId) => {
+    
     try {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       
@@ -422,6 +424,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GENERATE_INVOICE_NUMBER}?ddoId=${ddoId}&gstId=${gstId}`);
       if (response && response.status === 'success') {
         setInvoiceNumber(response?.invoiceNumber || '');
+        setInvoiceId(response?.invoiceId || '');
         // setLoading(false);
       }
     } catch (error) {
@@ -456,6 +459,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.BILL_LIST}?ddoCode=${ddoCode}`);
       if (response?.status === 'success' && Array.isArray(response.data)) {
+
+        console.log("response data in generate bill screen ::  ", response.data);
+        
         const mappedRecords = response.data.map((item, index) => ({
           id: item.id || item.billId || `proforma-${index}`,
           proformaNumber: item.billNumber || item.proformaNumber || `PA-${String(index + 1).padStart(4, '0')}`,
@@ -518,8 +524,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     setCustomerType('');
     setGstCalculation(null);
     setLineItems([
-      { serialNo: 1, description: '', amount: "", hsnNumber: '', quantity: 1 },
-      { serialNo: 2, description: '', amount: "", hsnNumber: '', quantity: 1 },
+      { serialNo: 1, serviceName: '', amount: "", hsnNumber: '', quantity: 1 },
+      { serialNo: 2, serviceName: '', amount: "", hsnNumber: '', quantity: 1 },
     ]);
     setIsInvoiceCreation(false);
   };
@@ -589,7 +595,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     if (record.raw && record.raw.items && Array.isArray(record.raw.items) && record.raw.items.length > 0) {
       const lineItemsData = record.raw.items.map((item, index) => ({
         serialNo: index + 1,
-        description: item.serviceName || item.description || '',
+        serviceName: item.serviceName ||  '',
         amount: item.amount || item.rate || 0,
         hsnNumber: item.hsnCode || item.hsnNumber || (hsnList.length > 0 ? hsnList[0].hsnCode : ''),
         quantity: item.quantity || 1
@@ -601,6 +607,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     if (record.raw) {
       if (record.raw.remarks) setNote(record.raw.remarks);
       if (record.raw.invoiceNumber) setInvoiceNumber(record.raw.invoiceNumber);
+      if (record.raw.invoiceId) setInvoiceId(record.raw.invoiceId);
       if (record.raw.invoiceDate) {
         setBillDetails(prev => ({
           ...prev,
@@ -778,10 +785,10 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     
     if (invoiceType !== 'RCM' && invoiceType !== 'FCM' && invoiceType !== 'EXEMPTED') {
       if (calculation.isSameState) {
-        setNote('CGST @' + cgstRate + '% + SGST @' + sgstRate + '% = ' + (cgstRate + sgstRate) + '%');
+        // setNote('CGST @' + cgstRate + '% + SGST @' + sgstRate + '% = ' + (cgstRate + sgstRate) + '%');
         setNotificationDetails('Same State - CGST and SGST applicable');
       } else {
-        setNote(`IGST @${gstRate}% (Different State)`);
+        // setNote(`IGST @${gstRate}% (Different State)`);
         setNotificationDetails('Different State - IGST applicable');
       }
     }
@@ -938,7 +945,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       ...lineItems,
       { 
         serialNo: lineItems.length + 1, 
-        description: '', 
+        serviceName: '', 
         amount: 0, 
         hsnNumber: defaultHsn, 
         quantity: 1 
@@ -986,7 +993,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     }
     for (let i = 0; i < lineItems.length; i++) {
       const item = lineItems[i];
-      const descValidation = validateDescription(item.description);
+      console.log("item details in onsave ",item);
+      
+      const descValidation = validateDescription(item.serviceName);
       const amountValidation = validateAmount(item.amount, `${t('bill.lineItem')} ${i + 1} ${t('label.amount')}`);
       
       if (!descValidation.valid) {
@@ -1020,7 +1029,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       const grandTotal = gstCalculation?.finalAmount || totalTaxableValue;
       const balanceAmount = grandTotal - (parseFloat(paidAmount) || 0);
       const billData = {
-        invoiceId: null,
+        invoiceId:invoiceId?invoiceId: null,
         ddoId: ddoId,
         bankId: bankDetails?.id || null,
         gstId: gstDetails?.gstId || gstDetails?.id || null,
@@ -1041,14 +1050,14 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         balanceAmount: balanceAmount,
         
         items: lineItems.map((item) => {
-          console.log('Mapping hsnList item for billData:', hsnList, item);
+          console.log('Mapping hsnList item for billData:', hsnList, item   );
           const hsnData = hsnList.find(h => 
             h.hsnCode === item.hsnNumber
           );
           
           return {
             hsnId: hsnData?.id || null,
-            serviceName: item.serviceName,
+            serviceName: item.serviceName || "",
             quantity: 1,
             rate: parseFloat(item.amount) || 0,
             amount: parseFloat(item.amount) || 0,
@@ -1090,7 +1099,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'image/png' });
-        signatureFile = new File([blob], `signature_${Date.now()}.png`, { type: 'image/png' });
+        // signatureFile = new File([blob], `signature_${Date.now()}.png`, { type: 'image/png' });
+        signatureFile = new File();
       }
       console.log('Bill Data to be saved:', billData);
       const response = await ApiService.handlePostMultiPartFileRequest(
@@ -1102,11 +1112,12 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         toast.success(t('bill.savedSuccessfully'));
         
         // Auto-redirect to Proforma Advice list after successful save
-        setTimeout(() => {
+        // setTimeout(() => {
           setShowForm(false);
           // Refresh the proforma list to show the newly saved entry
-          fetchProformaAdviceDetails();
-        }, 1500); // Give user time to see the success message
+        await  fetchProformaAdviceDetails();
+      await  fetchInvoiceNumber(gstDetails.gstId);
+        // }, 1500); // Give user time to see the success message
         
       } else {
         toast.error(response?.message || t('alert.error'));
@@ -1116,6 +1127,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       toast.error(t('alert.error'));
     } finally {
       setSaving(false);
+      
     }
   };
   const handlePrintBill = () => {
@@ -1652,7 +1664,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
               ${lineItems.map((item, index) => `
                 <tr>
                   <td class="text-center">${item.serialNo}</td>
-                  <td>${item.description}</td>
+                  <td>${item.serviceName}</td>
                   <td>${item.hsnNumber} - Public Administration</td>
                   <td class="text-center">1</td>
                   <td class="text-center">Nos</td>

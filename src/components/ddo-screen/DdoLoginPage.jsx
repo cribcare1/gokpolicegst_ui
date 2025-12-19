@@ -127,6 +127,7 @@ export default function LoginPage() {
     console.log("username : "+username);
     console.log("password : "+password);
     localStorage.removeItem("token");
+       localStorage.removeItem('gstinListCache');
     
     
     const requestBody = {

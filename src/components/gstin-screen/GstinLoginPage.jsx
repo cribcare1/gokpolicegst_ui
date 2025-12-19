@@ -129,6 +129,7 @@ export default function GstinLoginPage() {
     setLoading(true);
     setError(null);
     localStorage.removeItem("token");
+       localStorage.removeItem('gstinListCache');
     
     
     const requestBody = {

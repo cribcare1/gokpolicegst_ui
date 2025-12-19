@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '@/components/api/api_const';
 import ApiService from '@/components/api/api_service';
+import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
 // Demo GSTIN data for immediate display
 
@@ -16,7 +17,12 @@ export function useGstinList() {
 
     try {
       const cached = localStorage.getItem('gstinListCache');
-      if (cached) {
+      const gstinList = cached ? JSON.parse(cached) : [];
+      const gstCount = localStorage.getItem(LOGIN_CONSTANT.GST_COUNT);
+       console.log("Gst cout ::::: "+ gstCount + " cached data :::::"+ gstinList.length);
+       console.log( " cached data :::::"+ cached);
+       
+      if (gstinList.length== gstCount) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setGstinList(parsed);
@@ -29,6 +35,8 @@ export function useGstinList() {
 
     // no cache found, fetch from API
     fetchGstinList();
+
+    
   }, []);
 
   const fetchGstinList = async (force = false) => {
@@ -36,6 +44,7 @@ export function useGstinList() {
     try {
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST, 4000);
       if (response?.status === 'success' && response?.data?.length > 0) {
+        localStorage.setItem(LOGIN_CONSTANT.GST_COUNT , response?.data?.length);
         const gstinNumbers = response.data.map(item => {
           const gstinValue = item.gstNumber || item.gstinNumber || item.gstin;
           const gstinName = item.gstName || item.name || item.gstinName || item.gstin_name || '';

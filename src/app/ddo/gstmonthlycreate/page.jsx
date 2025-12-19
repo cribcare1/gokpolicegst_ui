@@ -56,7 +56,7 @@ export default function GSTTDSMonthlyCreate() {
   useEffect(() => {
     const current = new Date().getFullYear();
     const arr = [];
-     for (let i = 0; i >= 0; i--) {
+    for (let i = 0; i >= 0; i--) {
       let s = current - i;
       arr.push(`${s}-${String(s + 1).slice(2)}`);
     }
@@ -194,7 +194,7 @@ export default function GSTTDSMonthlyCreate() {
       });
 
       setMonthList([]);
-      router.replace('/ddo/ddo_gstmonthlyreport_list'); 
+      router.replace('/ddo/ddo_gstmonthlyreport_list');
     } catch (err) {
       toast.show(err.message, "error");
     } finally {
@@ -242,14 +242,34 @@ export default function GSTTDSMonthlyCreate() {
       <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between gap-6 items-start">
-          <div>
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
+            {/* LEFT */}
+            <Button
+              variant="outline"
+              onClick={() => router.replace("/ddo/ddo_gstmonthlyreport_list")}
+            >
+              ← Back to List
+            </Button>
+
+            {/* RIGHT */}
+           <div className="flex flex-col items-start">
+  <h1 className="text-2xl lg:text-3xl font-extrabold">
+    {t("nav.gstmonthlyreports")}
+  </h1>
+  <span className="text-sm text-gray-500">
+    Submit monthly GST-TDS return details
+  </span>
+</div>
+          </div>
+
+          {/* <div>
             <h1 className="text-2xl lg:text-3xl font-extrabold mb-2">
               {t("nav.gstmonthlyreports")}
             </h1>
             <p className="text-sm text-gray-500">
               Submit monthly GST-TDS return details
             </p>
-          </div>
+          </div> */}
 
           {/* DDO INFO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
