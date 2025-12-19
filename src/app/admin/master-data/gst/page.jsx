@@ -11,7 +11,7 @@ import { validateGSTIN, validateEmail, validateMobile, validateName, validateAdd
 import { Plus, Edit, Trash2, Search, ArrowLeft, Users, Download } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
-
+import {LOGIN_CONSTANT} from "@/components/utils/constant";
 // Extract PAN from GSTIN (positions 2-11, 0-indexed: 2-12)
 const extractPANFromGSTIN = (gstin) => {
   if (!gstin || gstin.length < 12) return null;
@@ -86,14 +86,17 @@ export default function GSTMasterPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}` );
-      if (response  && response.status === 'success') {
-          const gstData = response.data;
-          setData(gstData);
-          setFilteredData(gstData);
+
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}`);
+      if (response && response.status === 'success') {
+        const gstData = response.data;
+     
+
+        setData(gstData);
+           localStorage.setItem(LOGIN_CONSTANT.GST_COUNT, data.length);
+        setFilteredData(gstData);
       }
-      
+
     } catch (error) {
       console.log('Using demo data');
     } finally {
@@ -111,13 +114,13 @@ export default function GSTMasterPage() {
   const handleEdit = (item) => {
     setEditingItem(item);
     const ddoCount = ddoCounts[item.id] || item.ddoCount || 0;
-    
+
     // Auto-populate state code from GSTIN if not already present
     let stateCode = item.stateCode;
     if (!stateCode && item.gstNumber) {
       stateCode = extractStateCodeFromGSTIN(item.gstNumber);
     }
-    
+
     setFormData({
       ...item,
       ddoCount: ddoCount, // Store DDO count in form data for reference
@@ -134,13 +137,13 @@ export default function GSTMasterPage() {
       toast.error(`GSTIN is protected - dependent records found`);
       return;
     }
-    
+
     if (!confirm('Are you sure you want to delete this record?')) return;
-    
+
     try {
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.GST_DELETE}${item.gstId}`,{} );
-      
+        `${API_ENDPOINTS.GST_DELETE}${item.gstId}`, {});
+
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
         fetchData();
@@ -154,7 +157,7 @@ export default function GSTMasterPage() {
 
   const validateForm = (data) => {
     console.log("validate form is called");
-    
+
     // Validate GSTIN
     const gstValidation = validateGSTIN(data.gstNumber);
     if (!gstValidation.valid) {
@@ -169,54 +172,54 @@ export default function GSTMasterPage() {
 
     const panExists = panList.some(pan => pan.panNumber === extractedPAN);
     if (!panExists) {
-      return { 
-        valid: false, 
-        message: `GSTIN contains PAN "${extractedPAN}" which does not exist in PAN Master. Please add the PAN first.` 
+      return {
+        valid: false,
+        message: `GSTIN contains PAN "${extractedPAN}" which does not exist in PAN Master. Please add the PAN first.`
       };
     }
-    
+
     // Validate GST Holder Name
     const holderNameValidation = validateName(data.gstHolderName, 'GST Holder Name');
     if (!holderNameValidation.valid) {
       return { valid: false, message: holderNameValidation.message };
     }
-    
+
     // Validate GST Name
     const gstNameValidation = validateName(data.gstName, 'GST Name');
     if (!gstNameValidation.valid) {
       return { valid: false, message: gstNameValidation.message };
     }
-    
+
     // Validate Address
     const addressValidation = validateAddress(data.address);
     if (!addressValidation.valid) {
       return { valid: false, message: addressValidation.message };
     }
-    
+
     // Validate City
     const cityValidation = validateCity(data.city);
     if (!cityValidation.valid) {
       return { valid: false, message: cityValidation.message };
     }
-    
+
     // Validate PIN Code
     const pinValidation = validatePIN(data.pinCode);
     if (!pinValidation.valid) {
       return { valid: false, message: pinValidation.message };
     }
-    
+
     // Validate Email
     const emailValidation = validateEmail(data.email);
     if (!emailValidation.valid) {
       return { valid: false, message: emailValidation.message };
     }
-    
+
     // Validate Mobile
     const mobileValidation = validateMobile(String(data.mobile));
     if (!mobileValidation.valid) {
       return { valid: false, message: mobileValidation.message };
     }
-    
+
     // Validate State Code (if provided)
     if (data.stateCode) {
       const stateCodeValidation = validateStateCode(data.stateCode);
@@ -224,7 +227,7 @@ export default function GSTMasterPage() {
         return { valid: false, message: stateCodeValidation.message };
       }
     }
-    
+
     // Validate Password (if provided in edit mode)
     if (data.password && data.password.trim() !== '') {
       const passwordValidation = validatePassword(data.password);
@@ -232,7 +235,7 @@ export default function GSTMasterPage() {
         return { valid: false, message: passwordValidation.message };
       }
     }
-    
+
     return { valid: true };
   };
 
@@ -244,7 +247,7 @@ export default function GSTMasterPage() {
     if (!validation.valid) {
       // Show toast error
       toast.error(validation.message || t('validation.required'));
-      
+
       // Set field error in UI for better visibility
       // Check which field the error is related to
       if (validation.message && validation.message.includes('GSTIN')) {
@@ -271,24 +274,25 @@ export default function GSTMasterPage() {
         // PAN validation error is related to GSTIN field
         setFieldErrors((prev) => ({ ...prev, gstNumber: validation.message }));
       }
-      
+
       return;
     }
 
     try {
       const url = editingItem ? API_ENDPOINTS.GST_UPDATE : API_ENDPOINTS.GST_ADD;
-      
+
       // Prepare form data - remove empty password if not provided in edit mode
       const submitData = { ...formData };
       if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
         delete submitData.password;
       }
-       delete submitData.userId;
-       delete submitData.ddoCount;
-       delete submitData.logo;
+      delete submitData.userId;
+      delete submitData.ddoCount;
+      delete submitData.logo;
       const response = await ApiService.handlePostMultiPartFileRequest(url, submitData, formData.logo);
-      
+
       if (response && response.status === 'success') {
+
         toast.success(t('alert.success'));
         setIsModalOpen(false);
         setEditingItem(null);
@@ -307,10 +311,10 @@ export default function GSTMasterPage() {
   const updateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  
+
   const validateField = (field, value) => {
     let error = '';
-    
+
     switch (field) {
       case 'gstNumber':
         const gstValidation = validateGSTIN(value);
@@ -357,7 +361,7 @@ export default function GSTMasterPage() {
         }
         break;
     }
-    
+
     if (error) {
       setFieldErrors((prev) => ({ ...prev, [field]: error }));
     } else {
@@ -367,7 +371,7 @@ export default function GSTMasterPage() {
         return newErrors;
       });
     }
-    
+
     return !error;
   };
 
@@ -446,7 +450,7 @@ export default function GSTMasterPage() {
       // Create CSV content
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => 
+        ...rows.map(row =>
           row.map(cell => {
             // Escape commas and quotes in cell values
             const cellStr = String(cell || '');
@@ -468,7 +472,7 @@ export default function GSTMasterPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('CSV file downloaded successfully');
     } catch (error) {
       console.error('Error downloading CSV:', error);
@@ -477,8 +481,8 @@ export default function GSTMasterPage() {
   };
 
   const columns = [
-    { 
-      key: 'logo', 
+    {
+      key: 'logo',
       label: 'Logo',
       render: (value, row) => {
         const logoUrl = row.logo || row.logoUrl || value;
@@ -487,9 +491,9 @@ export default function GSTMasterPage() {
         if (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') {
           return (
             <div className="flex items-center justify-center">
-              <img 
-                src={imageUrl} 
-                alt="Logo" 
+              <img
+                src={imageUrl}
+                alt="Logo"
                 className="w-12 h-12 object-contain rounded-lg border border-[var(--color-border)] bg-white dark:bg-gray-800"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -518,8 +522,8 @@ export default function GSTMasterPage() {
     { key: 'pinCode', label: 'PIN' },
     { key: 'mobile', label: t('label.mobile') },
     { key: 'email', label: t('label.email') },
-    { 
-      key: 'ddoCount', 
+    {
+      key: 'ddoCount',
       label: 'DDO Count',
       render: (value, row) => {
         const count = ddoCounts[row.id] || value || 0;
@@ -539,7 +543,7 @@ export default function GSTMasterPage() {
   const tableActions = (row) => {
     const ddoCount = ddoCounts[row.id] || row.ddoCount || 0;
     const canDelete = ddoCount === 0;
-    
+
     return (
       <>
         <button
@@ -558,11 +562,10 @@ export default function GSTMasterPage() {
             handleDelete(row);
           }}
           disabled={!canDelete}
-          className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${
-            canDelete
+          className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${canDelete
               ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-          }`}
+            }`}
           aria-label="Delete"
           title={!canDelete ? `GSTIN is protected - dependent records found` : 'Delete'}
         >
@@ -604,9 +607,9 @@ export default function GSTMasterPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={handleDownloadCSV} 
-                variant="secondary" 
+              <Button
+                onClick={handleDownloadCSV}
+                variant="secondary"
                 className="group w-full sm:w-auto"
               >
                 <Download className="mr-2 group-hover:scale-110 transition-transform duration-300" size={18} />
@@ -686,11 +689,10 @@ export default function GSTMasterPage() {
                             validateField(field.key, e.target.value);
                           }
                         }}
-                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
-                          fieldErrors[field.key] 
-                            ? 'border-red-500 focus:ring-red-500' 
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
+                            ? 'border-red-500 focus:ring-red-500'
                             : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
-                        }`}
+                          }`}
                         rows={3}
                         required={field.required}
                       />
@@ -744,11 +746,10 @@ export default function GSTMasterPage() {
                             validateField(field.key, e.target.value);
                           }
                         }}
-                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${
-                          fieldErrors[field.key] 
-                            ? 'border-red-500 focus:ring-red-500' 
+                        className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
+                            ? 'border-red-500 focus:ring-red-500'
                             : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
-                        }`}
+                          }`}
                         placeholder="Leave blank to keep current password"
                         required={field.required}
                       />
@@ -764,7 +765,7 @@ export default function GSTMasterPage() {
                         onChange={(e) => {
                           let value = e.target.value;
                           const fieldLower = field.key.toLowerCase();
-                          
+
                           // ✅ Only allow integers for mobile, PIN, and account number fields
                           if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
                             // Mobile: only digits, max 10
@@ -781,7 +782,7 @@ export default function GSTMasterPage() {
                           } else if (fieldLower.includes('pan') || fieldLower.includes('gst')) {
                             // ✅ Auto-uppercase for PAN or GST fields
                             value = value.toUpperCase();
-                            
+
                             // Auto-populate state code from GSTIN (first 2 digits)
                             if (fieldLower.includes('gst') && value.length >= 2) {
                               const stateCode = extractStateCodeFromGSTIN(value);
@@ -790,7 +791,7 @@ export default function GSTMasterPage() {
                               }
                             }
                           }
-                          
+
                           if (field.type === 'number') {
                             const numValue = value === '' ? '' : parseInt(value);
                             updateFormData(field.key, isNaN(numValue) ? '' : numValue);
@@ -810,9 +811,9 @@ export default function GSTMasterPage() {
                           const fieldLower = field.key.toLowerCase();
                           // Block non-numeric input for mobile, PIN, and account number fields
                           if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone') ||
-                              fieldLower.includes('pin') || fieldLower.includes('pincode') ||
-                              fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
-                              fieldLower.includes('statecode') || fieldLower.includes('state code')) {
+                            fieldLower.includes('pin') || fieldLower.includes('pincode') ||
+                            fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
+                            fieldLower.includes('statecode') || fieldLower.includes('state code')) {
                             if (!/[0-9]/.test(e.key)) {
                               e.preventDefault();
                             }
@@ -848,16 +849,14 @@ export default function GSTMasterPage() {
                             validateField(field.key, valueToValidate);
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                          fieldErrors[field.key] 
-                            ? 'border-red-500 focus:ring-red-500' 
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
+                            ? 'border-red-500 focus:ring-red-500'
                             : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
-                        } ${
-                          (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
-                          (field.key === 'stateCode')
+                          } ${(field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
+                            (field.key === 'stateCode')
                             ? 'bg-[var(--color-surface)] cursor-not-allowed opacity-75'
                             : 'bg-[var(--color-background)]'
-                        }`}
+                          }`}
                         placeholder={field.placeholder}
                         required={field.required}
                         maxLength={field.maxLength}

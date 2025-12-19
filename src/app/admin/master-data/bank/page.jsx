@@ -243,7 +243,7 @@ export default function BankDetailsPage() {
       return { valid: false, message: accountNumberValidation.message };
     }
     
-    const accountHolderNameValidation = validateName(data.accountHolderName, 'Account Holder Name');
+    const accountHolderNameValidation = validateName(data.accountName, 'Account Holder Name');
     if (!accountHolderNameValidation.valid) {
       return { valid: false, message: accountHolderNameValidation.message };
     }
@@ -457,7 +457,7 @@ export default function BankDetailsPage() {
   const columns = [
     { key: 'gstinNumber', label: t('label.gstin') },
     { key: 'accountNumber', label: 'Account Number' },
-    { key: 'accountHolderName', label: 'Account Holder Name' },
+    { key: 'accountName', label: 'Account Holder Name' },
     { key: 'bankName', label: 'Bank Name' },
     { key: 'branchName', label: 'Branch Name' },
     { key: 'accountType', label: 'Account Type' },
@@ -466,7 +466,7 @@ export default function BankDetailsPage() {
     { 
       key: 'effectiveDate', 
       label: 'Effective Date',
-      render: (date) => date ? new Date(date).toLocaleDateString('en-IN') : 'N/A'
+      // render: (date) => date ? new Date(date).toLocaleDateString('en-IN') : 'N/A'
     },
     { 
       key: 'status', 
@@ -497,7 +497,7 @@ export default function BankDetailsPage() {
         readOnly: editingItem ? true : false // GSTIN cannot be changed when editing (must remain same)
       },
       { key: 'accountNumber', label: 'Account Number', required: true },
-      { key: 'accountHolderName', label: 'Account Holder Name', required: true },
+      { key: 'accountName', label: 'Account Holder Name', required: true },
       { key: 'bankName', label: 'Bank Name', required: true },
       { key: 'branchName', label: 'Branch Name', required: true },
       { key: 'accountType', label: 'Account Type', required: true, type: 'select', options: [

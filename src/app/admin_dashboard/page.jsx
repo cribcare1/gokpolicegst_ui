@@ -7,7 +7,7 @@ import { t } from '@/lib/localization';
 import { Package, Users, Receipt, Clock } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import Link from 'next/link';
-
+import { LOGIN_CONSTANT } from "@/components/utils/constant";
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
     gstInCount: 0,
@@ -23,15 +23,10 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     // Load demo data immediately for instant UI
-    const demoData = {
-      gstInCount: 245,
-      ddoCount: 92,
-      totalBillingCount: 156,
-      pendingPaymentSubmission: 38,
-    };
+  
     
     // Show demo data immediately
-    setStats(demoData);
+    // setStats(demoData);
     setLoading(false);
     
     try {
@@ -46,6 +41,8 @@ export default function AdminDashboard() {
       
       if (result && result.status === 'success' && result.data && !result.error) {
         const data = result.data;
+         localStorage.setItem(LOGIN_CONSTANT.GST_COUNT,data.totalGst);
+      
         setStats({
           gstInCount: data.totalGst || 0,
           ddoCount: data.totalDdo || 0,

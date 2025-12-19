@@ -106,6 +106,9 @@ export default function ProformaAdviceForm({
   // Validate form whenever required fields change
   useEffect(() => {
     console.log("ProformaAdviceForm  useEffect :: ddoDetails",ddoDetails.fullName);
+
+    console.log('Bank details in perform form screeen :::: ', bankDetails);
+    
     
     validateForm();
   }, [selectedCustomer, lineItems, hsnList, ddoSignature]);
@@ -117,7 +120,7 @@ export default function ProformaAdviceForm({
     const hasCustomer = selectedCustomer && selectedCustomer.customerName && selectedCustomer.customerName.trim() !== '';
     const hasLineItems = lineItems && lineItems.length > 0;
     const hasValidAmounts = hasLineItems && lineItems.every(item =>
-      item.description && item.description.trim() !== '' &&
+      item.serviceName && item.serviceName.trim() !== '' &&
       parseFloat(item.amount) > 0
     );
     // Signature validation - check if ddoSignature prop is available and not empty
@@ -194,7 +197,7 @@ export default function ProformaAdviceForm({
   const validateAndSetErrors = (items) => {
     const errors = {};
     items.forEach((item, idx) => {
-      const descValidation = validateDescription(item.description);
+      const descValidation = validateDescription(item.serviceName);
       const amountValidation = validateAmount(item.amount, `Line item ${idx + 1} amount`);
       if (!descValidation.valid) {
         errors[`${idx}-desc`] = descValidation.message;
@@ -224,7 +227,7 @@ export default function ProformaAdviceForm({
     const lineItemsHTML = lineItems.map((item, index) => `
       <tr>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.serialNo}</td>
-        <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${item.description || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${item.serviceName || ''}</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.hsnNumber || ''}</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">1</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">Nos</td>
@@ -523,7 +526,7 @@ export default function ProformaAdviceForm({
                     <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px;"> Details For Bank Transfer</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px;">
                       <div><strong>Bank:</strong> ${bankDetails?.bankName || 'State Bank of India'}</div>
-                      <div><strong>Branch:</strong> ${bankDetails?.bankBranch || 'Bangalore Main'}</div>
+                      <div><strong>Branch:</strong> ${bankDetails?.branchName || 'Bangalore Main'}</div>
                       <div><strong>IFSC:</strong> ${bankDetails?.ifscCode || 'SBIN0001234'}</div>
                       <div><strong>Account No:</strong> ${bankDetails?.accountNumber || '1234567890'}</div>
                     </div>
@@ -799,8 +802,8 @@ export default function ProformaAdviceForm({
                         <td className="border border-[var(--color-border)] p-2 text-sm mobile-text-xs mobile-xs-p-1">
                           <div>
                             <textarea
-                              value={item.description}
-                              onChange={(e) => handleLineItemChangeWithValidation(index, 'description', e.target.value)}
+                              value={item.serviceName}
+                              onChange={(e) => handleLineItemChangeWithValidation(index, 'serviceName', e.target.value)}
                               className={`w-full px-2 py-1 border rounded text-sm resize-none bg-[var(--color-background)] focus:outline-none focus:ring-1 mobile-text-xs ${lineItemErrors[`${index}-desc`]
                                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                                 : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
@@ -1039,7 +1042,7 @@ export default function ProformaAdviceForm({
                   </div>
                   <div className="mobile-full">
                     <span className="font-medium text-[var(--color-text-primary)] mobile-text-sm">Branch:</span>
-                    <p className="font-semibold mobile-text-sm">{bankDetails?.bankBranch || '-'}</p>
+                    <p className="font-semibold mobile-text-sm">{bankDetails?.branchName || '-'}</p>
                   </div>
                   <div className="mobile-full">
                     <span className="font-medium text-[var(--color-text-primary)] mobile-text-sm">IFSC Code:</span>
@@ -1403,7 +1406,7 @@ export default function ProformaAdviceForm({
                   {lineItems.map((item, index) => (
                     <tr key={index}>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.serialNo}</td>
-                      <td className="border border-gray-400 p-2" style={{ fontSize: '11px' }}>{item.description}</td>
+                      <td className="border border-gray-400 p-2" style={{ fontSize: '11px' }}>{item.serviceName}</td>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.hsnNumber}</td>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>1</td>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
@@ -1526,7 +1529,7 @@ export default function ProformaAdviceForm({
               <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}> Details For Bank Transfer</h3>
               <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
                 <div><strong>Bank:</strong> {bankDetails?.bankName || 'State Bank of India'}</div>
-                <div><strong>Branch:</strong> {bankDetails?.bankBranch || 'Bangalore Main'}</div>
+                <div><strong>Branch:</strong> {bankDetails?.branchName || 'Bangalore Main'}</div>
                 <div><strong>IFSC:</strong> {bankDetails?.ifscCode || 'SBIN0001234'}</div>
                 <div><strong>Account No:</strong> {bankDetails?.accountNumber || '1234567890'}</div>
               </div>

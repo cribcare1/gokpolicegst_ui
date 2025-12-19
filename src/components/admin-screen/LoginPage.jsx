@@ -58,6 +58,7 @@ export default function AdminLogin() {
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.LOGIN, requestBody);
   
       if (response.status === "success") {
+         localStorage.removeItem('gstinListCache');
         setUserData(response.login_response);
         localStorage.setItem(LOGIN_CONSTANT.USER_TOKEN, response.login_response.token);
         localStorage.setItem(LOGIN_CONSTANT.USER_ID, response.login_response.userId);

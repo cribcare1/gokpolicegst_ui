@@ -448,7 +448,7 @@ export default function BankDetailsPage() {
     {
       key: 'effectiveDate',
       label: 'Effective Date',
-      render: (value) => value ? formatDateDDMMYYYY(value) : '-',
+      render: (value) => value ? value : '-',
     },
 
     {

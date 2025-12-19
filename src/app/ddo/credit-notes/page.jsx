@@ -64,6 +64,7 @@ export default function ReceiptListPage() {
           balance: invoice.balanceAmount,
           paymentMode: invoice.paymentType,
           paymentRef: invoice.paymentReferenceNumber || "-",
+          status :invoice.status
         }));
 
         setReceiptsData(list);
@@ -114,12 +115,50 @@ const receiptColumns = [
   },
   // { key: "paNumber", label: "Proforma Advice No" },
   { key: "customerName", label: "Customer Name" },
-  { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v) },
-  { key: "amountReceived", label: "Amount Received", render: (v) => formatCurrency(v) },
+  { key: "amountReceived", label: "Amount Payable", render: (v) => formatCurrency(v , true) },
+  { key: "amountReceived", label: "Amount Received", render: (v) => formatCurrency(v , true) },
   // { key: "balance", label: "Balance", render: (v) => formatCurrency(v) },
   { key: "paymentMode", label: "Payment Mode" },
   { key: "paymentRef", label: "Reference No" },
-  { key: "paymentRef", label: "Status" },
+ {
+    key: "status",
+    label: "Status",
+  render: (status) => {
+  const statusMap = {
+    generated: {
+      label: "Generated" || "generated",
+      className:
+        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+    },
+    pending: {
+      label: "Pending" || "pending",
+      className:
+        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+    },
+    failed: {
+      label: "Failed",
+      className:
+        "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+    },
+  };
+
+  const config = statusMap[status] || {
+    label: status || "Unknown",
+    className:
+      "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
+  };
+
+  return (
+    <span
+      className={`px-2 py-1 rounded text-xs font-medium ${config.className}`}
+    >
+      {config.label}
+    </span>
+  );
+},
+
+
+  },
 ];
 
   return (

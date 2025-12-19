@@ -104,7 +104,7 @@ export default function DDOMappingPage() {
         toast.success('DDOs mapped successfully');
         setSelectedDDOs(new Set());
         // Refresh DDO list after successful mapping
-        refetchDDOs();
+        refetchDDOs(gstinList[0].gstNumber);
       } else {
         toast.error(response?.message || 'Failed to map DDOs');
       }

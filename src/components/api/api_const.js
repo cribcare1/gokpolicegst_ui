@@ -47,7 +47,8 @@ export const API_ENDPOINTS = {
   TDS_MONTHLY_SAVE : `${API_BASE_URL}/monthly-gst-filing/saveOrUpdateNew`,
   TDS_QUARTERLY_SAVE : `${API_BASE_URL}/quarterly-income-tax/saveOrUpdate`,
   PORFORMA_DELETE_CANCEL : `${API_BASE_URL}/invoices/updateInvoiceStatus/`,
-
+ CREATE_SHORTFALL_INVOICE: `${API_BASE_URL}/tds/invoices/shortfallList`,
+ 
   // HSN Master Data Endpoints
   HSN_LIST: `${API_BASE_URL}/hsn/getAllHSN`,
   HSN_ADD: `${API_BASE_URL}/hsn/saveOrUpdateHSN`,
