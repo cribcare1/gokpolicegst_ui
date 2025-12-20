@@ -82,7 +82,18 @@ export default function GSTMasterPage() {
       ]);
     }
   };
-
+  
+  const fetchDDOList = async (gstId) => {
+    try {
+      const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}${gstId}`);
+      if (response?.status === 'success' && response?.data) {
+        setDdoList(response.data?.ddos);
+      } 
+    } catch (error) {
+      console.error('Error fetching DDO list:', error);
+      
+    }
+  };
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -376,9 +387,10 @@ export default function GSTMasterPage() {
   };
 
   const handleDDOCountClick = async (gstItem) => {
+    console.log("gstItem========", gstItem);
     setSelectedGSTIN(gstItem);
     setShowDDOList(true);
-    // await fetchDDOList(gstItem.gstNumber);
+    await fetchDDOList(gstItem.gstId);
   };
 
   const handleDDOEditPassword = (ddo) => {
