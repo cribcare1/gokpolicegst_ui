@@ -188,15 +188,31 @@ export default function ReceiptPreviewPage() {
   }
 
   // 🔹 EXACT payload format as required by backend
-  const payload = data.map((item) => ({
-    invoiceId: item.invoiceId,
-    amount: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
-  }));
+  // const payload = data.map((item) => ({
+  //   invoiceId: item.invoiceId,
+  //   amount: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
+  // }));
 
+  const payload = {
+      
+    receipts: data.map((item) => ({
+      
+     
+      invoiceId: item.invoiceId,
+      type:
+        editedValues[item.invoiceId]?.paymentMode??"Other" 
+         ,
+      referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
+      amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
+      paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
+      differenceAmount: Number(item?.difference) || 0,
+      differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
+    })),
+  };
   try {
     setLoading(true);
     await ApiService.handlePostRequest(
-      API_ENDPOINTS.CREATE_SHORTFALL_INVOICE,
+      API_ENDPOINTS.CREATE_RECIEPT,
       payload
     );
     toast.success("Shortfall invoice generated successfully");

@@ -191,9 +191,12 @@ export default function ReceiptPreviewPage() {
         return;
       }
     }
-
+    console.log("temi=========",data);
     const payload = {
+      
       receipts: data.map((item) => ({
+        
+       
         invoiceId: item.invoiceId,
         type:
           editedValues[item.invoiceId]?.paymentMode??"Other" 
@@ -201,6 +204,7 @@ export default function ReceiptPreviewPage() {
         referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
         amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
         paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
+        differenceAmount: Number(item?.difference) || 0,
         differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
       })),
     };

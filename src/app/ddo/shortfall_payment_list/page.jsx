@@ -73,7 +73,7 @@ export default function ShortfallPaymentPage() {
       if (!gstId) return;
 
       const response = await ApiService.handleGetRequest(
-        `https://api.gokpolicegst.com:8443/tds/invoices/invoiceListDetails?isShortfall=true&status=SAVED&ddoId=${ddoId}`
+        `${API_ENDPOINTS.FETCH_INVOICE_LIST}${ddoId}`
       );
 
       if (response && response.success === "success") {
