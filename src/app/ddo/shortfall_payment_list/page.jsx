@@ -221,9 +221,16 @@ export default function ShortfallPaymentPage() {
             min="0"
             step="1"
             className="border rounded px-2 py-1 w-28"
-            value={edited}
-            onChange={(e) => updateField(row.id, "amountReceived", parseFloat(e.target.value) || 0)}
-          />
+            value={edited === 0 ? "" : edited}
+            onChange={(e) => {
+              const value = e.target.value;
+              updateField(
+                row.id,
+                "amountReceived",
+                value === "" ? "" : Number(value)
+              );
+            }}
+          /> 
         );
       },
     },
