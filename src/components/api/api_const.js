@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.gokpolicegst.com:8443/tds"; //"http://13.126.232.163:8888/tds";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.gokpolicegst.com:8443/tds"; //"https://api.gokpolicegst.com:8443/tds";
 
 export const API_ENDPOINTS = {
   UPLOAD: `${API_BASE_URL}/upload`,
@@ -82,7 +82,7 @@ export const API_ENDPOINTS = {
   BILL_DETAIL: `${API_BASE_URL}/bill/detail/`,
   BILL_SUBMIT: `${API_BASE_URL}/bill/submit`,
   BILL_APPROVE: `${API_BASE_URL}/bill/approve/`,
-BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
+  BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
   BILL_DELETE: `${API_BASE_URL}/bill/delete/`,
   
   // Invoice Number Generation
@@ -114,6 +114,8 @@ BILL_REJECT: `${API_BASE_URL}/bill/reject/`,
   
   // DDO Mapping Endpoints
   DDO_MAPPING_UPDATE: `${API_BASE_URL}/gst/migrate-ddos`,
+
+  FETCH_INVOICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?isShortfall=true&status=SAVED&ddoId=`, 
   
 };
 

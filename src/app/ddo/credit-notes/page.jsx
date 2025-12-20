@@ -49,7 +49,7 @@ export default function ReceiptListPage() {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
 
       const response = await ApiService.handleGetRequest(
-        `${API_ENDPOINTS.INVOICE_LIST}${ddoId}&status=RECEIPT`
+        `${API_ENDPOINTS.INVOICE_LIST}${ddoId}&status=SUBMITTED`
       );
 
       if (response && response.success === "success") {

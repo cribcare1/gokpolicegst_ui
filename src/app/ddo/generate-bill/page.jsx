@@ -319,7 +319,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       }
       const mappedRecords = (payloadArray || []).map((item) => {
         const items = Array.isArray(item.items) ? item.items : [];
-       const proformaAmount = Math.round(item.totalAmount || 0);
+       const proformaAmount = Math.round(item.grandTotal || 0);
         // Extract complete customer information
         const customerResponse = item.customerResponse || item.customer || {};
         
@@ -465,7 +465,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         const mappedRecords = response.data.map((item, index) => ({
           id: item.id || item.billId || `proforma-${index}`,
           proformaNumber: item.billNumber || item.proformaNumber || `PA-${String(index + 1).padStart(4, '0')}`,
-          proformaAmount: item.totalAmount || item.billAmount || 0,
+          proformaAmount: item.proformaAmount || item.billAmount || 0,
           taxInvoiceAmount: item.invoiceAmount || item.paidAmount || 0,
           customerName: item.customerName || item.customer?.customerName || '-',
           serviceType: item.serviceType || item.invoiceType || '-',
@@ -1026,7 +1026,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       const totalCgst = gstCalculation?.cgst || 0;
       const totalSgst = gstCalculation?.sgst || 0;
       const totalIgst = gstCalculation?.igst || 0;
-      const grandTotal = gstCalculation?.finalAmount || totalTaxableValue;
+      const grandTotal = (invoiceType.toString().trim().toUpperCase() === 'RCM')?totalTaxableValue:gstCalculation?.finalAmount || totalTaxableValue;
       const balanceAmount = grandTotal - (parseFloat(paidAmount) || 0);
       const billData = {
         invoiceId:invoiceId?invoiceId: null,
