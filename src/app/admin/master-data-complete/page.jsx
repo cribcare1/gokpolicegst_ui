@@ -36,10 +36,10 @@ export default function MasterDataCompletePage() {
     },
     {
       id: 'hsn',
-      title: 'HSN/SAC Master',
+      title: 'HSN/SAC Master Master',
       icon: FileText,
       href: '/admin/master-data/hsn',
-      description: 'HSN/SAC Codes with GST Tax Rates',
+      description: 'HSN/SAC Master Codes with GST Tax Rates',
     },
     {
       id: 'ddo-mapping',

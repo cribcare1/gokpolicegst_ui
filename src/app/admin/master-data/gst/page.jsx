@@ -11,7 +11,7 @@ import { validateGSTIN, validateEmail, validateMobile, validateName, validateAdd
 import { Plus, Edit, Trash2, Search, ArrowLeft, Users, Download } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
-import {LOGIN_CONSTANT} from "@/components/utils/constant";
+import { LOGIN_CONSTANT } from "@/components/utils/constant";
 // Extract PAN from GSTIN (positions 2-11, 0-indexed: 2-12)
 const extractPANFromGSTIN = (gstin) => {
   if (!gstin || gstin.length < 12) return null;
@@ -82,16 +82,16 @@ export default function GSTMasterPage() {
       ]);
     }
   };
-  
+
   const fetchDDOList = async (gstId) => {
     try {
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST}${gstId}`);
       if (response?.status === 'success' && response?.data) {
         setDdoList(response.data?.ddos);
-      } 
+      }
     } catch (error) {
       console.error('Error fetching DDO list:', error);
-      
+
     }
   };
   const fetchData = async () => {
@@ -101,10 +101,10 @@ export default function GSTMasterPage() {
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.GST_LIST}`);
       if (response && response.status === 'success') {
         const gstData = response.data;
-     
+
 
         setData(gstData);
-           localStorage.setItem(LOGIN_CONSTANT.GST_COUNT, data.length);
+        localStorage.setItem(LOGIN_CONSTANT.GST_COUNT, data.length);
         setFilteredData(gstData);
       }
 
@@ -575,8 +575,8 @@ export default function GSTMasterPage() {
           }}
           disabled={!canDelete}
           className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${canDelete
-              ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
             }`}
           aria-label="Delete"
           title={!canDelete ? `GSTIN is protected - dependent records found` : 'Delete'}
@@ -589,8 +589,8 @@ export default function GSTMasterPage() {
 
   const formFields = [
     { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
-    { key: 'gstHolderName', label: 'GST Holder Name', required: true },
-    { key: 'gstName', label: t('label.name'), required: true },
+    { key: 'gstHolderName', label: 'GST Holder Name', required: true, readOnly: true },
+    { key: 'gstName', label: t('label.name'), required: true, readOnly: true },
     { key: 'address', label: t('label.address'), type: 'textarea', required: true },
     { key: 'city', label: 'City', required: true },
     { key: 'pinCode', label: 'PIN', required: true, maxLength: 6, type: 'text' },
@@ -702,8 +702,8 @@ export default function GSTMasterPage() {
                           }
                         }}
                         className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
                           }`}
                         rows={3}
                         required={field.required}
@@ -759,8 +759,8 @@ export default function GSTMasterPage() {
                           }
                         }}
                         className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
                           }`}
                         placeholder="Leave blank to keep current password"
                         required={field.required}
@@ -801,7 +801,40 @@ export default function GSTMasterPage() {
                               if (stateCode !== null) {
                                 updateFormData('stateCode', stateCode);
                               }
+                              if (value.length >= 12) { // GSTIN contains PAN
+                                const extractedPAN = extractPANFromGSTIN(value);
+
+                                const panRecord = panList.find(p => p.panNumber === extractedPAN);
+                                console.log(
+                                  "panrecord :::::::::::: ", panRecord
+                                );
+                                console.log(
+                                  "panrecord :::::::::::: ", panRecord
+                                );
+
+                                if (panRecord) {
+                                  // Update GST Holder Name and gstName dynamically
+                                  updateFormData('gstHolderName', panRecord.panName);
+                                  updateFormData('gstName', panRecord.panName);
+
+                                  // Clear related errors
+                                  setFieldErrors(prev => {
+                                    const newErrors = { ...prev };
+                                    delete newErrors.gstNumber;
+                                    delete newErrors.gstHolderName;
+                                    delete newErrors.gstName;
+                                    return newErrors;
+                                  });
+                                } else {
+                                  // Show error if PAN not found
+                                  setFieldErrors(prev => ({
+                                    ...prev,
+                                    gstNumber: `PAN ${extractedPAN} does not exist in PAN Master`
+                                  }));
+                                }
+                              }
                             }
+
                           }
 
                           if (field.type === 'number') {
@@ -862,8 +895,8 @@ export default function GSTMasterPage() {
                           }
                         }}
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${fieldErrors[field.key]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]'
                           } ${(field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
                             (field.key === 'stateCode')
                             ? 'bg-[var(--color-surface)] cursor-not-allowed opacity-75'
@@ -876,9 +909,9 @@ export default function GSTMasterPage() {
                         max={field.max}
                         disabled={
                           (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
-                          (field.key === 'stateCode')
+                          (field.key === 'stateCode' || field.key === 'gstHolderName' || field.key === 'gstName')
                         }
-                        readOnly={field.key === 'stateCode'}
+                        readOnly={field.key === 'stateCode' || field.key === 'gstHolderName' || field.key === 'gstName'}
                       />
                       {fieldErrors[field.key] && (
                         <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>

@@ -22,8 +22,16 @@ export const validateGSTIN = (gstin) => {
   const cleaned = gstin.trim().toUpperCase().replace(/\s/g, "");
 
   // GSTIN Regex as per standard
-  const gstRegex =
-    /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{1}Z[A-Z0-9]{1}$/;
+  // const gstRegex =
+  //   /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{1}Z[A-Z0-9]{1}$/;
+  // const gstRegex =
+  // /^(?!00)[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-NP-Z0-9]Z[A-Z0-9]$/;
+const gstRegex =
+  /^(?!00)[0-9]{2}[A-Z]{5}[0-9]{4}[A-NP-Z][A-Z0-9]Z[A-Z0-9]$/;
+
+
+
+
 
   if (!gstRegex.test(cleaned)) {
     return {
@@ -226,6 +234,8 @@ export const validatePIN = (pin) => {
   }
   return { valid: true, cleaned };
 };
+
+export const isValidTAN = (tan) => /^[A-Z]{4}[0-9]{5}[A-NP-Z]$/.test(tan);
 
 /**
  * Validates email format

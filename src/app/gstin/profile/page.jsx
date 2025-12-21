@@ -349,6 +349,7 @@ export default function GstinProfilePage() {
                         type="text"
                         name="gstName"
                         value={formData.gstName || ''}
+                        readOnly
                         onChange={handleChange}
                         className="premium-input w-full px-4 py-3 text-base"
                         placeholder="Enter GSTIN name"

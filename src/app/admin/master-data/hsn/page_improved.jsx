@@ -4,7 +4,7 @@
 // 1. Constants for better maintainability
 const DELETE_BUTTON_CONFIG = {
   MESSAGES: {
-    DISABLED: 'Cannot delete: Invoices exist for this HSN/SSC',
+    DISABLED: 'Cannot delete: Invoices exist for this HSN/SAC Master',
     ENABLED: 'Delete HSN record',
     CONFIRMATION: 'Are you sure you want to delete this HSN record? This action cannot be undone.'
   },
