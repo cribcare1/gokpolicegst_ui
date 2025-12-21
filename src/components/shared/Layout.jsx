@@ -81,9 +81,10 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/admin/profile', label: 'Profile', icon: 'profile' },
     { href: '/admin/master-data/pan', label: 'nav.pan', icon: 'pan' },
     { href: '/admin/master-data/gst', label: 'nav.gst', icon: 'gst' },
-    { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
+    
     { href: '/admin/master-data/hsn', label: 'nav.hsn', icon: 'hsn' },
-    { href: '/admin/master-data/bank', label: 'nav.bank', icon: 'bank' },
+    { href: '/admin/master-data/bank', label: 'nav.bankmaster', icon: 'bank' },
+    { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
     { href: '/admin/reports', label: 'nav.reports', icon: 'reports' },
   
   ];
@@ -135,7 +136,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
               {sidebarOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <Menu size={20} className="sm:w-6 sm:h-6" />}
             </button>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent truncate">
-              KSP Bandobast GST {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? '- DDO' : ''}
+              Karnataka state police  {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? '- DDO' : ''}
             </h1>
           </div>
           

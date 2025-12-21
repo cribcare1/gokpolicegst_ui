@@ -10,7 +10,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { validateGSTIN, validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
+import {isValidTAN, validateGSTIN, validateEmail, validateMobile, validateDDOCode, validateName, validatePIN, validateAddress, validateCity } from '@/lib/gstUtils';
 
 export default function GstinDDORegistrationPage() {
   const [ddos, setDdos] = useState([]);
@@ -23,7 +23,6 @@ export default function GstinDDORegistrationPage() {
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
-
   const [formData, setFormData] = useState({
     ddoCode: '',
     ddoName: '',
@@ -34,9 +33,9 @@ export default function GstinDDORegistrationPage() {
     mobile: '',
     email: '',
     password: '',
-    ddoTan : '',
+    ddoTan: '',
 
-    
+
   });
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -50,7 +49,7 @@ export default function GstinDDORegistrationPage() {
     if (gstId) setGstId(gstId);
     if (userId) setUserId(userId);
 
-    if (gstId)fetchDDOs(gstId);
+    if (gstId) fetchDDOs(gstId);
   }, []);
 
   useEffect(() => {
@@ -77,24 +76,24 @@ export default function GstinDDORegistrationPage() {
       setDdos(demoDDOs);
       setFilteredDdos(demoDDOs);
 
-      console.log("gstid---------",gstId);
+      console.log("gstid---------", gstId);
       const response = await ApiService.handleGetRequest(`${API_ENDPOINTS.DDO_LIST_PER_GST}${gstId}`);
       // if (response  && response.status === 'success') {
       //     setDdos(response.data);
       //     setFilteredDdos(response.data); 
       // }
       if (response?.status === 'success' && Array.isArray(response?.data)) {
-          setDdos(response.data.ddos);
-          setFilteredDdos(response.data.ddos);
-        } else if (response?.status === 'success' && Array.isArray(response?.data?.ddos)) {
-          setDdos(response.data.ddos);
-          setFilteredDdos(response.data.ddos);
-        } else {
-          setDdos([]);
-          setFilteredDdos([]);
-        }
+        setDdos(response.data.ddos);
+        setFilteredDdos(response.data.ddos);
+      } else if (response?.status === 'success' && Array.isArray(response?.data?.ddos)) {
+        setDdos(response.data.ddos);
+        setFilteredDdos(response.data.ddos);
+      } else {
+        setDdos([]);
+        setFilteredDdos([]);
+      }
 
-     
+
     } catch (error) {
       console.error('Error fetching DDOs:', error);
     } finally {
@@ -112,7 +111,7 @@ export default function GstinDDORegistrationPage() {
           ddo.ddoName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ddo.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ddo.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ddo.city?.toLowerCase().includes(searchTerm.toLowerCase()) 
+          ddo.city?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -131,7 +130,7 @@ export default function GstinDDORegistrationPage() {
       mobile: '',
       email: '',
       password: '',
-      ddoTan : '',
+      ddoTan: '',
     });
     setShowPassword(false);
     setFieldErrors({});
@@ -147,11 +146,11 @@ export default function GstinDDORegistrationPage() {
       address: ddo.address || '',
       city: ddo.city || '',
       pinCode: ddo.pinCode || '',
-      mobile: ddo.mobile|| '',
+      mobile: ddo.mobile || '',
       email: ddo.email || '',
       id: ddo.userId || '',
-      ddoTan : ddo.ddoTan || '',
-     // password: '', // Password field is empty by default, user can set new password
+      ddoTan: ddo.ddoTan || '',
+      // password: '', // Password field is empty by default, user can set new password
     });
     setShowPassword(false);
     setFieldErrors({});
@@ -162,7 +161,7 @@ export default function GstinDDORegistrationPage() {
     if (!confirm('Are you sure you want to delete this DDO?')) return;
 
     try {
-      const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_DELETE, { id });
+      const response = await ApiService.handlePostRequest(`${API_ENDPOINTS.DDO_DELETE}${id}`);
       if (response?.status === 'success') {
         toast.success('DDO deleted successfully');
         fetchDDOs();
@@ -176,7 +175,7 @@ export default function GstinDDORegistrationPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     console.log('handleSubmit called', { formData, editingDDO });
 
     // Validate DDO Code
@@ -309,7 +308,7 @@ export default function GstinDDORegistrationPage() {
         email: formData.email || '',
         gstId: gstId || '',
         gstInUserId: userId || '',
-        ddoTan : formData.ddoTan || '',
+        ddoTan: formData.ddoTan || '',
       };
 
       // Include userId when editing - try multiple possible field names
@@ -327,9 +326,9 @@ export default function GstinDDORegistrationPage() {
       }
 
       const endpoint = editingDDO ? API_ENDPOINTS.DDO_UPDATE : API_ENDPOINTS.DDO_ADD;
-      
+
       console.log('Submitting DDO update:', { endpoint, payload, editingDDO });
-      
+
       const response = await ApiService.handlePostRequest(endpoint, payload);
 
       console.log('API Response:', response);
@@ -358,6 +357,7 @@ export default function GstinDDORegistrationPage() {
       render: (code) => <span className="font-medium text-[var(--color-text-primary)]">{code}</span>,
     },
     { key: 'ddoName', label: 'DDO Name' },
+    { key: 'ddoTan', label: 'DDO Tan' },
     { key: 'area', label: 'Area', render: (val, row) => val || row.area || '-' },
     { key: 'address', label: 'Address', render: (val, row) => val || row.address || '-' },
     { key: 'city', label: 'City', render: (val, row) => val || row.city || '-' },
@@ -377,7 +377,7 @@ export default function GstinDDORegistrationPage() {
             <Edit size={16} />
           </button>
           <button
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row.userId)}
             className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title="Delete"
           >
@@ -574,7 +574,7 @@ export default function GstinDDORegistrationPage() {
                   className="premium-input w-full"
                 />
               </div>
-                <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                   DDO Tan <span className="text-red-500">*</span>
                 </label>
@@ -585,7 +585,46 @@ export default function GstinDDORegistrationPage() {
                   className="premium-input w-full"
                   required
                 />
+              </div> */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                  DDO TAN <span className="text-red-500">*</span>
+                </label>
+
+                <input
+                  type="text"
+                  value={formData.ddoTan}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase(); // TAN is uppercase
+                    setFormData({ ...formData, ddoTan: value });
+
+                    // Validate on change
+                    if (value && !isValidTAN(value)) {
+                      setFieldErrors({
+                        ...fieldErrors,
+                        ddoTan: 'Invalid TAN format (e.g. ABCD12345E)',
+                      });
+                    } else {
+                      setFieldErrors({
+                        ...fieldErrors,
+                        ddoTan: '',
+                      });
+                    }
+                  }}
+                  className={`premium-input w-full ${fieldErrors.ddoTan ? 'border-red-500 focus:ring-red-500' : ''
+                    }`}
+                  maxLength={10}
+                  required
+                />
+
+                {fieldErrors.ddoTan && (
+                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>{fieldErrors.ddoTan}</span>
+                  </p>
+                )}
               </div>
+
             </div>
 
             {/* Address field - full width */}
@@ -617,32 +656,32 @@ export default function GstinDDORegistrationPage() {
             {/* Password field - only shown when editing */}
             {editingDDO && (
               <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                    <div className="flex items-center gap-2">
-                      <Lock className="text-[var(--color-text-secondary)]" size={16} />
-                      <span>Password</span>
-                      <span className="text-xs text-[var(--color-text-secondary)] font-normal">(Leave blank to keep current password)</span>
-                    </div>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="premium-input w-full pr-10"
-                      placeholder="Enter new password (optional)"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                  <div className="flex items-center gap-2">
+                    <Lock className="text-[var(--color-text-secondary)]" size={16} />
+                    <span>Password</span>
+                    <span className="text-xs text-[var(--color-text-secondary)] font-normal">(Leave blank to keep current password)</span>
                   </div>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="premium-input w-full pr-10"
+                    placeholder="Enter new password (optional)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
               <Button

@@ -69,10 +69,10 @@ const HeroCarousel = () => {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-[2] px-4">
           <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white drop-shadow-2xl">
-              Bandobast GST Management System
+             GST Incometax Management System
             </h1>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white drop-shadow-2xl">
-              Karnatak Police
+              Karnataka State Police
             </h2>
           </div>
         </div>

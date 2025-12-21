@@ -12,11 +12,11 @@ import { Plus, Edit, Trash2, Search, History } from 'lucide-react';
 import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
-
+import { formatDateDDMMYYYY  , formatDateYYYYMMDD} from '@/components/utils/dateUtils';
 // Constants for better maintainability and performance
 const DELETE_BUTTON_CONFIG = {
   MESSAGES: {
-    DISABLED: 'Cannot delete: Invoices exist for this HSN/SSC',
+    DISABLED: 'Cannot delete: Invoices exist for this HSN/SAC Master',
     ENABLED: 'Delete HSN record',
     CONFIRMATION: 'Are you sure you want to delete this HSN record? This action cannot be undone.'
   },
@@ -28,7 +28,7 @@ const DELETE_BUTTON_CONFIG = {
 
 // Utility functions for date and data formatting
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
+  if (!dateString) return '-';
   
   try {
     // Handle different date formats
@@ -120,10 +120,10 @@ const HistoryRow = React.memo(({ history }) => {
         {formatTaxRate(sgst)}
       </td>
       <td className="border border-[var(--color-border)] p-2 text-sm">
-        {effectiveFrom ? formatDate(effectiveFrom) : 'N/A'}
+        {effectiveFrom ? formatDate(effectiveFrom) : '-'}
       </td>
       <td className="border border-[var(--color-border)] p-2 text-sm">
-        {effectiveTo ? formatDate(effectiveTo) : 'Current'}
+        {effectiveTo ? formatDate(effectiveTo) : '-'}
       </td>
     </tr>
   );
@@ -488,25 +488,69 @@ const fetchGSTINList = async () => {
     }
   };
 
+  // const handleAdd = () => {
+  //   setEditingItem(null);
+  //   // Set default effectiveFrom to today
+  //   // setFormData({
+  //   //   effectiveFrom: new Date().toISOString().split('T')[0]
+  //   // });
+  
+  //   setFieldErrors({});
+  //   setIsModalOpen(true);
+  // };
   const handleAdd = () => {
-    setEditingItem(null);
-    // Set default effectiveFrom to today
-    setFormData({
-      effectiveFrom: new Date().toISOString().split('T')[0]
-    });
-    setFieldErrors({});
-    setIsModalOpen(true);
-  };
+  setEditingItem(null);
+
+  // Clear all form fields
+  setFormData({});
+
+  setFieldErrors({});
+  setIsModalOpen(true);
+};
+
+
+  const formatDateForInput = (value) => {
+  if (!value) return '';
+
+  // Handle "DD-MM-YYYY"
+  if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+    const [dd, mm, yyyy] = value.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Handle "DD/MM/YYYY"
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [dd, mm, yyyy] = value.split('/');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Handle timestamp or ISO
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return '';
+
+  return date.toISOString().split('T')[0];
+};
+
+  
 
   const handleEdit = (item) => {
+
     setEditingItem(item);
     setFieldErrors({});
 
     const selectedGST = gstinList.find(
       (gst) => gst.gstNumber === item.gstinNumber || gst.value === item.gstinNumber
     );
+    
+  console.log('EDIT RAW ITEM DATES:', {
+    rawEffectiveFrom: item.effectiveFrom,
+    rawEffectiveTo: item.effectiveTo,
+    parsedFrom: formatDateForInput(item.effectiveFrom),
+    parsedTo: formatDateForInput(item.effectiveTo),
+  });
 
     const updatedItem = {
+      
       ...item,
       gstId: selectedGST?.gstId || selectedGST?.id || "",
       effectiveFrom: formatDateForInput(item.effectiveFrom),
@@ -702,7 +746,7 @@ const fetchGSTINList = async () => {
       return { valid: false, message: hsnValidation.message };
     }
     
-    const serviceNameValidation = validateName(data.serviceName, 'HSN/SSC Description');
+    const serviceNameValidation = validateName(data.serviceName, 'HSN/SAC Master Description');
     if (!serviceNameValidation.valid) {
       return { valid: false, message: serviceNameValidation.message };
     }
@@ -742,6 +786,8 @@ const fetchGSTINList = async () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const dataCopy = { ...formData };
+    dataCopy.effectiveFrom=formatDateDDMMYYYY(dataCopy.effectiveFrom);
+    dataCopy.effectiveTo=formatDateDDMMYYYY(dataCopy.effectiveTo);
     
     // Validate all fields before submission
     let hasErrors = false;
@@ -780,15 +826,15 @@ const fetchGSTINList = async () => {
       if (hasInvoices) {
         // Check if GSTIN, HSN Code, or Description are being changed
         if (dataCopy.gstinNumber !== editingItem.gstinNumber) {
-          toast.error('Cannot edit GSTIN. Invoices have been generated for this HSN/SSC.');
+          toast.error('Cannot edit GSTIN. Invoices have been generated for this HSN/SAC Master.');
           return;
         }
         if (dataCopy.hsnCode !== editingItem.hsnCode) {
-          toast.error('Cannot edit HSN/SSC Code. Invoices have been generated for this HSN/SSC.');
+          toast.error('Cannot edit HSN/SAC Master Code. Invoices have been generated for this HSN/SAC Master.');
           return;
         }
         if (dataCopy.serviceName !== editingItem.serviceName) {
-          toast.error('Cannot edit HSN/SSC Description. Invoices have been generated for this HSN/SSC.');
+          toast.error('Cannot edit HSN/SAC Master Description. Invoices have been generated for this HSN/SAC Master.');
           return;
         }
       }
@@ -891,17 +937,17 @@ const fetchGSTINList = async () => {
 
   const columns = [
     { key: 'gstinNumber', label: t('label.gstin') },
-    { key: 'hsnCode', label: 'HSN/SSC Code' },
-    { key: 'serviceName', label: 'HSN/SSC Description' },
+    { key: 'hsnCode', label: 'HSN/SAC Master Code' },
+    { key: 'serviceName', label: 'HSN/SAC Master Description' },
     { 
       key: 'effectiveFrom', 
       label: 'Effective From',
-      render: (value) => formatDate(value)
+      render: (value) => value??"-",
     },
     { 
       key: 'effectiveTo', 
       label: 'Effective To',
-      render: (value) => value ? formatDate(value) : 'Current'
+      render: (value) => value ?? '-'
     },
     { key: 'totalGst', label: 'GST Tax Rate (%)' },
     { key: 'igst', label: 'IGST (%)' },
@@ -926,14 +972,14 @@ const fetchGSTINList = async () => {
       },
       { 
         key: 'hsnCode', 
-        label: 'HSN/SSC Code', 
+        label: 'HSN/SAC Master Code', 
         required: true,
         maxLength: 8,
         readOnly: editingItem && hasInvoices
       },
       { 
         key: 'serviceName', 
-        label: 'HSN/SSC Description', 
+        label: 'HSN/SAC Master Description', 
         required: true,
         readOnly: editingItem && hasInvoices
       },
@@ -1066,7 +1112,7 @@ const fetchGSTINList = async () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
-              <span className="gradient-text">HSN/SSC</span>
+              <span className="gradient-text">HSN/SAC Master</span>
             </h1>
             <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">
               Manage hsn master efficiently
@@ -1256,7 +1302,7 @@ const fetchGSTINList = async () => {
         <Modal
           isOpen={isHistoryModalOpen}
           onClose={() => setIsHistoryModalOpen(false)}
-          title="HSN/SSC Tax Change History"
+          title="HSN/SAC Master Tax Change History"
           size="lg"
         >
           {selectedHsnForHistory && (
@@ -1266,7 +1312,7 @@ const fetchGSTINList = async () => {
                   <strong>GSTIN:</strong> {selectedHsnForHistory.gstinNumber}
                 </p>
                 <p className="text-sm text-[var(--color-text-secondary)]">
-                  <strong>HSN/SSC Code:</strong> {selectedHsnForHistory.hsnCode}
+                  <strong>HSN/SAC Master Code:</strong> {selectedHsnForHistory.hsnCode}
                 </p>
                 <p className="text-sm text-[var(--color-text-secondary)]">
                   <strong>Description:</strong> {selectedHsnForHistory.serviceName}
@@ -1299,7 +1345,7 @@ const fetchGSTINList = async () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-[var(--color-text-secondary)]">
-                  <p>No history available for this HSN/SSC.</p>
+                  <p>No history available for this HSN/SAC Master.</p>
                 </div>
               )}
               

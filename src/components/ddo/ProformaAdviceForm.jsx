@@ -162,11 +162,14 @@ export default function ProformaAdviceForm({
   const fallbackGst = currentHsnDetails?.igst ?? currentHsnDetails?.gstRate ?? 18;
   const fallbackCgst = currentHsnDetails?.cgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
   const fallbackSgst = currentHsnDetails?.sgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
-  const displayGstRate = (latestCalc && (
-    typeof latestCalc.gstRate === 'number' ? latestCalc.gstRate :
-      typeof latestCalc.igst === 'number' ? latestCalc.igst :
-        (typeof latestCalc.cgstRate === 'number' && typeof latestCalc.sgstRate === 'number' ? (latestCalc.cgstRate + latestCalc.sgstRate) : undefined)
-  )) ?? fallbackGst;
+  // const displayGstRate = (latestCalc && (
+  //   typeof latestCalc.gstRate === 'number' ? latestCalc.gstRate :
+  //     typeof latestCalc.igst === 'number' ? latestCalc.igst :
+  //       (typeof latestCalc.cgstRate === 'number' && typeof latestCalc.sgstRate === 'number' ? (latestCalc.cgstRate + latestCalc.sgstRate) : undefined)
+  // )) ?? fallbackGst;
+  const displayGstRate =latestCalc? Number(latestCalc.gstRate) ||
+      (Number(latestCalc.cgstRate) + Number(latestCalc.sgstRate)) ||
+      fallbackGst: fallbackGst
   const computeRateFromAmounts = (amount, taxable) => {
     if (typeof amount !== 'number' || typeof taxable !== 'number' || taxable === 0) return null;
     return (amount / taxable) * 100;
