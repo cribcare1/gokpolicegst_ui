@@ -43,6 +43,7 @@ export default function GSTMasterPage() {
   const [ddoPasswordData, setDdoPasswordData] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [ddoCounts, setDdoCounts] = useState({}); // Store DDO counts for each GSTIN
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -67,19 +68,9 @@ export default function GSTMasterPage() {
       const response = await ApiService.handleGetRequest(API_ENDPOINTS.PAN_LIST);
       if (response?.status === 'success' && response?.data) {
         setPanList(response.data);
-      } else {
-        // Demo PAN data
-        setPanList([
-          { id: '1', panNumber: 'AAAGO1111W' },
-          { id: '2', panNumber: 'ABCDE1234F' },
-        ]);
-      }
+      } 
     } catch (error) {
       console.error('Error fetching PAN list:', error);
-      setPanList([
-        { id: '1', panNumber: 'AAAGO1111W' },
-        { id: '2', panNumber: 'ABCDE1234F' },
-      ]);
     }
   };
 
@@ -253,6 +244,7 @@ export default function GSTMasterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("submit is called");
+    setIsSubmitting(true);
     const validation = validateForm(formData);
     console.log("validation is called ", validation);
     if (!validation.valid) {
@@ -294,8 +286,14 @@ export default function GSTMasterPage() {
 
       // Prepare form data - remove empty password if not provided in edit mode
       const submitData = { ...formData };
-      if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
-        delete submitData.password;
+      // if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
+      //   delete submitData.password;
+      // }
+      const extractedPAN = extractPANFromGSTIN(formData.gstNumber);
+       const panRecord = panList.find(p => p.panNumber === extractedPAN);
+      console.log("extractedPAN", extractedPAN, panRecord);
+      if (panRecord) {
+        submitData.panId = panRecord.id;
       }
       delete submitData.userId;
       delete submitData.ddoCount;
@@ -303,7 +301,7 @@ export default function GSTMasterPage() {
       const response = await ApiService.handlePostMultiPartFileRequest(url, submitData, formData.logo);
 
       if (response && response.status === 'success') {
-
+        setIsSubmitting(false);
         toast.success(t('alert.success'));
         setIsModalOpen(false);
         setEditingItem(null);
@@ -926,11 +924,19 @@ export default function GSTMasterPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => setIsModalOpen(false)}
+                  disabled={isSubmitting}
                 >
                   {t('btn.cancel')}
                 </Button>
-                <Button type="submit" variant="primary">
-                  {t('btn.save')}
+                <Button type="submit" variant="primary" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  t('btn.save')
+                )}
                 </Button>
               </div>
             </form>

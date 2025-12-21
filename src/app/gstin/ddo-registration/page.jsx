@@ -161,7 +161,7 @@ export default function GstinDDORegistrationPage() {
     if (!confirm('Are you sure you want to delete this DDO?')) return;
 
     try {
-      const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_DELETE, { id });
+      const response = await ApiService.handlePostRequest(`${API_ENDPOINTS.DDO_DELETE}${id}`);
       if (response?.status === 'success') {
         toast.success('DDO deleted successfully');
         fetchDDOs();
@@ -377,7 +377,7 @@ export default function GstinDDORegistrationPage() {
             <Edit size={16} />
           </button>
           <button
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row.userId)}
             className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title="Delete"
           >

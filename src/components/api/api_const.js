@@ -40,7 +40,7 @@ export const API_ENDPOINTS = {
   DDO_LIST_PER_GST: `${API_BASE_URL}/gst/ddoList?gstId=`,
   DDO_ADD: `${API_BASE_URL}/user/addDDOByGSTIN`,
   DDO_UPDATE: `${API_BASE_URL}/user/addDDOByGSTIN`,
-  DDO_DELETE: `${API_BASE_URL}/ddo/delete/`,
+  DDO_DELETE: `${API_BASE_URL}/user/delete-ddo/`,
   DDO_MAPPING: `${API_BASE_URL}/user/addDDOByGSTIN`,
   GST_TDS_MONTHLY_REPORT : `${API_BASE_URL}/monthly-gst-filing/getMonthlyGstFilingByDdoId/`,
   TDS_QUARTERLY_LIST : `${API_BASE_URL}/quarterly-income-tax/ddo/`,
