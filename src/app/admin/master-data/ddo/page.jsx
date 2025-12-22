@@ -22,7 +22,7 @@ export default function DDOMappingPage() {
   const [movedDDOIds, setMovedDDOIds] = useState(new Set()); // Track DDOs moved to target
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Use hooks for DDO lists
   const { ddoList: sourceDDOsFromAPI, loading: sourceLoading, refetch: refetchSource } = useDdoList(sourceGSTIN);
   // const { ddoList: targetDDOsFromAPI, loading: targetLoading, refetch: refetchTarget } = useDdoList(targetGSTIN);
@@ -172,7 +172,7 @@ export default function DDOMappingPage() {
 
       console.log("fromGstId ", fromGstId);
       console.log("toGstId ", toGstId);
-
+      setIsSubmitting(true);
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
         fromGstId: fromGstId,
         toGstId: toGstId,
@@ -192,17 +192,22 @@ export default function DDOMappingPage() {
         setTargetDDOs([]);
         setMovedDDOIds(new Set()); // Clear moved DDOs after successful mapping
         // Refresh DDOs after successful mapping
+        setIsSubmitting(false);
+        setSourceGSTIN(''); // Reset to trigger useEffect
         refetchSource();
         // if (targetGSTIN) {
         //   refetchTarget();
         // }
       } else {
+        setIsSubmitting(false);
         toast.error(response?.message || 'Failed to map DDOs');
       }
     } catch (error) {
+      setIsSubmitting(false);
       toast.error('Failed to map DDOs');
       console.error('Error mapping DDOs:', error);
     } finally {
+      setIsSubmitting(false);
       setLoading(false);
       setIsModalOpen(false);
     }
@@ -611,11 +616,20 @@ export default function DDOMappingPage() {
               type="button"
               variant="secondary"
               onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="button" variant="primary" onClick={confirmSave}>
-              Confirm Mapping
+            <Button type="button" variant="primary" onClick={confirmSave} disabled={isSubmitting}>
+              {isSubmitting ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                                  Confirm Mapping...
+                                </div>
+                              ) : (
+                                'Confirm Mapping'
+                              )}
+              
             </Button>
           </div>
         </div>

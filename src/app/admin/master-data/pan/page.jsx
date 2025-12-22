@@ -562,7 +562,11 @@ export default function PANRecordsPage() {
                           let value = e.target.value;
                           const fieldLower = field.key.toLowerCase();
 
-                          if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
+                          if (fieldLower.includes('name') || fieldLower.includes('panName') ) {
+                            console.log("name is printing");
+                            
+                            value = value.replace(/[^A-Za-z .&-]/g, '').slice(0, 100);
+                          }else if (fieldLower.includes('mobile') || fieldLower.includes('contactnumber') || fieldLower.includes('phone')) {
                             value = value.replace(/\D/g, '').slice(0, 10);
                           } else if (fieldLower.includes('pin') || fieldLower.includes('pinCode')) {
                             value = value.replace(/\D/g, '').slice(0, 6);

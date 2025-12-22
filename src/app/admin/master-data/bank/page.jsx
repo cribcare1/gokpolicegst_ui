@@ -28,6 +28,7 @@ export default function BankDetailsPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const { gstinList: gstinListHook } = useGstinList();
   const [panList, setPanList] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -362,6 +363,7 @@ export default function BankDetailsPage() {
     }
 
     try {
+      setIsSubmitting(true);
       if (editingItem) {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
@@ -415,6 +417,7 @@ export default function BankDetailsPage() {
         if (response && response.status === 'success') {
           toast.success('Bank details updated successfully. Old record inactivated, new record created.');
           setIsModalOpen(false);
+          setIsSubmitting(false);
           fetchData();
           fetchBills();
         } else {
@@ -428,15 +431,18 @@ export default function BankDetailsPage() {
         const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, dataCopy);
 
         if (response && response.status === 'success') {
+          setIsSubmitting(false);
           toast.success(t('alert.success'));
           setIsModalOpen(false);
           fetchData();
           fetchBills();
         } else {
+          setIsSubmitting(false);
           toast.error(response?.message || t('alert.error'));
         }
       }
     } catch (error) {
+      setIsSubmitting(false);
       toast.error(t('alert.error'));
     }
   };
@@ -650,7 +656,7 @@ const names = gstinList.find(
         >
           <Edit size={18} />
         </button>
-        <button
+        {/* <button
           onClick={(e) => {
             e.stopPropagation();
             if (canDelete) {
@@ -666,7 +672,7 @@ const names = gstinList.find(
           title={!canDelete ? (!isEditable ? 'Bank details is protected - dependent records found' : 'Bank details is protected - dependent records found') : 'Delete'}
         >
           <Trash2 size={18} />
-        </button>
+        </button> */}
       </>
     );
   };
@@ -822,7 +828,7 @@ const names = gstinList.find(
                           const fieldLower = field.key.toLowerCase();
 
                           if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                            value = value.replace(/\D/g, '');
+                            value = value.replace(/\D/g, '').slice(0, 18);
                           } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
                             value = value.replace(/\D/g, '').slice(0, 9);
                           } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
@@ -913,11 +919,19 @@ const names = gstinList.find(
                 type="button"
                 variant="secondary"
                 onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
               >
                 {t('btn.cancel')}
               </Button>
-              <Button type="submit" variant="primary">
-                {t('btn.save')}
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  t('btn.save')
+                )}
               </Button>
             </div>
           </form>

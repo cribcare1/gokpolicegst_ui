@@ -148,7 +148,7 @@ export default function HSNRecordsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const { gstinList: gstinListHook } = useGstinList();
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Check if invoices exist for this HSN
   const hasInvoicesForHSN = useCallback((hsnId, gstinNumber, hsnCode) => {
     if (!bills || bills.length === 0) return false;
@@ -852,18 +852,22 @@ const fetchGSTINList = async () => {
     }
 
     try {
+      setIsSubmitting(true);
       const url = editingItem ? API_ENDPOINTS.HSN_UPDATE : API_ENDPOINTS.HSN_ADD;
       const response = await ApiService.handlePostRequest(url, dataCopy);
       
       if (response && response.status === 'success') {
         toast.success(t('alert.success'));
         setIsModalOpen(false);
+        setIsSubmitting(false);
         fetchData();
  // Refresh bills to update invoice status
       } else {
         toast.error(response?.message || t('alert.error'));
+        setIsSubmitting(false);
       }
     } catch (error) {
+      setIsSubmitting(false);
       toast.error(t('alert.error'));
     }
   };
@@ -1288,11 +1292,19 @@ const fetchGSTINList = async () => {
                 type="button"
                 variant="secondary"
                 onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
               >
                 {t('btn.cancel')}
               </Button>
-              <Button type="submit" variant="primary">
-                {t('btn.save')}
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
+                 {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  t('btn.save')
+                )}
               </Button>
             </div>
           </form>

@@ -19,7 +19,7 @@ export default function DDOMappingPage() {
   const [selectedDDOs, setSelectedDDOs] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Use hook for DDO list based on current GSTIN
   const { ddoList, loading: ddoLoading, refetch: refetchDDOs } = useDdoList(currentGSTIN);
 
@@ -91,6 +91,7 @@ export default function DDOMappingPage() {
   const confirmMove = async () => {
     try {
       setLoading(true);
+      setIsSubmitting(true);
       const fromGstId = gstinList.find(item => item.gstNumber === currentGSTIN)?.gstId || null;
       const toGstId = gstinList.find(item => item.gstNumber === targetGSTIN)?.gstId || null;
       const response = await ApiService.handlePostRequest(API_ENDPOINTS.DDO_MAPPING_UPDATE, {
@@ -101,17 +102,21 @@ export default function DDOMappingPage() {
       });
 
       if (response?.status === 'success') {
+        setIsSubmitting(false);
         toast.success('DDOs mapped successfully');
         setSelectedDDOs(new Set());
         // Refresh DDO list after successful mapping
         refetchDDOs(gstinList[0].gstNumber);
       } else {
+        setIsSubmitting(false);
         toast.error(response?.message || 'Failed to map DDOs');
       }
     } catch (error) {
+      setIsSubmitting(false);
       toast.error('Failed to map DDOs');
       console.error('Error mapping DDOs:', error);
     } finally {
+      setIsSubmitting(false);
       setLoading(false);
       setIsModalOpen(false);
     }
@@ -342,10 +347,11 @@ export default function DDOMappingPage() {
               type="button"
               variant="secondary"
               onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="button" variant="primary" onClick={confirmMove}>
+            <Button type="button" variant="primary" onClick={confirmMove} disabled={isSubmitting}>
               Confirm
             </Button>
           </div>
