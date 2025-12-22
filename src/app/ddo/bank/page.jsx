@@ -884,56 +884,55 @@ export default function BankDetailsPage() {
             
             // Text / Number / IFSC / MICR / Account Number
             : (
-              <>
-                <input
-                  type={field.type || 'text'}
-                  value={formData[field.key] ?? ''}
-                  onChange={(e) => {
-                    let value = e.target.value;
-                    const fieldLower = field.key.toLowerCase();
+             <>
+  <input
+    type={field.type || 'text'}
+    value={formData[field.key] ?? ''}
+    onChange={(e) => {
+      let value = e.target.value;
+      const fieldLower = field.key.toLowerCase();
 
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                      value = value.replace(/\D/g, '');
-                    } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      value = value.replace(/\D/g, '').slice(0, 9);
-                    } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
-                      value = value.toUpperCase().slice(0, 11);
-                    }
+      if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+        // Only digits, max 18
+        value = value.replace(/\D/g, '').slice(0, 18);
+      } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+        // Only digits, max 9
+        value = value.replace(/\D/g, '').slice(0, 9);
+      } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
+        // Uppercase, max 11
+        value = value.toUpperCase().slice(0, 11);
+      }
 
-                    updateFormData(field.key, value);
-                  }}
-                  onKeyPress={(e) => {
-                    const fieldLower = field.key.toLowerCase();
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
-                      fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      if (!/[0-9]/.test(e.key)) e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    const fieldLower = field.key.toLowerCase();
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                      e.preventDefault();
-                      const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
-                      updateFormData(field.key, pastedText);
-                    } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      e.preventDefault();
-                      const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 9);
-                      updateFormData(field.key, pastedText);
-                    }
-                  }}
-                  onBlur={(e) => validateField(field.key, e.target.value, field)}
-                  readOnly={isReadOnly}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
-                    fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                  } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  maxLength={field.maxLength}
-                  min={field.min}
-                  max={field.max}
-                />
-                {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
-              </>
+      updateFormData(field.key, value);
+    }}
+    onPaste={(e) => {
+      const fieldLower = field.key.toLowerCase();
+      let pastedText = e.clipboardData.getData('text') || '';
+      if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+        e.preventDefault();
+        pastedText = pastedText.replace(/\D/g, '').slice(0, 18);
+        updateFormData(field.key, pastedText);
+      } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+        e.preventDefault();
+        pastedText = pastedText.replace(/\D/g, '').slice(0, 9);
+        updateFormData(field.key, pastedText);
+      } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
+        e.preventDefault();
+        pastedText = pastedText.toUpperCase().slice(0, 11);
+        updateFormData(field.key, pastedText);
+      }
+    }}
+    onBlur={(e) => validateField(field.key, e.target.value, field)}
+    readOnly={isReadOnly}
+    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+      fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+    } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
+    placeholder={field.placeholder}
+    required={field.required}
+  />
+  {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
+</>
+
             )}
           </div>
         );

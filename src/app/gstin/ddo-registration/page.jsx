@@ -429,275 +429,213 @@ export default function GstinDDORegistrationPage() {
         </div>
 
         {/* Add/Edit Modal */}
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title={editingDDO ? 'Edit DDO' : 'Add DDO'}
-          size="lg"
-        >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  DDO Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.ddoCode}
-                  onChange={(e) => setFormData({ ...formData, ddoCode: e.target.value })}
-                  className="premium-input w-full"
-                  required
-                />
-              </div>
+      <Modal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  title={editingDDO ? 'Edit DDO' : 'Add DDO'}
+  size="lg"
+>
+  <form onSubmit={handleSubmit} className="space-y-5">
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  DDO Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.ddoName}
-                  onChange={(e) => setFormData({ ...formData, ddoName: e.target.value })}
-                  className="premium-input w-full"
-                  required
-                />
-              </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* DDO Code */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          DDO Code <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.ddoCode}
+          onChange={(e) => setFormData({ ...formData, ddoCode: e.target.value })}
+          required
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Area
-                </label>
-                <input
-                  type="text"
-                  value={formData.area}
-                  onChange={(e) => {
-                    setFormData({ ...formData, area: e.target.value });
-                    // Clear error when user starts typing
-                    if (fieldErrors.area) {
-                      setFieldErrors({ ...fieldErrors, area: '' });
-                    }
-                  }}
-                  className={`premium-input w-full ${fieldErrors.area ? 'border-red-500 focus:ring-red-500' : ''}`}
-                />
-                {fieldErrors.area && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{fieldErrors.area}</span>
-                  </p>
-                )}
-              </div>
+      {/* DDO Name */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          DDO Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.ddoName}
+          onChange={(e) => setFormData({ ...formData, ddoName: e.target.value })}
+          required
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => {
-                    setFormData({ ...formData, city: e.target.value });
-                    // Clear error when user starts typing
-                    if (fieldErrors.city) {
-                      setFieldErrors({ ...fieldErrors, city: '' });
-                    }
-                  }}
-                  className={`premium-input w-full ${fieldErrors.city ? 'border-red-500 focus:ring-red-500' : ''}`}
-                />
-                {fieldErrors.city && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{fieldErrors.city}</span>
-                  </p>
-                )}
-              </div>
+      {/* Area */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          Area
+        </label>
+        <input
+          type="text"
+          value={formData.area}
+          onChange={(e) => {
+            setFormData({ ...formData, area: e.target.value });
+            if (fieldErrors.area) setFieldErrors({ ...fieldErrors, area: '' });
+          }}
+          className={`w-full rounded-lg px-3 py-2 text-sm border
+            ${fieldErrors.area ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}
+            focus:outline-none focus:ring-2`}
+        />
+        {fieldErrors.area && <p className="mt-1 text-xs text-red-500">{fieldErrors.area}</p>}
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  value={formData.pinCode}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setFormData({ ...formData, pinCode: value });
-                  }}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-                    setFormData({ ...formData, pinCode: pastedText });
-                  }}
-                  className="premium-input w-full"
-                  maxLength={6}
-                />
-              </div>
+      {/* City */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          City
+        </label>
+        <input
+          type="text"
+          value={formData.city}
+          onChange={(e) => {
+            setFormData({ ...formData, city: e.target.value });
+            if (fieldErrors.city) setFieldErrors({ ...fieldErrors, city: '' });
+          }}
+          className={`w-full rounded-lg px-3 py-2 text-sm border
+            ${fieldErrors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}
+            focus:outline-none focus:ring-2`}
+        />
+        {fieldErrors.city && <p className="mt-1 text-xs text-red-500">{fieldErrors.city}</p>}
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Contact No
-                </label>
-                <input
-                  type="text"
-                  value={formData.mobile}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setFormData({ ...formData, mobile: value });
-                  }}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 10);
-                    setFormData({ ...formData, mobile: pastedText });
-                  }}
-                  className="premium-input w-full"
-                  maxLength={10}
-                />
-              </div>
+      {/* Pincode */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          Pincode
+        </label>
+        <input
+          type="text"
+          value={formData.pinCode}
+          maxLength={6}
+          onChange={(e) => {
+            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+            setFormData({ ...formData, pinCode: value });
+          }}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="premium-input w-full"
-                />
-              </div>
-              {/* <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  DDO Tan <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.ddoTan}
-                  onChange={(e) => setFormData({ ...formData, ddoTan: e.target.value })}
-                  className="premium-input w-full"
-                  required
-                />
-              </div> */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  DDO TAN <span className="text-red-500">*</span>
-                </label>
+      {/* Contact No */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          Contact No
+        </label>
+        <input
+          type="text"
+          value={formData.mobile}
+          maxLength={10}
+          onChange={(e) => {
+            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+            setFormData({ ...formData, mobile: value });
+          }}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
 
-                <input
-                  type="text"
-                  value={formData.ddoTan}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase(); // TAN is uppercase
-                    setFormData({ ...formData, ddoTan: value });
+      {/* Email */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          Email
+        </label>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
 
-                    // Validate on change
-                    if (value && !isValidTAN(value)) {
-                      setFieldErrors({
-                        ...fieldErrors,
-                        ddoTan: 'Invalid TAN format (e.g. ABCD12345E)',
-                      });
-                    } else {
-                      setFieldErrors({
-                        ...fieldErrors,
-                        ddoTan: '',
-                      });
-                    }
-                  }}
-                  className={`premium-input w-full ${fieldErrors.ddoTan ? 'border-red-500 focus:ring-red-500' : ''
-                    }`}
-                  maxLength={10}
-                  required
-                />
+      {/* DDO TAN */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          DDO TAN <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.ddoTan}
+          maxLength={10}
+          required
+          onChange={(e) => {
+            const value = e.target.value.toUpperCase();
+            setFormData({ ...formData, ddoTan: value });
+            setFieldErrors({
+              ...fieldErrors,
+              ddoTan: value && !isValidTAN(value) ? 'Invalid TAN format (e.g. ABCD12345E)' : '',
+            });
+          }}
+          className={`w-full rounded-lg px-3 py-2 text-sm border
+            ${fieldErrors.ddoTan ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}
+            focus:outline-none focus:ring-2`}
+        />
+        {fieldErrors.ddoTan && <p className="mt-1 text-xs text-red-500">{fieldErrors.ddoTan}</p>}
+      </div>
+    </div>
 
-                {fieldErrors.ddoTan && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{fieldErrors.ddoTan}</span>
-                  </p>
-                )}
-              </div>
+    {/* Address */}
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">
+        Address
+      </label>
+      <textarea
+        rows={3}
+        value={formData.address}
+        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    </div>
 
-            </div>
+    {/* Password - show only when editing */}
+    {editingDDO && (
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">
+          Password <span className="text-gray-400 text-xs">(Leave blank to keep current password)</span>
+        </label>
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+            placeholder="Enter new password (optional)"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </div>
+    )}
 
-            {/* Address field - full width */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                Address
-              </label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => {
-                  setFormData({ ...formData, address: e.target.value });
-                  // Clear error when user starts typing
-                  if (fieldErrors.address) {
-                    setFieldErrors({ ...fieldErrors, address: '' });
-                  }
-                }}
-                className={`premium-input w-full ${fieldErrors.address ? 'border-red-500 focus:ring-red-500' : ''}`}
-                rows={3}
-                placeholder="Enter full address (minimum 10 characters)"
-              />
-              {fieldErrors.address && (
-                <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>{fieldErrors.address}</span>
-                </p>
-              )}
-            </div>
+    {/* Buttons */}
+    <div className="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+        Cancel
+      </Button>
+      <Button type="submit" variant="primary" disabled={formLoading}>
+        {formLoading ? 'Saving...' : editingDDO ? 'Update' : 'Save'}
+      </Button>
+    </div>
 
-            {/* Password field - only shown when editing */}
-            {editingDDO && (
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  <div className="flex items-center gap-2">
-                    <Lock className="text-[var(--color-text-secondary)]" size={16} />
-                    <span>Password</span>
-                    <span className="text-xs text-[var(--color-text-secondary)] font-normal">(Leave blank to keep current password)</span>
-                  </div>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="premium-input w-full pr-10"
-                    placeholder="Enter new password (optional)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-            )}
+  </form>
+</Modal>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setIsModalOpen(false)}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" disabled={formLoading} className="w-full sm:w-auto">
-                {formLoading ? 'Saving...' : editingDDO ? 'Update' : 'Save'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+
       </div>
     </Layout>
   );
