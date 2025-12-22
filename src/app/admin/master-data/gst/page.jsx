@@ -282,6 +282,7 @@ export default function GSTMasterPage() {
     }
 
     try {
+      setIsSubmitting(true);
       const url = editingItem ? API_ENDPOINTS.GST_UPDATE : API_ENDPOINTS.GST_ADD;
 
       // Prepare form data - remove empty password if not provided in edit mode
@@ -307,6 +308,7 @@ export default function GSTMasterPage() {
         setEditingItem(null);
         setFormData({});
         setFieldErrors({});
+        setIsSubmitting(false);
         fetchData();
       } else {
         toast.error(response?.message || t('alert.error'));
@@ -314,6 +316,7 @@ export default function GSTMasterPage() {
     } catch (error) {
       console.error('Error submitting form:', error);
       toast.error(t('alert.error'));
+      setIsSubmitting(false);
     }
   };
 
@@ -812,15 +815,15 @@ export default function GSTMasterPage() {
 
                                 if (panRecord) {
                                   // Update GST Holder Name and gstName dynamically
-                                  updateFormData('gstHolderName', panRecord.panName);
-                                  updateFormData('gstName', panRecord.panName);
+                                  // updateFormData('gstHolderName', panRecord.panName);
+                                  // updateFormData('gstName', panRecord.panName);
 
                                   // Clear related errors
                                   setFieldErrors(prev => {
                                     const newErrors = { ...prev };
                                     delete newErrors.gstNumber;
-                                    delete newErrors.gstHolderName;
-                                    delete newErrors.gstName;
+                                    // delete newErrors.gstHolderName;
+                                    // delete newErrors.gstName;
                                     return newErrors;
                                   });
                                 } else {
@@ -907,9 +910,9 @@ export default function GSTMasterPage() {
                         max={field.max}
                         disabled={
                           (field.key === 'gstNumber' && editingItem && (formData.ddoCount || 0) > 0) ||
-                          (field.key === 'stateCode' || field.key === 'gstHolderName' || field.key === 'gstName')
+                          (field.key === 'stateCode' )
                         }
-                        readOnly={field.key === 'stateCode' || field.key === 'gstHolderName' || field.key === 'gstName'}
+                         readOnly={field.key === 'stateCode' }
                       />
                       {fieldErrors[field.key] && (
                         <p className="mt-1 text-sm text-red-600">{fieldErrors[field.key]}</p>

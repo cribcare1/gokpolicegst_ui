@@ -61,12 +61,141 @@ export default function GstinProfilePage() {
     gstId: null,
     gstHolderName: '',
     userId: null,
+    gstinBankDetails: '',
   });
 
-  useEffect(() => {
+useEffect(() => {
     fetchProfileData();
-  }, []);
+}, []);
 
+  // const gstinBankDetails = formatBankDetails(formData.bankDetailsResponse || formData.bankDetails);
+  // const cleanedBankDetails = cleanGstinBankDetails(gstinBankDetails);
+
+// Helper to convert keys to readable labels
+const formatLabel = (key) => {
+  const LABEL_MAP = {
+    accountName: "Account",
+    accountNumber: "Account Number",
+    accountType: "Account Type",
+    bankName: "Bank",
+    branchName: "Branch",
+    ifscCode: "IFSC Code",
+    micrCode: "MICR Code"
+  };
+
+  if (LABEL_MAP[key]) return LABEL_MAP[key];
+
+  return key
+    .replace(/([A-Z])/g, " $1") // camelCase → camel Case
+    .replace(/_/g, " ")
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+};
+
+// Main formatter
+const formatBankDetails = (details) => {
+  console.log("Bank details to format: ", details);
+  if (!details) return "-";
+
+  // If already a string
+  if (typeof details === "string") {
+    return details.trim() || "-";
+  }
+
+  // If array
+  if (Array.isArray(details)) {
+    const filtered = details.filter(Boolean);
+    return filtered.length ? filtered.join(" | ") : "-";
+  }
+
+  // If object
+  if (typeof details === "object") {
+    const excludedKeys = [
+      "id",
+      "gstId",
+      "gstName",
+      "gstNumber",
+      "status",
+      "isEditable",
+      "effectiveFrom"
+    ];
+
+    const entries = Object.entries(details)
+      .filter(([key, value]) => !excludedKeys.includes(key) && value);
+
+    if (!entries.length) return "-";
+
+    return entries
+      .map(([key, value]) => {
+        // Special formatting
+        if (key === "ifscCode") {
+          return `${formatLabel(key)}: ${String(value).toUpperCase()}`;
+        }
+
+        if (key === "accountName") {
+          const name = String(value)
+            .toLowerCase()
+            .replace(/\b\w/g, c => c.toUpperCase());
+          return `${formatLabel(key)}: ${name}`;
+        }
+
+        return `${formatLabel(key)}: ${value}`;
+      })
+      .join(" | ");
+  }
+
+  return String(details);
+};
+
+
+  
+function cleanGstinBankDetails(details) {
+  if (!details) return "";
+
+  let parts = details.split("|").map(p => p.trim());
+
+  // Remove unwanted metadata fields
+  parts = parts.filter(p =>
+    !p.toLowerCase().startsWith("is editable") &&
+    !p.toLowerCase().startsWith("effective date")
+  );
+
+  // Normalize labels
+  parts = parts.map(p => {
+    const lower = p.toLowerCase();
+
+    // --- IFSC ---
+    if (
+      lower.startsWith("ifsc") ||
+      lower.startsWith("ifsc code") ||
+      lower.startsWith("ifsc  code")
+    ) {
+      const [, value] = p.split(":");
+      return `IFSC Code: ${value.trim().toUpperCase()}`;
+    }
+
+    // --- MICR / MICR Code ---
+    if (lower.startsWith("micr") || lower.startsWith("micr code") || lower.startsWith("Micr Code")) {
+      const [, value] = p.split(":");
+      return `MICR Code: ${value.trim()}`;
+    }
+
+    // --- Standard formatting for all other fields ---
+    if (p.includes(":")) {
+      const [key, value] = p.split(":");
+      const cleanKey =
+        key
+          .toLowerCase()
+          .replace(/\b\w/g, c => c.toUpperCase()) // capitalize words
+          .replace(/\s+/g, " "); // normalize spacing
+      return `${cleanKey}: ${value.trim()}`;
+    }
+
+    return p;
+  });
+
+  return parts.join(" | ");
+}
   const fetchProfileData = async () => {
     setFetching(true);
     try {
@@ -82,7 +211,7 @@ export default function GstinProfilePage() {
             const userProfile = JSON.parse(storedProfile);
             console.log("userprofile gstin data", userProfile);
             if (userProfile && typeof userProfile === 'object' && Object.keys(userProfile).length > 0) {
-              // If it's an array, find the matching record
+              //If it's an array, find the matching record
               if (Array.isArray(userProfile)) {
                 const matchedProfile = gstId 
                   ? userProfile.find(p => p.gstId === parseInt(gstId) || p.gstId === gstId)
@@ -104,46 +233,7 @@ export default function GstinProfilePage() {
           console.error('Error parsing stored profile data:', error);
         }
       }
-
-    //   // Fetch from API
-    //   const response = await ApiService.handleGetRequest(API_ENDPOINTS.GST_LIST);
-      
-    //   if (response?.status === 'success' && response?.data && Array.isArray(response.data)) {
-    //     // Find the current user's GST record
-    //     let matchedProfile = null;
-        
-    //     if (gstId) {
-    //       // Try to match by gstId
-    //       matchedProfile = response.data.find(
-    //         item => item.gstId === parseInt(gstId) || item.gstId === gstId || String(item.gstId) === String(gstId)
-    //       );
-    //     }
-        
-    //     // If no match by gstId, try to match by userId
-    //     if (!matchedProfile) {
-    //       const userId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-    //       if (userId) {
-    //         matchedProfile = response.data.find(
-    //           item => item.userId === parseInt(userId) || item.userId === userId || String(item.userId) === String(userId)
-    //         );
-    //       }
-    //     }
-        
-    //     // If still no match, use the first record
-    //     if (!matchedProfile && response.data.length > 0) {
-    //       matchedProfile = response.data[0];
-    //     }
-        
-    //     if (matchedProfile) {
-    //       setFormDataFromApi(matchedProfile);
-    //       // Store in localStorage for future use
-    //       localStorage.setItem(LOGIN_CONSTANT.USER_PROFILE_DATA, JSON.stringify(response.data));
-    //     } else {
-    //       toast.error('No GST profile found');
-    //     }
-    //   } else {
-    //     toast.error('Failed to load GST profile data');
-    //   }
+    
     } catch (error) {
       console.error('Error fetching GST profile:', error);
       toast.error('An error occurred while loading profile data');
@@ -160,7 +250,7 @@ export default function GstinProfilePage() {
       city: apiData.city || '',
       pinCode: apiData.pinCode || apiData.pin || '',
       mobile: apiData.mobileNumber || apiData.mobileNumberNumber || '',
-      bankDetails: apiData.bankDetails || apiData.bank_details || apiData.bankName || apiData.bank || '',
+      bankDetailsResponse: apiData.bankDetailsResponse || apiData.bank_details || apiData.bankName || apiData.bank || '',
       email: apiData.email || '',
       gstId: apiData.gstId || apiData.id || null,
       gstHolderName: apiData.gstHolderName || '',
@@ -255,7 +345,11 @@ export default function GstinProfilePage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+const gstinBankDetails = formatBankDetails(
+  formData.bankDetailsResponse || formData.bankDetails
+);
 
+const cleanedBankDetails = cleanGstinBankDetails(gstinBankDetails);
   return (
     <Layout role="gstin">
       <div className="space-y-6 sm:space-y-8">
@@ -374,7 +468,7 @@ export default function GstinProfilePage() {
                       Bank Details
                     </label>
                     <div className="px-4 py-3 bg-gradient-to-r from-[var(--color-muted)] to-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
-                      <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{formData.bankDetails || '-'}</p>
+                      <p className="text-[var(--color-text-primary)] font-medium whitespace-pre-wrap">{cleanedBankDetails || '-'}</p>
                     </div>
                   </div>
                 </div>
