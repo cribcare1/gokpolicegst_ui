@@ -139,7 +139,7 @@ export default function TDSQuarterlyCreate() {
         deducteeCount: Number(f.deducteeCount),
         totalChallanAmount: Number(f.challanAmount),
         totalTaxDeducted: Number(f.taxDeducted),
-        anyRevisionFiled: f.revision,
+        anyRevisionFiled: (f.revision== "Yes" )? true :false ,
         remarks: f.remarks ?? "",
       };
 
