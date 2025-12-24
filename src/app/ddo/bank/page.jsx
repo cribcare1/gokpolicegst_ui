@@ -311,14 +311,18 @@ export default function BankDetailsPage() {
           const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
 
           // Only include fields that have changed
-          fieldsToCheck.forEach(field => {
-            if (updatedFormData[field] !== originalItem[field]) {
-              delta[field] = updatedFormData[field];
-            }
-          });
+          // fieldsToCheck.forEach(field => {
+          //   if (updatedFormData[field] !== originalItem[field]) {
+          //     delta[field] = updatedFormData[field];
+          //   }
+          // });
+          updatedFormData.effectiveDate=formatDateDDMMYYYY(updatedFormData.effectiveDate);
+          updatedFormData.effectiveFrom=formatDateDDMMYYYY(updatedFormData.effectiveFrom);
 
           return {
-            ...delta,
+            // ...delta,
+            ...updatedFormData,
+
             //id: originalItem.id, // Include original id for update identification
             ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
             createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
