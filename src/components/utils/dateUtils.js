@@ -30,3 +30,24 @@ export function formatDateYYYYMMDD(date) {
 
   return `${year}-${month}-${day}`;
 }
+
+
+
+  export function formatDateForInput (value)  {
+  if (!value) return '';
+
+  if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+    const [dd, mm, yyyy] = value.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [dd, mm, yyyy] = value.split('/');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return '';
+
+  return date.toISOString().split('T')[0];
+};
