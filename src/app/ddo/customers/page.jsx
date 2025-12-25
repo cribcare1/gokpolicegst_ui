@@ -18,6 +18,8 @@ import { LOGIN_CONSTANT } from '@/components/utils/constant';
 function CustomersPageContent() {
   const searchParams = useSearchParams();
   const [customers, setCustomers] = useState([]);
+  const [nameError, setNameError] = useState('');
+
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -201,11 +203,13 @@ function CustomersPageContent() {
     }
   };
 
+
   // const handleGSTINChange = (value) => {
   //   const upperValue = value.toUpperCase().slice(0, 15);
   //   let updatedFormData = { ...formData, gstNumber: upperValue };
   //   let errorMessage = '';
 
+  //   // Auto-set stateCode from GST
   //   if (upperValue.length >= 2) {
   //     const stateCode = getStateCodeFromGSTIN(upperValue);
   //     updatedFormData.stateCode = stateCode ? stateCode.toString() : '';
@@ -213,62 +217,73 @@ function CustomersPageContent() {
   //     updatedFormData.stateCode = '';
   //   }
 
+  //   // Clear exemption cert if GST is entered
   //   if (upperValue && upperValue.trim() !== '') {
   //     updatedFormData.exemptionCertNumber = '';
   //   }
 
+  //   // Govt GST validation
   //   if (updatedFormData.customerType === 'Government' && upperValue.length >= 6) {
-  //     const sixthChar = upperValue.charAt(5);
-  //     if (sixthChar !== 'G') {
-  //       errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
+  //     if (upperValue.charAt(5) !== 'G') {
+  //       errorMessage =
+  //         'Entered GSTIN does not belong to Govt, correct GSTIN or remove to proceed';
   //     }
   //   }
 
+
+  //   if (updatedFormData.customerType != 'Government' && upperValue.length >= 6) {
+  //     if (upperValue.charAt(5) === 'G') {
+  //       errorMessage =
+  //         'Entered GSTIN  belong to Govt, correct GSTIN or remove to proceed';
+  //     }
+  //   }
+
+
   //   setGstinError(errorMessage);
-  //   updateServiceType(updatedFormData.customerType, upperValue, updatedFormData);
+
+  //   // UPDATE service type properly
+  //   updatedFormData = updateServiceType(updatedFormData.customerType, upperValue, updatedFormData);
+
   //   setFormData(updatedFormData);
   // };
-
   const handleGSTINChange = (value) => {
-    const upperValue = value.toUpperCase().slice(0, 15);
-    let updatedFormData = { ...formData, gstNumber: upperValue };
-    let errorMessage = '';
+    const gst = value.toUpperCase().slice(0, 15);
+    let error = '';
+    let updatedFormData = { ...formData, gstNumber: gst };
 
-    // Auto-set stateCode from GST
-    if (upperValue.length >= 2) {
-      const stateCode = getStateCodeFromGSTIN(upperValue);
-      updatedFormData.stateCode = stateCode ? stateCode.toString() : '';
+    // Auto state code
+    if (gst.length >= 2) {
+      const stateCode = getStateCodeFromGSTIN(gst);
+      updatedFormData.stateCode = stateCode || '';
     } else {
       updatedFormData.stateCode = '';
     }
-
-    // Clear exemption cert if GST is entered
-    if (upperValue && upperValue.trim() !== '') {
-      updatedFormData.exemptionCertNumber = '';
+    if (gst.length > 0 && gst.length < 15) {
+      error = 'GSTIN must be 15 characters';
     }
 
-    // Govt GST validation
-    if (updatedFormData.customerType === 'Government' && upperValue.length >= 6) {
-      if (upperValue.charAt(5) !== 'G') {
-        errorMessage =
-          'Entered GSTIN does not belong to Govt, correct GSTIN or remove to proceed';
+    // GSTIN format validation (only when complete)
+    if (gst.length === 15) {
+      const result = validateGSTIN(gst);
+      if (!result.valid) {
+        error = result.message;
       }
     }
 
+    // Govt / Non-Govt validation
+    if (gst.length >= 6) {
+      const sixthChar = gst.charAt(5);
 
- if (updatedFormData.customerType != 'Government' && upperValue.length >= 6) {
-      if (upperValue.charAt(5) === 'G') {
-        errorMessage =
-          'Entered GSTIN  belong to Govt, correct GSTIN or remove to proceed';
+      if (formData.customerType === 'Government' && sixthChar !== 'G') {
+        error = 'Entered GSTIN does not belong to Government';
+      }
+
+      if (formData.customerType === 'Non-Government' && sixthChar === 'G') {
+        error = 'Entered GSTIN belongs to Government';
       }
     }
-    
 
-    setGstinError(errorMessage);
-
-    // UPDATE service type properly
-    updatedFormData = updateServiceType(updatedFormData.customerType, upperValue, updatedFormData);
-
+    setGstinError(error);
     setFormData(updatedFormData);
   };
 
@@ -277,53 +292,66 @@ function CustomersPageContent() {
   //   let updatedFormData = { ...formData, customerType: value };
   //   let errorMessage = '';
 
+  //   // Govt GST validation
   //   if (value === 'Government' && updatedFormData.gstNumber.length >= 6) {
-  //     const sixthChar = updatedFormData.gstNumber.charAt(5);
-  //     if (sixthChar !== 'G') {
-  //       errorMessage = 'Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed';
+  //     if (updatedFormData.gstNumber.charAt(5) !== 'G') {
+  //       errorMessage =
+  //         'Entered GSTIN does not belong to Govt, correct GSTIN or remove to proceed';
   //     }
   //   }
 
   //   setGstinError(errorMessage);
-  //   updateServiceType(value, updatedFormData.gstNumber, updatedFormData);
+
+  //   // UPDATE service type properly
+  //   updatedFormData = updateServiceType(value, updatedFormData.gstNumber, updatedFormData);
+
   //   setFormData(updatedFormData);
   // };
-  const handleCustomerTypeChange = (value) => {
-    let updatedFormData = { ...formData, customerType: value };
-    let errorMessage = '';
 
-    // Govt GST validation
-    if (value === 'Government' && updatedFormData.gstNumber.length >= 6) {
-      if (updatedFormData.gstNumber.charAt(5) !== 'G') {
-        errorMessage =
-          'Entered GSTIN does not belong to Govt, correct GSTIN or remove to proceed';
+  const handleCustomerTypeChange = (value) => {
+  let updatedFormData = { ...formData, customerType: value };
+  let error = '';
+  const gst = updatedFormData.gstNumber.toUpperCase();
+
+  // 1️⃣ Validate GSTIN if already entered
+  if (gst) {
+    // Length check
+    if (gst.length < 15) {
+      error = 'GSTIN must be 15 characters';
+    }
+
+    // Full GSTIN format validation (only if complete)
+    if (gst.length === 15) {
+      const result = validateGSTIN(gst);
+      if (!result.valid) {
+        error = result.message;
       }
     }
 
-    setGstinError(errorMessage);
+    // Check 6th char for Govt / Non-Govt rules
+    if (gst.length >= 6) {
+      const sixthChar = gst.charAt(5);
 
-    // UPDATE service type properly
-    updatedFormData = updateServiceType(value, updatedFormData.gstNumber, updatedFormData);
+      if (value === 'Government' && sixthChar !== 'G') {
+        error = 'Entered GSTIN does not belong to Government';
+      }
 
-    setFormData(updatedFormData);
-  };
+      if (value === 'Non-Government' && sixthChar === 'G') {
+        error = 'Entered GSTIN belongs to Government';
+      }
+    }
+  }
 
-  // const updateServiceType = (customerType, gstNumber, formDataObj) => {
-  //   if (customerType === 'Government') {
-  //     formDataObj.serviceType = 'Exempted';
-  //   } else if (customerType === 'Non-Government') {
-  //     if (gstNumber && gstNumber.trim() !== '') {
+  // 2️⃣ Set GSTIN error message
+  setGstinError(error);
 
-  //       if (!formDataObj.serviceType || formDataObj.serviceType === 'FCM') {
-  //         formDataObj.serviceType = 'RCM';
-  //       }
-  //     } else {
-  //       if (!formDataObj.serviceType || formDataObj.serviceType === 'RCM') {
-  //         formDataObj.serviceType = 'FCM';
-  //       }
-  //     }
-  //   }
-  // };
+  // 3️⃣ Auto-update service type based on customer type & GSTIN
+  updatedFormData = updateServiceType(value, gst, updatedFormData);
+
+  setFormData(updatedFormData);
+};
+
+
   const updateServiceType = (customerType, gstNumber, formDataObj) => {
     let updated = { ...formDataObj };
 
@@ -350,10 +378,26 @@ function CustomersPageContent() {
     return updated;
   };
 
-   const handleSubmit = async (e) => {
-   
+  const handleSubmit = async (e) => {
+
     e.preventDefault();
     setLoading(true); // ⭐ FIXED: modal loader only
+     if (gstinError) {
+      toast.error(gstinError);
+      setLoading(false);
+      return;
+    }
+
+ 
+
+    if (formData.gstNumber) {
+      const gstVal = validateGSTIN(formData.gstNumber);
+      if (!gstVal.valid) {
+        toast.error(gstVal.message);
+        setLoading(false);
+        return;
+      }
+    }
 
     const nameVal = validateName(formData.name, "Customer Name");
     if (!nameVal.valid) {
@@ -408,7 +452,7 @@ function CustomersPageContent() {
     }
 
     try {
-       setIsModalOpen(false);
+      setIsModalOpen(false);
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
 
       const payload = {
@@ -446,123 +490,6 @@ function CustomersPageContent() {
     setLoading(false);
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //    setLoading(true);
-  //   const nameValidation = validateName(formData.name, 'Customer Name');
-  //   if (!nameValidation.valid) {
-  //     toast.error(nameValidation.message);
-  //     return;
-  //   }
-
-  //   if (formData.gstNumber && formData.gstNumber.trim() !== '') {
-  //     const gstValidation = validateGSTIN(formData.gstNumber);
-  //     if (!gstValidation.valid) {
-  //       toast.error(gstValidation.message);
-  //       return;
-  //     }
-  //   }
-
-  //   const addressValidation = validateAddress(formData.address);
-  //   if (!addressValidation.valid) {
-  //     toast.error(addressValidation.message);
-  //     return;
-  //   }
-
-  //   const cityValidation = validateCity(formData.city);
-  //   if (!cityValidation.valid) {
-  //     toast.error(cityValidation.message);
-  //     return;
-  //   }
-
-  //   const stateCodeValidation = validateStateCode(formData.stateCode);
-  //   if (!stateCodeValidation.valid) {
-  //     toast.error(stateCodeValidation.message);
-  //     return;
-  //   }
-
-  //   const pinValidation = validatePIN(formData.pin);
-  //   if (!pinValidation.valid) {
-  //     toast.error(pinValidation.message);
-  //     return;
-  //   }
-
-  //   if (formData.customerType === 'Government' && formData.gstNumber && formData.gstNumber.length >= 6) {
-  //     const sixthChar = formData.gstNumber.charAt(5);
-  //     if (sixthChar !== 'G') {
-  //       toast.error('Entered GSTIN is not belongs to govt, correct the GSTIN/remove to proceed');
-  //       return;
-  //     }
-  //   }
-
-  //   if (!formData.serviceType || formData.serviceType.trim() === '') {
-  //     toast.error('Service Type is required');
-  //     return;
-  //   }
-
-  //   if (formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && !(formData.gstNumber && formData.gstNumber.trim() !== '')) {
-  //     if (!formData.exemptionCertNumber || formData.exemptionCertNumber.trim() === '') {
-  //       toast.error('Notification is required when Service Type is Exempted for Non-Government customers without GSTIN');
-  //       return;
-  //     }
-  //   }
-
-  //   const emailValidation = validateEmail(formData.email);
-  //   if (!emailValidation.valid) {
-  //     toast.error(emailValidation.message);
-  //     return;
-  //   }
-
-  //   const mobileValidation = validateMobile(formData.mobile);
-  //   if (!mobileValidation.valid) {
-  //     toast.error(mobileValidation.message);
-  //     return;
-  //   }
-
-  //   try {
-  //     const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-
-  //     if (!ddoId) {
-        
-  //       toast.error('DDO ID not found. Please login again.');
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     const payload = {
-  //       ...(editingCustomer && editingCustomer.id ? { id: editingCustomer.id } : {}),
-  //       customerName: formData.name,
-  //       customerType: formData.customerType === 'Government' ? 'gov' : 'non-gov',
-  //       customerEmail: formData.email,
-  //       address: formData.address,
-  //       pinCode: formData.pin,
-  //       stateCode: formData.stateCode,
-  //       gstNumber: formData.gstNumber || '',
-  //       city: formData.city,
-  //       mobile: formData.mobile,
-  //       exemptionNumber: formData.exemptionCertNumber || '',
-  //       serviceType: formData.serviceType,
-  //       ddoId: parseInt(ddoId, 10),
-  //     };
-
-  //     const response = await ApiService.handlePostRequest(
-  //       API_ENDPOINTS.CUSTOMER_ADD_OR_EDIT,
-  //       payload
-  //     );
-
-  //     if (response && response.status === 'success') {
-  //       toast.success(response.message || t('alert.success'));
-  //       setIsModalOpen(false);
-  //       fetchCustomers();
-  //     } else {
-  //       toast.error(response?.message || t('alert.error'));
-  //     }
-  //   } catch (error) {
-  //     console.error('Error saving customer:', error);
-  //     toast.error(t('alert.error'));
-  //   }
-  //     setLoading(false);
-  // };
 
   const columns = [
     { key: 'name', label: 'Customer Name', render: (v) => v || '-' },
@@ -659,7 +586,7 @@ function CustomersPageContent() {
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium mb-1">
                   Customer Name <span className="text-red-500">*</span>
                 </label>
@@ -670,7 +597,44 @@ function CustomersPageContent() {
                   className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
                   required
                 />
+              </div> */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+
+                    // 🔴 Show error if user tries to exceed 100 chars
+                    if (value.length > 100) {
+                      setNameError('Customer name cannot exceed 100 characters');
+                      return; // ⛔ stop updating value
+                    }
+
+                    // ✅ Clear error when valid
+                    setNameError('');
+                    setFormData({ ...formData, name: value });
+                  }}
+                  className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg
+      ${nameError ? 'border-red-500' : 'border-[var(--color-border)]'}
+    `}
+                  maxLength={110} // allow typing attempt
+                  required
+                />
+
+                {/* 🔴 ERROR BELOW INPUT */}
+                {nameError && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {nameError}
+                  </p>
+                )}
               </div>
+
+
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Type (Govt, Non Govt) <span className="text-red-500">*</span>
@@ -690,18 +654,25 @@ function CustomersPageContent() {
                 <label className="block text-sm font-medium mb-1">
                   GSTIN Number
                 </label>
+
                 <input
                   type="text"
                   value={formData.gstNumber}
                   onChange={(e) => handleGSTINChange(e.target.value)}
-                  className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg ${gstinError ? 'border-red-500' : 'border-[var(--color-border)]'
-                    }`}
+                  className={`w-full px-3 py-2 bg-[var(--color-background)] border rounded-lg
+      ${gstinError ? 'border-red-500' : 'border-[var(--color-border)]'}
+    `}
                   maxLength={15}
                 />
+
+                {/* 🔴 ERROR SHOWN HERE */}
                 {gstinError && (
-                  <p className="mt-1 text-sm text-red-500">{gstinError}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {gstinError}
+                  </p>
                 )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Service Type <span className="text-red-500">*</span>
@@ -736,31 +707,7 @@ function CustomersPageContent() {
                   )}
                 </select>
               </div>
-              {/* {!(formData.gstNumber && formData.gstNumber.trim() !== ''  ) && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Notification
-                    {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                      <span className="text-red-500">*</span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.exemptionCertNumber}
-                    onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                    placeholder="Enter notification"
-                    pattern="[A-Za-z0-9]*"
-                    required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
-                    disabled={formData.serviceType !== 'Exempted'}
-                  />
-                  {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
-                    <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                      Required for Exempted service type (Non-Government)
-                    </p>
-                  )}
-                </div>
-              )} */}
+
               {formData.serviceType === "Exempted" && (
                 <div>
                   <label className="block text-sm mb-1">

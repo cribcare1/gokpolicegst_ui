@@ -255,10 +255,11 @@ export default function BankDetailsPage() {
   };
 
   const handleSubmit = async (e) => {
-     setLoading(true);
-     
+    setLoading(true);
+
     e.preventDefault();
     const dataCopy = { ...formData };
+    dataCopy.effectiveDate=formatDateDDMMYYYY(dataCopy.effectiveDate);
 
     // Validate all fields before submission
     let hasErrors = false;
@@ -282,7 +283,7 @@ export default function BankDetailsPage() {
       const validation = validateForm(dataCopy);
       if (!validation.valid) {
         toast.error(validation.message || t('validation.required'));
-         setLoading(false);
+        setLoading(false);
         return;
       }
     }
@@ -300,48 +301,48 @@ export default function BankDetailsPage() {
     // }
     console.log("Bank dataCopy data: ", dataCopy);
     try {
-        setIsModalOpen(false);
+      setIsModalOpen(false);
       if (editingItem) {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
         console.log("Bank editing called: ");
-        const editData = (originalItem, updatedFormData) => {
-          const delta = {};
-          const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
+        // const editData = (originalItem, updatedFormData) => {
+        //   const delta = {};
+        //   const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
 
-          // Only include fields that have changed
-          fieldsToCheck.forEach(field => {
-            if (updatedFormData[field] !== originalItem[field]) {
-              delta[field] = updatedFormData[field];
-            }
-          });
+        //   // Only include fields that have changed
+        //   fieldsToCheck.forEach(field => {
+        //     if (updatedFormData[field] !== originalItem[field]) {
+        //       delta[field] = updatedFormData[field];
+        //     }
+        //   });
 
-          return {
-            ...delta,
-            //id: originalItem.id, // Include original id for update identification
-            ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
-            createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
-          };
-        };
+        //   return {
+        //     ...delta,
+        //     //id: originalItem.id, // Include original id for update identification
+        //     ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //     createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //   };
+        // };
         if (!editingItem) {
-           setLoading(false);
+          setLoading(false);
           toast.error('No bank record selected for editing');
           return;
         }
-        const deltaPayload = editData(editingItem, formData);
-        console.log("Bank editing called with delta: ", deltaPayload);
-        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, deltaPayload);
+        // const deltaPayload = editData(editingItem, formData);
+        console.log("Bank editing called with delta: ", dataCopy);
+        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, dataCopy);
         console.log("Bank inactivate response: ", response);
         if (response && response.status === 'success') {
           toast.success('Bank details updated successfully. Old record inactivated, new record created.');
           // setIsModalOpen(false);
-           setLoading(false);
+          setLoading(false);
           fetchData();
 
         } else {
           toast.error(response?.message || t('alert.error'));
         }
-         setLoading(false);
+        setLoading(false);
       } else {
         // Adding new record - ensure status is Active
         dataCopy.status = 'Active';
@@ -352,18 +353,18 @@ export default function BankDetailsPage() {
         if (response && response.status === 'success') {
           toast.success(t('alert.success'));
           // setIsModalOpen(false);
-            setLoading(false);
+          setLoading(false);
           fetchData();
 
         } else {
-           setLoading(false);
+          setLoading(false);
           toast.error(response?.message || t('alert.error'));
         }
       }
     } catch (error) {
       toast.error(t('alert.error'));
     }
-     setLoading(false);
+    setLoading(false);
   };
 
   const updateFormData = (field, value) => {
@@ -446,7 +447,7 @@ export default function BankDetailsPage() {
     { key: 'micrCode', label: 'MICR Code', render: empty },
 
     {
-      key: 'effectiveDate',
+      key: 'effectiveFrom',
       label: 'Effective Date',
       render: (value) => value ? value : '-',
     },
@@ -460,8 +461,8 @@ export default function BankDetailsPage() {
         return (
           <span
             className={`px-2 py-1 rounded-full text-xs font-semibold ${isActive
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
               }`}
           >
             {isActive ? 'Active' : 'Inactive'}
@@ -474,13 +475,7 @@ export default function BankDetailsPage() {
 
   const getFormFields = useCallback(() => {
     return [
-      // {
-      //   key: 'gstinNumber',
-      //   label: t('label.gstin'),
-      //   required: true,
-      //   maxLength: 15,
-      //   readOnly: editingItem ? true : false // GSTIN cannot be changed when editing (must remain same)
-      // },
+
       { key: 'accountNumber', label: 'Account Number', required: true },
       { key: 'accountName', label: 'Account Holder Name', required: true },
       { key: 'bankName', label: 'Bank Name', required: true },
@@ -549,8 +544,8 @@ export default function BankDetailsPage() {
           }}
           disabled={!canDelete}
           className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${canDelete
-              ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
             }`}
           aria-label="Delete"
           title={!canDelete ? (!isEditable ? 'Bank details is protected - dependent records found' : 'Bank details is protected - dependent records found') : 'Delete'}
@@ -627,148 +622,188 @@ export default function BankDetailsPage() {
         </div>
 
         {/* Add/Edit Modal */}
-        {/* <Modal
+
+
+        <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           title={editingItem ? `Edit Bank Details` : `Add Bank Details`}
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
-            {getFormFields().map((field) => {
-              const isReadOnly = field.readOnly;
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {getFormFields().map((field) => {
+                const isReadOnly = field.readOnly;
 
-              return (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                    {field.label} {field.required && <span className="text-red-500">*</span>}
-                    {isReadOnly && editingItem && (
-                      <span className="ml-2 text-xs text-orange-500">
-                        (Auto-set when editing)
-                      </span>
-                    )}
-                  </label>
-                  {field.type === 'date' ? (
-                    <>
-                      <input
-                        type="date"
-                        value={formData[field.key] || ''}
-                        onChange={(e) => updateFormData(field.key, e.target.value)}
-                        onBlur={(e) => validateField(field.key, e.target.value, field)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                          } bg-[var(--color-background)]`}
-                        required={field.required}
-                      />
-                      {fieldErrors[field.key] && (
-                        <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
-                      )}
-                    </>
-                  ) : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
-                    <>
-                      <select
-                        value={formData[field.key] ?? ''}
-                        onChange={(e) => updateFormData(field.key, e.target.value)}
-                        onBlur={(e) => validateField(field.key, e.target.value, field)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase border-[var(--color-border)] ${isReadOnly ? 'bg-gray-100 cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'
-                          }`}
-                        required={field.required}
-                        disabled={isReadOnly}
-                      >
-                        <option value="">Select GSTIN Number</option>
-                        {gstinList.map((gstin) => (
-                          <option key={gstin.value || gstin.gstNumber} value={gstin.value || gstin.gstNumber || gstin.gstinNumber}>
-                            {gstin.label || gstin.value || gstin.gstNumber || gstin.gstinNumber}
-                          </option>
-                        ))}
-                      </select>
+                return (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
                       {isReadOnly && editingItem && (
-                        <p className="mt-1 text-xs text-orange-500">GSTIN cannot be changed when editing</p>
+                        <span className="ml-2 text-xs text-orange-500">(Auto-set when editing)</span>
                       )}
-                      {fieldErrors[field.key] && (
-                        <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
-                      )}
-                    </>
-                  ) : field.type === 'select' && field.options ? (
-                    <>
-                      <select
-                        value={formData[field.key] ?? ''}
-                        onChange={(e) => updateFormData(field.key, e.target.value)}
-                        onBlur={(e) => validateField(field.key, e.target.value, field)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                          } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
-                        required={field.required}
-                        disabled={isReadOnly}
-                      >
-                        <option value="">Select {field.label}</option>
-                        {field.options.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {fieldErrors[field.key] && (
-                        <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type={field.type || 'text'}
-                        value={formData[field.key] ?? ''}
-                        onChange={(e) => {
-                          let value = e.target.value;
-                          const fieldLower = field.key.toLowerCase();
+                    </label>
 
-                          if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                            value = value.replace(/\D/g, '');
-                          } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                            value = value.replace(/\D/g, '').slice(0, 9);
-                          } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
-                            value = value.toUpperCase().slice(0, 11);
-                          }
+                    {/* Date Field */}
+                    {field.type === 'date' ? (
+                      <>
+                        <input
+                          type="date"
+                          value={formData[field.key] || ''}
+                          onChange={(e) => updateFormData(field.key, e.target.value)}
+                          onBlur={(e) => validateField(field.key, e.target.value, field)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                            } bg-[var(--color-background)]`}
+                          required={field.required}
+                        />
+                        {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
+                      </>
+                    )
 
-                          updateFormData(field.key, value);
-                        }}
-                        onKeyPress={(e) => {
-                          const fieldLower = field.key.toLowerCase();
-                          if (fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
-                            fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                            if (!/[0-9]/.test(e.key)) {
-                              e.preventDefault();
-                            }
-                          }
-                        }}
-                        onPaste={(e) => {
-                          const fieldLower = field.key.toLowerCase();
-                          if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                            e.preventDefault();
-                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
-                            updateFormData(field.key, pastedText);
-                          } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                            e.preventDefault();
-                            const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 9);
-                            updateFormData(field.key, pastedText);
-                          }
-                        }}
-                        onBlur={(e) => {
-                          validateField(field.key, e.target.value, field);
-                        }}
-                        readOnly={isReadOnly}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                          } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
-                        placeholder={field.placeholder}
-                        required={field.required}
-                        maxLength={field.maxLength}
-                        min={field.min}
-                        max={field.max}
-                      />
-                      {fieldErrors[field.key] && (
-                        <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                      // GSTIN Select
+                      : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
+                        <>
+                          <select
+                            value={formData[field.key] ?? ''}
+                            onChange={(e) => updateFormData(field.key, e.target.value)}
+                            onBlur={(e) => validateField(field.key, e.target.value, field)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase border-[var(--color-border)] ${isReadOnly ? 'bg-gray-100 cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'
+                              }`}
+                            required={field.required}
+                            disabled={isReadOnly}
+                          >
+                            <option value="">Select GSTIN Number</option>
+                            {gstinList.map((gstin) => (
+                              <option
+                                key={gstin.value || gstin.gstNumber}
+                                value={gstin.value || gstin.gstNumber || gstin.gstinNumber}
+                              >
+                                {gstin.label || gstin.value || gstin.gstNumber || gstin.gstinNumber}
+                              </option>
+                            ))}
+                          </select>
+                          {isReadOnly && editingItem && (
+                            <p className="mt-1 text-xs text-orange-500">GSTIN cannot be changed when editing</p>
+                          )}
+                          {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
+                        </>
+                      )
+
+                        // Generic Select
+                        : field.type === 'select' && field.options ? (
+                          <>
+                            <select
+                              value={formData[field.key] ?? ''}
+                              onChange={(e) => updateFormData(field.key, e.target.value)}
+                              onBlur={(e) => validateField(field.key, e.target.value, field)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                                } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
+                              required={field.required}
+                              disabled={isReadOnly}
+                            >
+                              <option value="">Select {field.label}</option>
+                              {field.options.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
+                          </>
+                        )
+
+                          // Text / Number / IFSC / MICR / Account Number
+                          : (
+                            <>
+                              <input
+                                type={field.type || 'text'}
+                                value={formData[field.key] ?? ''}
+                                // onChange={(e) => {
+                                //   let value = e.target.value;
+                                //   const fieldLower = field.key.toLowerCase();
+
+                                //   if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                                //     // Only digits, max 18
+                                //     value = value.replace(/\D/g, '').slice(0, 18);
+                                //   } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+                                //     // Only digits, max 9
+                                //     value = value.replace(/\D/g, '').slice(0, 9);
+                                //   } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
+                                //     // Uppercase, max 11
+                                //     value = value.toUpperCase().slice(0, 11);
+                                //   }
+
+                                //   updateFormData(field.key, value);
+                                // }}
+
+                                onChange={(e) => {
+                                  let value = e.target.value;
+                                  const fieldLower = field.key.toLowerCase();
+
+                                  // Character limit check for name fields
+                                  if (
+                                    (field.key === 'accountName' ||
+                                      field.key === 'bankName' ||
+                                      field.key === 'branchName')
+                                  ) {
+                                    if (value.length > 100) {
+                                      setFieldErrors((prev) => ({
+                                        ...prev,
+                                        [field.key]: `${field.label} cannot exceed 100 characters`,
+                                      }));
+                                      return; // stop updating value
+                                    } else {
+                                      setFieldErrors((prev) => {
+                                        const newErrors = { ...prev };
+                                        delete newErrors[field.key];
+                                        return newErrors;
+                                      });
+                                    }
+                                  }
+
+                                  if (fieldLower.includes('accountnumber')) {
+                                    value = value.replace(/\D/g, '').slice(0, 18);
+                                  } else if (fieldLower.includes('micr')) {
+                                    value = value.replace(/\D/g, '').slice(0, 9);
+                                  } else if (fieldLower.includes('ifsc')) {
+                                    value = value.toUpperCase().slice(0, 11);
+                                  }
+
+                                  updateFormData(field.key, value);
+                                }}
+
+                                onPaste={(e) => {
+                                  const fieldLower = field.key.toLowerCase();
+                                  let pastedText = e.clipboardData.getData('text') || '';
+                                  if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
+                                    e.preventDefault();
+                                    pastedText = pastedText.replace(/\D/g, '').slice(0, 18);
+                                    updateFormData(field.key, pastedText);
+                                  } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
+                                    e.preventDefault();
+                                    pastedText = pastedText.replace(/\D/g, '').slice(0, 9);
+                                    updateFormData(field.key, pastedText);
+                                  } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
+                                    e.preventDefault();
+                                    pastedText = pastedText.toUpperCase().slice(0, 11);
+                                    updateFormData(field.key, pastedText);
+                                  }
+                                }}
+                                onBlur={(e) => validateField(field.key, e.target.value, field)}
+                                readOnly={isReadOnly}
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                                  } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
+                                placeholder={field.placeholder}
+                                required={field.required}
+                              />
+                              {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
+                            </>
+
+                          )}
+                  </div>
+                );
+              })}
+            </div>
 
             {editingItem && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
@@ -789,177 +824,7 @@ export default function BankDetailsPage() {
               </Button>
             </div>
           </form>
-        </Modal> */}
-
-        <Modal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  title={editingItem ? `Edit Bank Details` : `Add Bank Details`}
-  size="lg"
->
-  <form onSubmit={handleSubmit} className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {getFormFields().map((field) => {
-        const isReadOnly = field.readOnly;
-
-        return (
-          <div key={field.key}>
-            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-              {isReadOnly && editingItem && (
-                <span className="ml-2 text-xs text-orange-500">(Auto-set when editing)</span>
-              )}
-            </label>
-
-            {/* Date Field */}
-            {field.type === 'date' ? (
-              <>
-                <input
-                  type="date"
-                  value={formData[field.key] || ''}
-                  onChange={(e) => updateFormData(field.key, e.target.value)}
-                  onBlur={(e) => validateField(field.key, e.target.value, field)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
-                    fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                  } bg-[var(--color-background)]`}
-                  required={field.required}
-                />
-                {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
-              </>
-            ) 
-            
-            // GSTIN Select
-            : (field.key.toLowerCase().includes('gstin') || field.key.toLowerCase().includes('gstnumber')) && gstinList.length > 0 ? (
-              <>
-                <select
-                  value={formData[field.key] ?? ''}
-                  onChange={(e) => updateFormData(field.key, e.target.value)}
-                  onBlur={(e) => validateField(field.key, e.target.value, field)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase border-[var(--color-border)] ${
-                    isReadOnly ? 'bg-gray-100 cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'
-                  }`}
-                  required={field.required}
-                  disabled={isReadOnly}
-                >
-                  <option value="">Select GSTIN Number</option>
-                  {gstinList.map((gstin) => (
-                    <option
-                      key={gstin.value || gstin.gstNumber}
-                      value={gstin.value || gstin.gstNumber || gstin.gstinNumber}
-                    >
-                      {gstin.label || gstin.value || gstin.gstNumber || gstin.gstinNumber}
-                    </option>
-                  ))}
-                </select>
-                {isReadOnly && editingItem && (
-                  <p className="mt-1 text-xs text-orange-500">GSTIN cannot be changed when editing</p>
-                )}
-                {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
-              </>
-            ) 
-            
-            // Generic Select
-            : field.type === 'select' && field.options ? (
-              <>
-                <select
-                  value={formData[field.key] ?? ''}
-                  onChange={(e) => updateFormData(field.key, e.target.value)}
-                  onBlur={(e) => validateField(field.key, e.target.value, field)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
-                    fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                  } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
-                  required={field.required}
-                  disabled={isReadOnly}
-                >
-                  <option value="">Select {field.label}</option>
-                  {field.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
-              </>
-            ) 
-            
-            // Text / Number / IFSC / MICR / Account Number
-            : (
-              <>
-                <input
-                  type={field.type || 'text'}
-                  value={formData[field.key] ?? ''}
-                  onChange={(e) => {
-                    let value = e.target.value;
-                    const fieldLower = field.key.toLowerCase();
-
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                      value = value.replace(/\D/g, '');
-                    } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      value = value.replace(/\D/g, '').slice(0, 9);
-                    } else if (fieldLower.includes('ifsc') || fieldLower.includes('ifsc code')) {
-                      value = value.toUpperCase().slice(0, 11);
-                    }
-
-                    updateFormData(field.key, value);
-                  }}
-                  onKeyPress={(e) => {
-                    const fieldLower = field.key.toLowerCase();
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number') ||
-                      fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      if (!/[0-9]/.test(e.key)) e.preventDefault();
-                    }
-                  }}
-                  onPaste={(e) => {
-                    const fieldLower = field.key.toLowerCase();
-                    if (fieldLower.includes('accountnumber') || fieldLower.includes('account number')) {
-                      e.preventDefault();
-                      const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '');
-                      updateFormData(field.key, pastedText);
-                    } else if (fieldLower.includes('micr') || fieldLower.includes('micr code')) {
-                      e.preventDefault();
-                      const pastedText = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 9);
-                      updateFormData(field.key, pastedText);
-                    }
-                  }}
-                  onBlur={(e) => validateField(field.key, e.target.value, field)}
-                  readOnly={isReadOnly}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
-                    fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
-                  } ${isReadOnly ? 'bg-[var(--color-background)] cursor-not-allowed opacity-75' : 'bg-[var(--color-background)]'}`}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  maxLength={field.maxLength}
-                  min={field.min}
-                  max={field.max}
-                />
-                {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
-
-    {editingItem && (
-      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-        <strong>Note:</strong> When editing bank details, the old record will be inactivated and a new active record will be created with the same GSTIN. GSTIN cannot be changed.
-      </div>
-    )}
-
-    <div className="flex items-center justify-end gap-3 pt-4">
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => setIsModalOpen(false)}
-      >
-        {t('btn.cancel')}
-      </Button>
-      <Button type="submit" variant="primary">
-        {t('btn.save')}
-      </Button>
-    </div>
-  </form>
-</Modal>
+        </Modal>
 
       </div>
     </Layout>

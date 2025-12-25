@@ -54,50 +54,7 @@ export default function ShortfallPaymentPage() {
     }
   };
 
-  // const fetchInvoices = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-  //     const storedProfileRaw = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
-  //     let gstId = 0;
-
-  //     if (storedProfileRaw) {
-  //       const storedProfile = JSON.parse(storedProfileRaw);
-  //       if (Array.isArray(storedProfile) && storedProfile.length > 0) {
-  //         gstId = storedProfile[0].gstId;
-  //       } else if (typeof storedProfile === "object" && storedProfile.gstId) {
-  //         gstId = storedProfile.gstId;
-  //       }
-  //     }
-
-  //     if (!gstId) return;
-
-  //     const response = await ApiService.handleGetRequest(
-  //       `${API_ENDPOINTS.PROFORMA_ADVICE_LIST}${ddoId}&gstId=${gstId}&status=${status}`
-  //     );
-
-  //     if (response && response.success === "success") {
-  //       const invoices = (response.data || []).map((invoice) => ({
-  //         id: invoice.invoiceId,
-  //         paNo: invoice.invoiceNumber,
-  //         customerName: invoice.customerResponse?.name || "",
-  //         amountPayable: invoice.grandTotal,
-  //         amountReceived: 0,
-  //         paymentMode: "Bank",
-  //         paymentRef: "",
-  //         paymentDate: invoice.invoiceDate,
-  //       }));
-
-  //       setReceiptsData(invoices);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching invoices:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-
+ 
    const fetchInvoices = async () => {
     try {
       setLoading(true);
@@ -262,15 +219,26 @@ export default function ShortfallPaymentPage() {
         if (!isChecked) return <span>{formatCurrency(v)}</span>;
 
         return (
-          // <input
-          //   type="number"
-          //   min="0"
-          //   step="1"
-          //   className="border rounded px-2 py-1 w-28"
-          //   value={edited}
-          //   onChange={(e) => updateField(row.id, "amountReceived", parseFloat(e.target.value) || 0)}
-          // />
-          <input type="number" min="0" step="1" className="border rounded px-2 py-1 w-28" value={edited === 0 ? "" : edited} onChange={(e) => { const value = e.target.value; updateField( row.id, "amountReceived", value === "" ? "" : Number(value) ); }} />
+       
+          // <input type="number" min="0" step="1" className="border rounded px-2 py-1 w-28" value={edited === 0 ? "" : edited} onChange={(e) => { const value = e.target.value; updateField( row.id, "amountReceived", value === "" ? "" : Number(value) ); }} />
+          <input
+  type="number"
+  min="0"
+  max={row.amountPayable} // restrict max to amountPayable
+  step="1"
+  className="border rounded px-2 py-1 w-28"
+  value={edited === 0 ? "" : edited}
+  onChange={(e) => {
+    let value = e.target.value === "" ? "" : Number(e.target.value);
+
+    // Restrict value between 0 and amountPayable
+    if (value !== "" && value < 0) value = 0;
+    if (value !== "" && value > row.amountPayable) value = row.amountPayable;
+
+    updateField(row.id, "amountReceived", value);
+  }}
+/>
+
 
 
 

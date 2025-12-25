@@ -9,6 +9,7 @@ import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { t } from "@/lib/localization";
 import { useRouter } from 'next/navigation';
+import { formatDateDDMMYYYY } from "@/components/utils/dateUtils";
 
 export default function TDSQuarterlyCreate() {
   const router = useRouter();
@@ -133,12 +134,12 @@ export default function TDSQuarterlyCreate() {
         fiscalYear: f.fy,
         returnType: f.returnType,
         quarter: f.quarter,
-        dateOfFiling: f.filingDate,
+        dateOfFiling:formatDateDDMMYYYY(f.filingDate),
         provisionalReceiptNo: f.receiptNo,
         deducteeCount: Number(f.deducteeCount),
         totalChallanAmount: Number(f.challanAmount),
         totalTaxDeducted: Number(f.taxDeducted),
-        anyRevisionFiled: f.revision,
+        anyRevisionFiled: (f.revision== "Yes" )? true :false ,
         remarks: f.remarks ?? "",
       };
 

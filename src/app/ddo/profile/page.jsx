@@ -56,6 +56,9 @@ export default function DDOProfilePage() {
       } 
     }, []);
 
+
+    
+
   const fetchProfileData = async () => {
     setFetching(true);
     try {
@@ -300,8 +303,6 @@ export default function DDOProfilePage() {
     return String(details);
   };
 
-
-
 function cleanGstinBankDetails(details) {
   if (!details) return "";
 
@@ -349,7 +350,6 @@ function cleanGstinBankDetails(details) {
 
   return parts.join(" | ");
 }
-
 
 
 
