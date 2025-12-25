@@ -13,7 +13,7 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
-import { formatDateDDMMYYYY } from '@/components/utils/dateUtils';
+import { formatDateDDMMYYYY , formatDateForInput } from '@/components/utils/dateUtils';
 export default function BankDetailsPage() {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -169,6 +169,8 @@ export default function BankDetailsPage() {
     setIsModalOpen(true);
   };
 
+  
+
   const handleEdit = (item) => {
     setEditingItem(item);
     setFieldErrors({});
@@ -180,6 +182,7 @@ export default function BankDetailsPage() {
     const updatedItem = {
       ...item,
       gstId: 0,
+      effectiveDate: formatDateForInput(item.effectiveFrom),
       // Ensure status is set
       status: item.status || (item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : 'Active'),
     };
@@ -306,9 +309,9 @@ export default function BankDetailsPage() {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
         console.log("Bank editing called: ");
-        const editData = (originalItem, updatedFormData) => {
-          const delta = {};
-          const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
+        // const editData = (originalItem, updatedFormData) => {
+        //   const delta = {};
+        //   const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
 
 
         //   Only include fields that have changed
@@ -317,18 +320,18 @@ export default function BankDetailsPage() {
         //       delta[field] = updatedFormData[field];
         //     }
         //   });
-          updatedFormData.effectiveDate=formatDateDDMMYYYY(updatedFormData.effectiveDate);
-          updatedFormData.effectiveFrom=formatDateDDMMYYYY(updatedFormData.effectiveFrom);
+          // updatedFormData.effectiveDate=formatDateDDMMYYYY(updatedFormData.effectiveDate);
+          // updatedFormData.effectiveFrom=formatDateDDMMYYYY(updatedFormData.effectiveFrom);
 
-          return {
-            // ...delta,
-            ...updatedFormData,
+        //   return {
+        //     // ...delta,
+        //     ...updatedFormData,
 
-            //id: originalItem.id, // Include original id for update identification
-            ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
-            createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
-          };
-        };
+        //     //id: originalItem.id, // Include original id for update identification
+        //     ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //     createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //   };
+        // };
 
         //   // Only include fields that have changed
         //   fieldsToCheck.forEach(field => {
