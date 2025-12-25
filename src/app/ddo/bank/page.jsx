@@ -306,32 +306,32 @@ export default function BankDetailsPage() {
         // When editing: ALWAYS inactivate old record and create new one
         // Step 1: Inactivate the old bank record
         console.log("Bank editing called: ");
-        const editData = (originalItem, updatedFormData) => {
-          const delta = {};
-          const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
+        // const editData = (originalItem, updatedFormData) => {
+        //   const delta = {};
+        //   const fieldsToCheck = ['bankName', 'branchName', 'accountNumber', 'accountType', 'accountName', 'ifscCode', 'micrCode', 'effectiveDate', 'status'];
 
-          // Only include fields that have changed
-          fieldsToCheck.forEach(field => {
-            if (updatedFormData[field] !== originalItem[field]) {
-              delta[field] = updatedFormData[field];
-            }
-          });
+        //   // Only include fields that have changed
+        //   fieldsToCheck.forEach(field => {
+        //     if (updatedFormData[field] !== originalItem[field]) {
+        //       delta[field] = updatedFormData[field];
+        //     }
+        //   });
 
-          return {
-            ...delta,
-            //id: originalItem.id, // Include original id for update identification
-            ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
-            createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
-          };
-        };
+        //   return {
+        //     ...delta,
+        //     //id: originalItem.id, // Include original id for update identification
+        //     ddoId: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //     createdBy: userIdStr ? parseInt(userIdStr, 10) : 0,
+        //   };
+        // };
         if (!editingItem) {
           setLoading(false);
           toast.error('No bank record selected for editing');
           return;
         }
-        const deltaPayload = editData(editingItem, formData);
-        console.log("Bank editing called with delta: ", deltaPayload);
-        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, deltaPayload);
+        // const deltaPayload = editData(editingItem, formData);
+        console.log("Bank editing called with delta: ", dataCopy);
+        const response = await ApiService.handlePostRequest(API_ENDPOINTS.BANK_ADD, dataCopy);
         console.log("Bank inactivate response: ", response);
         if (response && response.status === 'success') {
           toast.success('Bank details updated successfully. Old record inactivated, new record created.');
@@ -447,7 +447,7 @@ export default function BankDetailsPage() {
     { key: 'micrCode', label: 'MICR Code', render: empty },
 
     {
-      key: 'effectiveDate',
+      key: 'effectiveFrom',
       label: 'Effective Date',
       render: (value) => value ? value : '-',
     },
