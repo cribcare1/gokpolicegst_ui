@@ -8,6 +8,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { t } from "@/lib/localization";
 import { useRouter } from 'next/navigation';
+import { formatDateDDMMYYYY } from "@/components/utils/dateUtils";
 export default function GSTTDSMonthlyCreate() {
   const router = useRouter();
   const [toasts, setToasts] = useState([]);
@@ -162,7 +163,7 @@ export default function GSTTDSMonthlyCreate() {
         ddoId: Number(localStorage.getItem(LOGIN_CONSTANT.USER_ID)),
         filingMonth: f.month,
         arnNo: f.arnNumber,
-        arnDate: f.arnDate,
+        arnDate:formatDateDDMMYYYY( f.arnDate),
         declaredAmount: Number(f.amountDeclared),
         paidAmount: Number(f.amountPaid),
         penaltyAmount: Number(f.penaltyAmount || 0),

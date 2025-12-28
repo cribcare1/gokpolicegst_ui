@@ -9,7 +9,7 @@ import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { toast } from 'sonner';
-import { LoadingProgressBar } from "@/components/shared/ProgressBar"; 
+import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { useRouter } from "next/navigation";
 
 export default function ShortfallPaymentPage() {
@@ -21,7 +21,7 @@ export default function ShortfallPaymentPage() {
   const [receiptsData, setReceiptsData] = useState([]);
   const [selectedReceipts, setSelectedReceipts] = useState([]);
   const [editedValues, setEditedValues] = useState({});
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
   const countrecords = receiptsData.length;
 
@@ -29,7 +29,7 @@ export default function ShortfallPaymentPage() {
     setFromDate("");
     setToDate("");
     fetchCustomers();
-    if(Object.keys(editedValues).length === 0){
+    if (Object.keys(editedValues).length === 0) {
       fetchInvoices();
     }
   }, []);
@@ -54,8 +54,8 @@ export default function ShortfallPaymentPage() {
     }
   };
 
- 
-   const fetchInvoices = async () => {
+
+  const fetchInvoices = async () => {
     try {
       setLoading(true);
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
@@ -209,35 +209,35 @@ export default function ShortfallPaymentPage() {
     },
     { key: "paNo", label: "Proforma Number" },
     { key: "customerName", label: "Customer Name" },
-    { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v) },
+    { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v, true) },
     {
       key: "amountReceived",
       label: "Amount Received",
       render: (v, row) => {
         const isChecked = selectedReceipts.includes(row.id);
         const edited = editedValues[row.id]?.amountReceived ?? v;
-        if (!isChecked) return <span>{formatCurrency(v)}</span>;
+        if (!isChecked) return <span>{formatCurrency(v, true)}</span>;
 
         return (
-       
+
           // <input type="number" min="0" step="1" className="border rounded px-2 py-1 w-28" value={edited === 0 ? "" : edited} onChange={(e) => { const value = e.target.value; updateField( row.id, "amountReceived", value === "" ? "" : Number(value) ); }} />
           <input
-  type="number"
-  min="0"
-  max={row.amountPayable} // restrict max to amountPayable
-  step="1"
-  className="border rounded px-2 py-1 w-28"
-  value={edited === 0 ? "" : edited}
-  onChange={(e) => {
-    let value = e.target.value === "" ? "" : Number(e.target.value);
+            type="number"
+            min="0"
+            max={row.amountPayable} // restrict max to amountPayable
+            step="1"
+            className="border rounded px-2 py-1 w-28"
+            value={edited === 0 ? "" : edited}
+            onChange={(e) => {
+              let value = e.target.value === "" ? "" : Number(e.target.value);
 
-    // Restrict value between 0 and amountPayable
-    if (value !== "" && value < 0) value = 0;
-    if (value !== "" && value > row.amountPayable) value = row.amountPayable;
+              // Restrict value between 0 and amountPayable
+              if (value !== "" && value < 0) value = 0;
+              if (value !== "" && value > row.amountPayable) value = row.amountPayable;
 
-    updateField(row.id, "amountReceived", value);
-  }}
-/>
+              updateField(row.id, "amountReceived", value);
+            }}
+          />
 
 
 
@@ -250,10 +250,10 @@ export default function ShortfallPaymentPage() {
       label: "Difference",
       render: (v, row) => {
         const received = editedValues[row.id]?.amountReceived ?? row.amountReceived;
-        const diff = row.amountPayable - received;
+        const diff =   row.amountPayable - received ;
         return (
           <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
+            {formatCurrency(diff , true)}
           </span>
         );
       },
@@ -326,27 +326,27 @@ export default function ShortfallPaymentPage() {
             </div>
           )}
 
-          
+
         </div>
 
         <div className="flex justify-end gap-4 mt-4">
-            {!loading && (
-              <>
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  onClick={handleNext}
-                >
-                  Next
-                </button>
-                <button
-                  className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                  onClick={handleClear}
-                >
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
+          {!loading && (
+            <>
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleNext}
+              >
+                Next
+              </button>
+              <button
+                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );

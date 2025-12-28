@@ -86,7 +86,7 @@ export default function ReceiptPreviewPage() {
         const diff = row.amountPayable - received;
         return (
           <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
+            {formatCurrency(diff, true)}
           </span>
         );
       },
