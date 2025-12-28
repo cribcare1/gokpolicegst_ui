@@ -206,14 +206,14 @@ export default function ShortfallPaymentPage() {
     },
     { key: "paNo", label: "Proforma Number" },
     { key: "customerName", label: "Customer Name" },
-    { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v) },
+    { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v, true) },
     {
       key: "amountReceived",
       label: "Amount Received",
       render: (v, row) => {
         const isChecked = selectedReceipts.includes(row.id);
         const edited = editedValues[row.id]?.amountReceived ?? v;
-        if (!isChecked) return <span>{formatCurrency(v)}</span>;
+        if (!isChecked) return <span>{formatCurrency(v, true)}</span>;
 
         return (
           <input
@@ -242,7 +242,7 @@ export default function ShortfallPaymentPage() {
         const diff = row.amountPayable - received;
         return (
           <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
+            {formatCurrency(diff , true)}
           </span>
         );
       },

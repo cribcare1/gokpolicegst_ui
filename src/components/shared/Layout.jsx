@@ -86,6 +86,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/admin/master-data/bank', label: 'nav.bankmaster', icon: 'bank' },
     { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
     { href: '/admin/reports', label: 'nav.reports', icon: 'reports' },
+     { href: '/admin/master-data/admin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
+    { href: '/admin/master-data/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreport' },
   
   ];
 

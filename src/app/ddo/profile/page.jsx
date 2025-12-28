@@ -291,7 +291,8 @@ export default function DDOProfilePage() {
     }
     if (typeof details === 'object') {
       // Exclude sensitive/metadata fields: id, gstId, gstName, gstNumber, status
-      const excludedKeys = ['id', 'gstId', 'gstName', 'gstNumber', 'status'];
+      const excludedKeys = ['id', 'gstId', 'gstName', 'gstNumber', 'status' ,   "isEditable",
+      "effectiveFrom"];
       const entries = Object.entries(details)
         .filter(([key, value]) => !excludedKeys.includes(key) && value)
         .filter(([, value]) => value);
@@ -302,6 +303,55 @@ export default function DDOProfilePage() {
     }
     return String(details);
   };
+
+// function cleanGstinBankDetails(details) {
+//   if (!details) return "";
+
+//   let parts = details.split("|").map(p => p.trim());
+
+//   // Remove unwanted metadata fields
+//   parts = parts.filter(p =>
+//     !p.toLowerCase().startsWith("is editable") &&
+//     !p.toLowerCase().startsWith("effective date")
+//   );
+
+//   // Normalize labels
+//   parts = parts.map(p => {
+//     const lower = p.toLowerCase();
+
+//     // --- IFSC ---
+//     if (
+//       lower.startsWith("ifsc") ||
+//       lower.startsWith("ifsc code") ||
+//       lower.startsWith("ifsc  code")
+//     ) {
+//       const [, value] = p.split(":");
+//       return `IFSC Code: ${value.trim().toUpperCase()}`;
+//     }
+
+//     // --- MICR / MICR Code ---
+//     if (lower.startsWith("micr") || lower.startsWith("micr code") || lower.startsWith("Micr Code")) {
+//       const [, value] = p.split(":");
+//       return `MICR Code: ${value.trim()}`;
+//     }
+
+//     // --- Standard formatting for all other fields ---
+//     if (p.includes(":")) {
+//       const [key, value] = p.split(":");
+//       const cleanKey =
+//         key
+//           .toLowerCase()
+//           .replace(/\b\w/g, c => c.toUpperCase()) // capitalize words
+//           .replace(/\s+/g, " "); // normalize spacing
+//       return `${cleanKey}: ${value.trim()}`;
+//     }
+
+//     return p;
+//   });
+
+//   return parts.join(" | ");
+// }
+
 
 function cleanGstinBankDetails(details) {
   if (!details) return "";
@@ -350,8 +400,6 @@ function cleanGstinBankDetails(details) {
 
   return parts.join(" | ");
 }
-
-
 
   const gstinValue = formData.gstinNumber || formData.gstNumber || formData.gstin || '';
   const ddoTanNumer=formData.ddoTan || formData.tanNumber || formData.tan || '';
