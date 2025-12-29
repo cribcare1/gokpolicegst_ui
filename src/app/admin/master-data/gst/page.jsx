@@ -187,10 +187,10 @@ export default function GSTMasterPage() {
     }
 
     // Validate GST Name
-    const gstNameValidation = validateName(data.gstName, 'GST Name');
-    if (!gstNameValidation.valid) {
-      return { valid: false, message: gstNameValidation.message };
-    }
+    // const gstNameValidation = validateName(data.gstName, 'GST Name');
+    // if (!gstNameValidation.valid) {
+    //   return { valid: false, message: gstNameValidation.message };
+    // }
 
     // Validate Address
     const addressValidation = validateAddress(data.address);
@@ -250,16 +250,19 @@ export default function GSTMasterPage() {
     if (!validation.valid) {
       // Show toast error
       toast.error(validation.message || t('validation.required'));
-
+ setIsSubmitting(false);
       // Set field error in UI for better visibility
       // Check which field the error is related to
       if (validation.message && validation.message.includes('GSTIN')) {
         setFieldErrors((prev) => ({ ...prev, gstNumber: validation.message }));
       } else if (validation.message && validation.message.includes('GST Holder Name')) {
         setFieldErrors((prev) => ({ ...prev, gstHolderName: validation.message }));
-      } else if (validation.message && validation.message.includes('GST Name')) {
-        setFieldErrors((prev) => ({ ...prev, gstName: validation.message }));
-      } else if (validation.message && (validation.message.includes('Address') || validation.message.includes('address'))) {
+      }
+      //  else if (validation.message && validation.message.includes('GST Name')) {
+      //   setFieldErrors((prev) => ({ ...prev, gstName: validation.message }));
+      // }
+      
+      else if (validation.message && (validation.message.includes('Address') || validation.message.includes('address'))) {
         setFieldErrors((prev) => ({ ...prev, address: validation.message }));
       } else if (validation.message && validation.message.includes('City')) {
         setFieldErrors((prev) => ({ ...prev, city: validation.message }));
@@ -284,9 +287,10 @@ export default function GSTMasterPage() {
     try {
       setIsSubmitting(true);
       const url = editingItem ? API_ENDPOINTS.GST_UPDATE : API_ENDPOINTS.GST_ADD;
-
+        
       // Prepare form data - remove empty password if not provided in edit mode
-      const submitData = { ...formData };
+      
+      const submitData = { ...formData , gstName:formData.gstHolderName||""};
       // if (editingItem && (!submitData.password || submitData.password.trim() === '')) {
       //   delete submitData.password;
       // }
@@ -311,6 +315,7 @@ export default function GSTMasterPage() {
         setIsSubmitting(false);
         fetchData();
       } else {
+          setIsSubmitting(false);
         toast.error(response?.message || t('alert.error'));
       }
     } catch (error) {
@@ -336,10 +341,10 @@ export default function GSTMasterPage() {
         const holderNameValidation = validateName(value, 'GST Holder Name');
         if (!holderNameValidation.valid) error = holderNameValidation.message;
         break;
-      case 'gstName':
-        const gstNameValidation = validateName(value, 'GST Name');
-        if (!gstNameValidation.valid) error = gstNameValidation.message;
-        break;
+      // case 'gstName':
+      //   const gstNameValidation = validateName(value, 'GST Name');
+      //   if (!gstNameValidation.valid) error = gstNameValidation.message;
+      //   break;
       case 'address':
         const addressValidation = validateAddress(value);
         if (!addressValidation.valid) error = addressValidation.message;
@@ -433,7 +438,7 @@ export default function GSTMasterPage() {
       const headers = [
         'GSTIN Number',
         'GST Holder Name',
-        'Name',
+        // 'Name',
         'Address',
         'City',
         'PIN',
@@ -529,7 +534,7 @@ export default function GSTMasterPage() {
     },
     { key: 'gstNumber', label: t('label.gstin') },
     { key: 'gstHolderName', label: 'GST Holder Name' },
-    { key: 'gstName', label: t('label.name') },
+    // { key: 'gstName', label: t('label.name') },
     { key: 'address', label: t('label.address') },
     { key: 'city', label: 'City' },
     { key: 'pinCode', label: 'PIN' },
@@ -591,7 +596,7 @@ export default function GSTMasterPage() {
   const formFields = [
     { key: 'gstNumber', label: t('label.gstin'), required: true, maxLength: 15 },
     { key: 'gstHolderName', label: 'GST Holder Name', required: true, readOnly: true },
-    { key: 'gstName', label: t('label.name'), required: true, readOnly: true },
+    // { key: 'gstName', label: t('label.name'), required: true, readOnly: true },
     { key: 'address', label: t('label.address'), type: 'textarea', required: true },
     { key: 'city', label: 'City', required: true },
     { key: 'pinCode', label: 'PIN', required: true, maxLength: 6, type: 'text' },

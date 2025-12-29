@@ -142,7 +142,7 @@ export default function ReceiptPreviewPage() {
       label: "Payment Ref No",
       render: (v, row) => {
         const paymentMode = editedValues[row.invoiceId]?.paymentMode || "Select";
-        const isMandatory = paymentMode === "Bank/ DD/ Cheque";
+        const isMandatory = true;
         return (
           <input
             type="text"
@@ -175,6 +175,31 @@ export default function ReceiptPreviewPage() {
       ),
     },
   ];
+
+ const isFormValid = () => {
+  return data.every((item) => {
+    const edited = editedValues[item.invoiceId];
+    if (!edited) return false;
+
+    const diff = item.amountPayable - edited.amountReceived;
+
+    // Payment Ref ALWAYS mandatory
+    if (!edited.paymentRef || !edited.paymentRef.trim()) return false;
+
+    // Payment mode mandatory
+    if (!edited.paymentMode || edited.paymentMode === "Select") return false;
+
+    // Payment date mandatory
+    if (!edited.paymentDate) return false;
+
+    // Difference reason mandatory if diff > 0
+    if (diff > 0 && !edited.differenceReason?.trim()) return false;
+
+    return true;
+  });
+};
+
+
 
   const handleSaveAndGenerate = async () => {
     for (let item of data) {
@@ -213,7 +238,7 @@ export default function ReceiptPreviewPage() {
       setLoading(true);
       await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
       toast.success("Receipts saved & invoice generated");
-      router.replace("/ddo/proforma-advice");
+      router.replace("/ddo/credit-notes");
     } catch (error) {
       toast.error("Failed to save receipts");
     } finally {
@@ -244,13 +269,34 @@ export default function ReceiptPreviewPage() {
             Back
           </button>
 
-          <button
+          {/* <button
             disabled={loading}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            onClick={handleSaveAndGenerate}
+            onClick={() => {
+    if (window.confirm('Are you sure you want to save and generate the invoice?')) {
+      handleSaveAndGenerate();
+    }
+  }}
           >
             Save & Generate Invoice
-          </button>
+          </button> */}
+
+          <button
+  disabled={loading || !isFormValid()}
+  className={`px-4 py-2 rounded text-white
+    ${loading || !isFormValid()
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-600 hover:bg-blue-700"}
+  `}
+  onClick={() => {
+    if (window.confirm("Receipt has been saved. Do you want to generate the invoice?")) {
+      handleSaveAndGenerate();
+    }
+  }}
+>
+  Save & Generate Invoice
+</button>
+
         </div>
       </div>
     </Layout>

@@ -13,7 +13,7 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { useGstinList } from '@/hooks/useGstinList';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
-import { formatDateDDMMYYYY , formatDateForInput } from '@/components/utils/dateUtils';
+import { formatDateDDMMYYYY, formatDateForInput } from '@/components/utils/dateUtils';
 export default function BankDetailsPage() {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -158,18 +158,39 @@ export default function BankDetailsPage() {
     }
   };
 
-  const handleAdd = () => {
-    setEditingItem(null);
-    // Set default effectiveDate to today and status to Active
-    setFormData({
-      effectiveDate: new Date().toISOString().split('T')[0],
-      status: 'Active'
-    });
-    setFieldErrors({});
-    setIsModalOpen(true);
-  };
+  // const handleAdd = () => {
+  //   setEditingItem(null);
+  //   // Set default effectiveDate to today and status to Active
+  //   setFormData({
+  //     effectiveDate: new Date().toISOString().split('T')[0],
+  //     status: 'Active'
+  //   });
+  //   setFieldErrors({});
+  //   setIsModalOpen(true);
+  // };
 
-  
+  const handleAdd = () => {
+  setEditingItem(null);
+
+  // const accountHolderName =
+  //   localStorage.getItem(LOGIN_CONSTANT.USER_NAME) || '';
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
+     const userProfile = JSON.parse(storedProfile);
+     console.log(userProfile ," ::: while add bank");
+     
+
+  setFormData({
+    accountName: userProfile.fullName||"",  
+    effectiveDate: new Date().toISOString().split('T')[0],
+    status: 'Active',
+  });
+
+  setFieldErrors({});
+  setIsModalOpen(true);
+};
+
+
+
 
   const handleEdit = (item) => {
     setEditingItem(item);
@@ -262,7 +283,7 @@ export default function BankDetailsPage() {
 
     e.preventDefault();
     const dataCopy = { ...formData };
-    dataCopy.effectiveDate=formatDateDDMMYYYY(dataCopy.effectiveDate);
+    dataCopy.effectiveDate = formatDateDDMMYYYY(dataCopy.effectiveDate);
 
     // Validate all fields before submission
     let hasErrors = false;
@@ -320,8 +341,8 @@ export default function BankDetailsPage() {
         //       delta[field] = updatedFormData[field];
         //     }
         //   });
-          // updatedFormData.effectiveDate=formatDateDDMMYYYY(updatedFormData.effectiveDate);
-          // updatedFormData.effectiveFrom=formatDateDDMMYYYY(updatedFormData.effectiveFrom);
+        // updatedFormData.effectiveDate=formatDateDDMMYYYY(updatedFormData.effectiveDate);
+        // updatedFormData.effectiveFrom=formatDateDDMMYYYY(updatedFormData.effectiveFrom);
 
         //   return {
         //     // ...delta,
@@ -501,7 +522,8 @@ export default function BankDetailsPage() {
     return [
 
       { key: 'accountNumber', label: 'Account Number', required: true },
-      { key: 'accountName', label: 'Account Holder Name', required: true },
+      { key: 'accountName', label: 'Account Holder Name', required: true  , required: true,
+  readOnly: true,},
       { key: 'bankName', label: 'Bank Name', required: true },
       { key: 'branchName', label: 'Branch Name', required: true },
       {
@@ -671,7 +693,7 @@ export default function BankDetailsPage() {
                     {/* Date Field */}
                     {field.type === 'date' ? (
                       <>
-                        <input
+                        {/* <input
                           type="date"
                           value={formData[field.key] || ''}
                           onChange={(e) => updateFormData(field.key, e.target.value)}
@@ -679,7 +701,19 @@ export default function BankDetailsPage() {
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
                             } bg-[var(--color-background)]`}
                           required={field.required}
+                        /> */}
+                        <input
+                          type="date"
+                          value={formData[field.key] || ''}
+                          min={new Date().toISOString().split('T')[0]}
+                          max={new Date().toISOString().split('T')[0]}
+                          onChange={(e) => updateFormData(field.key, e.target.value)}
+                          onBlur={(e) => validateField(field.key, e.target.value, field)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                            } bg-[var(--color-background)]`}
+                          required={field.required}
                         />
+
                         {fieldErrors[field.key] && <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>}
                       </>
                     )
