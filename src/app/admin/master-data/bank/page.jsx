@@ -191,39 +191,39 @@ export default function BankDetailsPage() {
   };
 
   const formatDateForInput = (value) => {
-  if (!value) return '';
+    if (!value) return '';
 
-  if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
-    const [dd, mm, yyyy] = value.split('-');
-    return `${yyyy}-${mm}-${dd}`;
-  }
+    if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+      const [dd, mm, yyyy] = value.split('-');
+      return `${yyyy}-${mm}-${dd}`;
+    }
 
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-    const [dd, mm, yyyy] = value.split('/');
-    return `${yyyy}-${mm}-${dd}`;
-  }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      const [dd, mm, yyyy] = value.split('/');
+      return `${yyyy}-${mm}-${dd}`;
+    }
 
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return '';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return '';
 
-  return date.toISOString().split('T')[0];
-};
+    return date.toISOString().split('T')[0];
+  };
 
 
   const handleEdit = (item) => {
     setEditingItem(item);
     setFieldErrors({});
     console.log("item ", item);
-    
+
 
     const selectedGST = gstinList.find(
       (gst) => gst.gstNumber === item.gstinNumber || gst.value === item.gstinNumber
     );
-    
-  console.log('EDIT RAW ITEM DATES:', {
-    rawEffectiveDate: item.effectiveFrom,
-    parsedEffectiveDate: formatDateForInput(item.effectiveFrom),
-  });
+
+    console.log('EDIT RAW ITEM DATES:', {
+      rawEffectiveDate: item.effectiveFrom,
+      parsedEffectiveDate: formatDateForInput(item.effectiveFrom),
+    });
 
     // const updatedItem = {
     //   ...item,
@@ -232,14 +232,14 @@ export default function BankDetailsPage() {
     //   // Ensure status is set
     //   status: item.status || (item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : 'Active'),
     // };
-      const updatedItem = {
-    ...item,
-    gstId: selectedGST?.gstId || selectedGST?.id || "",
-    status: item.status || 'Active',
+    const updatedItem = {
+      ...item,
+      gstId: selectedGST?.gstId || selectedGST?.id || "",
+      status: item.status || 'Active',
 
-    // ✅ THIS WAS MISSING
-    effectiveDate: formatDateForInput(item.effectiveFrom),
-  };
+      // ✅ THIS WAS MISSING
+      effectiveDate: formatDateForInput(item.effectiveFrom),
+    };
     setFormData(updatedItem);
     setIsModalOpen(true);
   };
@@ -448,20 +448,20 @@ export default function BankDetailsPage() {
   };
 
   const updateFormData = (field, value) => {
-      console.log(" on change  " , field, value);
-    if( field.toLowerCase().includes('gstin') || field.toLowerCase().includes('gstnumber')){
+    console.log(" on change  ", field, value);
+    if (field.toLowerCase().includes('gstin') || field.toLowerCase().includes('gstnumber')) {
       console.log();
-      
-const names = gstinList.find(
-  (gstin) => gstin.gstNumber===value
-)?.gstName;
-   console.log("name onchange ::: name" ,names);
-   updateFormData("accountName", names)
-    
+
+      const names = gstinList.find(
+        (gstin) => gstin.gstNumber === value
+      )?.gstName;
+      console.log("name onchange ::: name", names);
+      updateFormData("accountName", names)
+
     };
- 
-  
-    
+
+
+
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (fieldErrors[field]) {
@@ -597,7 +597,7 @@ const names = gstinList.find(
         readOnly: editingItem ? true : false // GSTIN cannot be changed when editing (must remain same)
       },
       { key: 'accountNumber', label: 'Account Number', required: true, readOnly: editingItem ? true : false },
-      { key: 'accountName', label: 'Account Holder Name', required: true, readOnly: true  },
+      { key: 'accountName', label: 'Account Holder Name', required: true, readOnly: true },
       { key: 'bankName', label: 'Bank Name', required: true },
       { key: 'branchName', label: 'Branch Name', required: true },
       {
@@ -758,7 +758,7 @@ const names = gstinList.find(
                   </label>
                   {field.type === 'date' ? (
                     <>
-                      <input
+                      {/* <input
                         type="date"
                         value={formData[field.key] || ''}
                         onChange={(e) => updateFormData(field.key, e.target.value)}
@@ -766,7 +766,19 @@ const names = gstinList.find(
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
                           } bg-[var(--color-background)]`}
                         required={field.required}
+                      /> */}
+                      <input
+                        type="date"
+                        value={formData[field.key] || ''}
+                        min={new Date().toISOString().split('T')[0]}
+                        max={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => updateFormData(field.key, e.target.value)}
+                        onBlur={(e) => validateField(field.key, e.target.value, field)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${fieldErrors[field.key] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--color-border)]'
+                          } bg-[var(--color-background)]`}
+                        required={field.required}
                       />
+
                       {fieldErrors[field.key] && (
                         <p className="mt-1 text-sm text-red-500">{fieldErrors[field.key]}</p>
                       )}

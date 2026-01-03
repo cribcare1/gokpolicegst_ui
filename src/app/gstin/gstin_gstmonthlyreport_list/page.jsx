@@ -50,7 +50,7 @@ export default function GstTdsMonthlyReportPage() {
         const mapped = response.data.map((item) => {
           const declared = Number(item.declaredAmount || 0);
           const paid = Number(item.paidAmount || 0);
-          const penaltyAmount=Number(item.penaltyAmount||0);
+   const penaltyAmount=Number(item.penaltyAmount||0);
           // Difference = Paid - Declared
           const difference = paid - declared;
 
@@ -58,7 +58,7 @@ export default function GstTdsMonthlyReportPage() {
           const remarks =
             difference >= 0 ? "Fully Compliance" : "Partial Compliance";
 
-         return {
+        return {
   month: item.filingMonth,
   arnNo: item.arnNo,
   arnDate: formatDate(item.arnDate),
@@ -69,6 +69,7 @@ export default function GstTdsMonthlyReportPage() {
   remarks,
   ackDocument: item.ackDocument,
 };
+
         });
 
         setRecords(mapped);
@@ -213,7 +214,7 @@ export default function GstTdsMonthlyReportPage() {
   ];
 
   return (
-    <Layout role="admin">
+    <Layout role="gstin">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

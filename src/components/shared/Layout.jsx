@@ -1,9 +1,12 @@
+
+
+
 "use client";
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { t, getLanguage, setLanguage as setLang, translations } from '@/lib/localization';
 import { applyTheme, getTheme, getMode, setTheme } from '@/lib/theme';
-import { Menu, X, LogOut, Settings, Moon, Sun, Languages } from 'lucide-react';
+import { Menu, X, LogOut, Settings, Moon, Sun, Languages, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
@@ -13,6 +16,9 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
   const [darkMode, setDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [profileName, setProfileName] = useState('');
+  const [ddoCode, setDddCode] = useState('');
+  const [gstinnum, setgstIn] = useState('');
+  const [openMenus, setOpenMenus] = useState({}); // track open submenus
   const router = useRouter();
   const pathname = usePathname();
 
@@ -21,7 +27,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     setLanguage(getLanguage());
     const mode = getMode();
     setDarkMode(mode === 'dark');
-    // Apply theme on mount
+
     if (typeof window !== 'undefined') {
       const theme = getTheme();
       applyTheme();
@@ -34,6 +40,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
             const nameFromProfile = parsedProfile?.fullName || parsedProfile?.name || '';
             if (nameFromProfile) {
               setProfileName(nameFromProfile);
+              setDddCode(parsedProfile.ddoCode || "");
+              setgstIn(parsedProfile.gstNumber || "");
               return;
             }
           }
@@ -46,13 +54,26 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     }
   }, [role]);
 
+  // Auto-open submenu if current pathname matches a child
+  useEffect(() => {
+    const newOpenMenus = {};
+    navItems.forEach((item) => {
+      if (item.children) {
+        const childActive = item.children.some((child) => child.href === pathname);
+        if (childActive) {
+          newOpenMenus[item.label] = true;
+        }
+      }
+    });
+    setOpenMenus(newOpenMenus);
+  }, [pathname]);
+
   const toggleLanguage = useCallback(() => {
     const newLang = language === 'en' ? 'kn' : 'en';
     setLanguage(newLang);
     setLang(newLang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('preferredLanguage', newLang);
-      // Force re-render instead of full page reload
       router.refresh();
     }
   }, [language, router]);
@@ -81,30 +102,31 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/admin/profile', label: 'Profile', icon: 'profile' },
     { href: '/admin/master-data/pan', label: 'nav.pan', icon: 'pan' },
     { href: '/admin/master-data/gst', label: 'nav.gst', icon: 'gst' },
-    
     { href: '/admin/master-data/hsn', label: 'nav.hsn', icon: 'hsn' },
     { href: '/admin/master-data/bank', label: 'nav.bankmaster', icon: 'bank' },
     { href: '/admin/master-data/ddo', label: 'nav.ddo', icon: 'ddo' },
     { href: '/admin/reports', label: 'nav.reports', icon: 'reports' },
-     { href: '/admin/master-data/admin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
+    { href: '/admin/master-data/admin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
     { href: '/admin/master-data/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreport' },
-  
   ];
 
   const ddoNavItems = [
     { href: '/ddo_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
-    { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
-    { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
-     { href: '/ddo/shortfall_payment_list', label: 'Shortfall', icon: 'shortfall' },
-    { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'invoices' },
-
-    { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'credit-notes' },
+    {
+      label: 'Sales',
+      icon: 'sales',
+      children: [
+        { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
+        { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
+        { href: '/ddo/shortfall_payment_list', label: 'Shortfall', icon: 'shortfall' },
+        { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'invoices' },
+        { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'credit-notes' },
+      ],
+    },
     { href: '/ddo/ddo_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'reports' },
     { href: '/ddo/quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreports' },
-   
-
   ];
 
   const gstinNavItems = [
@@ -112,6 +134,8 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
     { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
+    { href: '/gstin/gstin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
+    { href: '/gstin/gstin_quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreport' },
   ];
 
   const navItems = role === 'admin' ? adminNavItems : role === 'gstin' ? gstinNavItems : ddoNavItems;
@@ -132,61 +156,36 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-[var(--color-muted)] rounded-xl transition-all duration-200 hover:scale-105 flex-shrink-0"
+              className="lg:hidden p-2 rounded-xl transition-all duration-200 hover:scale-105 flex-shrink-0"
               aria-label="Toggle menu"
             >
               {sidebarOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <Menu size={20} className="sm:w-6 sm:h-6" />}
             </button>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent truncate">
-              Karnataka state police  {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? '- DDO' : ''}
+              Karnataka state police {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? `- DDO/${ddoCode}/${gstinnum}` : ''}
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 flex-shrink-0">
-            <button
-              onClick={toggleLanguage}
-              className="p-2 sm:p-2.5 hover:bg-[var(--color-muted)] rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md"
-              aria-label="Toggle language"
-            >
+            <button onClick={toggleLanguage} className="p-2 sm:p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md" aria-label="Toggle language">
               <Languages size={18} className="sm:w-5 sm:h-5 text-[var(--color-text-secondary)]" />
-              <span className="sr-only">{language === 'en' ? 'Switch to Kannada' : 'Switch to English'}</span>
             </button>
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 sm:p-2.5 hover:bg-[var(--color-muted)] rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md"
-              aria-label="Toggle dark mode"
-            >
+            <button onClick={toggleDarkMode} className="p-2 sm:p-2.5  rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md" aria-label="Toggle dark mode">
               {darkMode ? <Sun size={18} className="sm:w-5 sm:h-5 text-amber-500" /> : <Moon size={18} className="sm:w-5 sm:h-5 text-slate-600 dark:text-slate-400" />}
             </button>
-            <Link
-              href="/settings"
-              className="p-2 sm:p-2.5 hover:bg-[var(--color-muted)] rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md hidden sm:block"
-              aria-label="Settings"
-            >
+            <Link href="/settings" className="p-2 sm:p-2.5  rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md hidden sm:block" aria-label="Settings">
               <Settings size={18} className="sm:w-5 sm:h-5 text-[var(--color-text-secondary)]" />
             </Link>
-            <button
-              onClick={handleLogout}
-              className="p-2 sm:p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-[var(--color-error)]"
-              aria-label="Logout"
-            >
+            <button onClick={handleLogout} className="p-2 sm:p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-[var(--color-error)]" aria-label="Logout">
               <LogOut size={18} className="sm:w-5 sm:h-5" />
             </button>
             {role === 'ddo' && (
               <Link
                 href="/ddo/profile"
-                className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-2xl transition-all duration-200 hover:scale-105 hover:shadow-md ${
-                  isDdoProfileActive ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-muted)] text-[var(--color-text-primary)]'
-                }`}
+                className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-2xl transition-all duration-200 hover:scale-105 hover:shadow-md ${isDdoProfileActive ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-muted)] text-[var(--color-text-primary)]'}`}
                 aria-label="DDO profile"
               >
-                <div
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold ${
-                    isDdoProfileActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white'
-                  }`}
-                >
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold ${isDdoProfileActive ? 'bg-white/20 text-white' : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white'}`}>
                   {profileInitial}
                 </div>
                 <div className="hidden sm:flex flex-col leading-tight text-left">
@@ -202,34 +201,50 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
       <div className="flex">
         {/* Sidebar */}
         <aside
-          className={`
-            fixed lg:fixed left-0 z-40
-            top-[56px] sm:top-[64px] lg:top-[56px] xl:top-[64px]
-            h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-[calc(100vh-56px)] xl:h-[calc(100vh-64px)]
-            w-64 sm:w-72 flex-shrink-0 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)]
-            transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-lg
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            lg:translate-x-0 overflow-y-auto
-          `}
+          className={`fixed lg:fixed left-0 z-40 top-[56px] sm:top-[64px] lg:top-[56px] xl:top-[64px] h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] lg:h-[calc(100vh-56px)] xl:h-[calc(100vh-64px)] w-64 sm:w-72 flex-shrink-0 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-muted)] border-r border-[var(--color-border)] transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-lg ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 overflow-y-auto`}
         >
           <nav className="pt-4 sm:pt-6 md:pt-8 p-3 sm:p-4 md:p-6 space-y-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
+
+              // Submenu with children
+              if (item.children) {
+                const submenuOpen = openMenus[item.label] || false;
+
+                return (
+                  <div key={item.label}>
+                    <button
+                      onClick={() => setOpenMenus((prev) => ({ ...prev, [item.label]: !submenuOpen }))}
+                      className="flex items-center justify-between w-full px-3 py-2 rounded-xl "
+                    >
+                      <span>{item.label}</span>
+                      <span>{submenuOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</span>
+                    </button>
+                    {submenuOpen && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`block px-3 py-2 rounded-md  ${pathname === child.href ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-primary)]'}`}
+                          >
+                            {child.label.startsWith('nav.') ? (mounted ? t(child.label) : (translations[child.label]?.en || child.label)) : child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Regular menu item
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`
-                    flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl
-                    transition-all duration-200 font-medium text-sm sm:text-base
-                    touch-manipulation min-h-[44px]
-                    ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-105'
-                        : 'hover:bg-[var(--color-muted)] text-[var(--color-text-primary)] hover:scale-105 hover:shadow-md active:scale-95'
-                    }
-                  `}
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl ${isActive ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-105' : ' text-[var(--color-text-primary)]'}`}
                 >
                   <span suppressHydrationWarning>
                     {item.label.startsWith('nav.') ? (mounted ? t(item.label) : (translations[item.label]?.en || item.label)) : item.label}
@@ -249,17 +264,10 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
       </div>
 
       {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
     </div>
   );
 });
 
 Layout.displayName = 'Layout';
-
 export default Layout;
-
