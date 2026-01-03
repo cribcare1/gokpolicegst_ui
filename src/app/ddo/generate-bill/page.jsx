@@ -379,6 +379,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     console.log('[DEBUG] Raw response:', response);
     if (response?.status === 'success' || response?.status === 'SUCCESS') {
       toast.success(t('alert.success'));
+      await fetchInvoiceNumber(gstDetails?.gstId);
        await fetchProformaAdviceDetails();
       
     } else {

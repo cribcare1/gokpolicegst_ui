@@ -112,6 +112,12 @@ export default function ProformaAdviceForm({
     
     validateForm();
   }, [selectedCustomer, lineItems, hsnList, ddoSignature]);
+
+useEffect(() => {
+    onLineItemChange(0, 'hsnCode', hsnList.length > 0 ? hsnList[0].hsnCode : '');
+  }, []);
+
+
   // Keep localTaxInvoice in sync with paidAmount prop
   useEffect(() => {
     setLocalTaxInvoice(Number.isFinite(paidAmount) ? String(Math.floor(Number(paidAmount) || 0)) : '');
