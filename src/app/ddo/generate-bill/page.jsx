@@ -67,14 +67,14 @@ export default function GenerateBillPage() {
       serialNo: 1, 
       serviceName: '', 
       amount: "", 
-      hsnNumber: '',
+      hsnCode: '',
       quantity: 1
     },
     { 
       serialNo: 2, 
       serviceName: '', 
       amount: "", 
-      hsnNumber: '',
+      hsnCode: '',
       quantity: 1
     },
   ]);
@@ -166,8 +166,8 @@ export default function GenerateBillPage() {
     // Auto-assign HSN if only one exists
     if (hsnList.length === 1) {
       const defaultHsn = hsnList[0]?.hsnCode ?? '';
-      if (item.hsnNumber !== defaultHsn) {
-        newItem.hsnNumber = defaultHsn;
+      if (item.hsnCode !== defaultHsn) {
+        newItem.hsnCode = defaultHsn;
         needsUpdate = true;
       }
     }
@@ -524,8 +524,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     setCustomerType('');
     setGstCalculation(null);
     setLineItems([
-      { serialNo: 1, serviceName: '', amount: "", hsnNumber: '', quantity: 1 },
-      { serialNo: 2, serviceName: '', amount: "", hsnNumber: '', quantity: 1 },
+      { serialNo: 1, serviceName: '', amount: "", hsnCode: '', quantity: 1 },
+      { serialNo: 2, serviceName: '', amount: "", hsnCode: '', quantity: 1 },
     ]);
     setIsInvoiceCreation(false);
   };
@@ -597,7 +597,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         serialNo: index + 1,
         serviceName: item.serviceName ||  '',
         amount: item.amount || item.rate || 0,
-        hsnNumber: item.hsnCode || item.hsnNumber || (hsnList.length > 0 ? hsnList[0].hsnCode : ''),
+        hsnCode: item.hsnCode || item.hsnCode || (hsnList.length > 0 ? hsnList[0].hsnCode : ''),
         quantity: item.quantity || 1
       }));
       setLineItems(lineItemsData);
@@ -642,9 +642,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
     const customerGSTIN = selectedCustomer.gstNumber || '';
     const customerPAN = selectedCustomer.pan || '';
     
-    const firstHSN = lineItems[0]?.hsnNumber;
+    const firstHSN = lineItems[0]?.hsnCode;
     const hsnDetails = firstHSN ? hsnList.find(h => 
-      h.hsnNumber === firstHSN || 
+      h.hsnCode === firstHSN || 
       h.hsnCode === firstHSN || 
       h.code === firstHSN
     ) : null;
@@ -947,7 +947,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         serialNo: lineItems.length + 1, 
         serviceName: '', 
         amount: 0, 
-        hsnNumber: defaultHsn, 
+        hsnCode: defaultHsn, 
         quantity: 1 
       },
     ]);
@@ -1052,7 +1052,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
         items: lineItems.map((item) => {
           console.log('Mapping hsnList item for billData:', hsnList, item   );
           const hsnData = hsnList.find(h => 
-            h.hsnCode === item.hsnNumber
+            h.hsnCode === item.hsnCode
           );
           
           return {
@@ -1665,7 +1665,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
                 <tr>
                   <td class="text-center">${item.serialNo}</td>
                   <td>${item.serviceName}</td>
-                  <td>${item.hsnNumber} - Public Administration</td>
+                  <td>${item.hsnCode} - Public Administration</td>
                   <td class="text-center">1</td>
                   <td class="text-center">Nos</td>
                   <td class="text-right">${formatCurrency(item.amount)}</td>
@@ -2033,6 +2033,7 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
             filteredProformaList={filteredProformaList}
             proformaLoading={proformaLoading}
             onShowForm={handleOpenEditProforma}
+            hsnList={hsnList}
             onUpdateProforma={handleUpdateProformaInline}
               ddoDetails={ddoDetails}
                gstDetails={gstDetails}

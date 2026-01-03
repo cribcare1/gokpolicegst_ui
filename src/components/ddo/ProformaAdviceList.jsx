@@ -21,6 +21,8 @@ export default function ProformaAdviceList({
   filteredProformaList,
   proformaLoading,
   onShowForm,
+  hsnList,
+  gstCalculation,
   onUpdateProforma,
   // New required props for consistent preview
   bankDetails ,
@@ -64,7 +66,9 @@ export default function ProformaAdviceList({
     const raw = previewData.raw || previewData;
     const items = raw.items || [];
     const customerResponse = raw.customerResponse || raw.customer || {};
-    console.log('🧾 Extracting preview data:', previewData, raw, items, customerResponse);
+    console.log("previewData===", previewData);
+    
+    console.log('🧾 Extracting preview data:',  raw);
     // Extract line items
     const lineItems = items.map((item, index) => ({
       serialNo: index + 1,
@@ -87,22 +91,28 @@ export default function ProformaAdviceList({
         stateCode: customerResponse.stateCode || '',
         type: customerResponse.customerType || '',
       },
-      invoiceType: raw.invoiceType || raw.serviceType || 'EXEMPTED',
+      invoiceType: customerResponse.customerType || 'EXEMPTED',
       remarks: raw.note || raw.remarks || '',
       notificationDetails: raw.notificationDetails || '',
-      gstCalculation: raw.gstCalculation || null,
+      gstCalculation: _getHsnDetails(raw.items?.[0]?.hsnCode) || null,
       billDetails: {
         date: raw.date || previewData.proformaDate || new Date().toISOString().split('T')[0],
         placeOfSupply: raw.placeOfSupply || 'Bengaluru'
       },
       invoiceNumber: previewData.proformaNumber || raw.invoiceNumber || '',
       signature: previewData.signature || raw.signature || '',
-      rcmIgst: raw.rcmIgst || 0,
-      rcmCgst: raw.rcmCgst || 0,
-      rcmSgst: raw.rcmSgst || 0,
+      rcmIgst: raw.totalIgst || 0,
+      rcmCgst: raw.totalCgst || 0,
+      rcmSgst: raw.totalSgst || 0,
       totalAdviceAmountReceivable: raw.totalAdviceAmountReceivable || raw.grandTotal || totalAmount
     };
   };
+
+  const _getHsnDetails = (hsnCode) => {
+    if (!hsnList || hsnList.length === 0) return null;
+    return hsnList.find(h => h.hsnCode === hsnCode || h.code === hsnCode) || null;
+  };
+
   const handlePrint = () => {
     if (!previewData) return;
     
@@ -1131,19 +1141,19 @@ const renderProformaActions = (row) => {
                           <>
                             <div className="flex justify-between border-b py-1">
                               <span>IGST @ {formatPercent(displayGstRate)}%:</span>
-                              <span>{gstCalc?.igst ? formatCurrency(gstCalc.igst) : '-'}</span>
+                              <span>{data.rcmIgst>0 ? formatCurrency(data.rcmIgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1">
                               <span>CGST @ {formatPercent(displayCgstRate)}%:</span>
-                              <span>{gstCalc?.cgst ? formatCurrency(gstCalc.cgst) : '-'}</span>
+                              <span>{data?.rcmCgst>0 ? formatCurrency(data.rcmCgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1">
                               <span>SGST @ {formatPercent(displaySgstRate)}%:</span>
-                              <span>{gstCalc?.sgst ? formatCurrency(gstCalc.sgst) : '-'}</span>
+                              <span>{data?.rcmSgst>0 ? formatCurrency(data.rcmSgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1 font-semibold">
                               <span>Total GST:</span>
-                              <span>{formatCurrency(gstCalc?.gstAmount || 0)}</span>
+                              <span>{data.rcmIgst>0 ?formatCurrency(data.rcmIgst || 0):formatCurrency(data.rcmCgst+data.rcmSgst || 0)}</span>
                             </div>
                           </>
                         );
