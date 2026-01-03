@@ -11,6 +11,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
+import { Edit, Trash2 } from 'lucide-react';
 import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode, isGovernmentGSTIN, isGovernmentPAN } from '@/lib/gstUtils';
 export default function GstTdsMonthlyReportPage() {
   const [records, setRecords] = useState([]);
@@ -90,6 +91,37 @@ export default function GstTdsMonthlyReportPage() {
     }
   }, [searchTerm, records]);
 
+
+  const tableActions = (row) => {
+    const isEditable = row.isEditable;
+    return (
+      <>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // handleEdit(row);
+          }}
+          className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
+          aria-label="Edit"
+        >
+          <Edit size={18} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // handleDelete(row);
+          }}
+   
+          className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer"
+          aria-label="Delete"
+         
+        >
+          <Trash2 size={18} />
+        </button>
+      </>
+    );
+  };
+
   const columns = [
     { key: "month", label: "Month of Filing", style: { minWidth: "150px" } },
     { key: "arnNo", label: "ARN No", style: { minWidth: "180px" } },
@@ -165,7 +197,7 @@ export default function GstTdsMonthlyReportPage() {
             </div>
           ) : (
             <div className="min-w-max">
-              <Table columns={columns} data={filtered} />
+              <Table columns={columns} data={filtered}  actions={tableActions} />
             </div>
           )}
         </div>
