@@ -40,14 +40,14 @@ export default function AdminTDSQuarterlyListPage() {
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const adminID = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-      if (!adminID) {
+      const gstinId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      if (!gstinId) {
         toast.error(LOGIN_CONSTANT.DDO_ID_NOTFOUND);
         return;
       }
 
       const response = await ApiService.handleGetRequest(
-        `https://api.gokpolicegst.com:8443/tds/quarterly-income-tax/all`
+        `https://api.gokpolicegst.com:8443/tds/quarterly-income-tax/getByGSTIn/${gstinId}`
       );
 
       if (response?.status === "success") {

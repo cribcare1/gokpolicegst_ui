@@ -36,14 +36,14 @@ export default function GstTdsMonthlyReportPage() {
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
-      if (!ddoId) {
+      const gstInID = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      if (!gstInID) {
         toast.error(LOGIN_CONSTANT.DDO_ID_NOTFOUND);
         return;
       }
 
       const response = await ApiService.handleGetRequest(
-        "https://api.gokpolicegst.com:8443/tds/monthly-gst-filing/all"
+        `https://api.gokpolicegst.com:8443/tds/monthly-gst-filing/getMonthlyGstFilingByGSTId/${gstInID}`
       );
 
       if (response?.status === "success") {
@@ -212,6 +212,7 @@ export default function GstTdsMonthlyReportPage() {
       ),
     },
   ];
+  
 
   return (
     <Layout role="gstin">
