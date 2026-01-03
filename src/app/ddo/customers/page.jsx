@@ -15,6 +15,7 @@ import { LoadingProgressBar } from '@/components/shared/ProgressBar';
 import { toast } from 'sonner';
 import { LOGIN_CONSTANT } from '@/components/utils/constant';
 
+import { useRef } from "react";
 function CustomersPageContent() {
   const searchParams = useSearchParams();
   const [customers, setCustomers] = useState([]);
@@ -23,6 +24,7 @@ function CustomersPageContent() {
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  
   const [formData, setFormData] = useState({
     name: '',
     gstNumber: '',
@@ -41,10 +43,19 @@ function CustomersPageContent() {
   const [gstinError, setGstinError] = useState('');
   const [hasOpenedFromQuery, setHasOpenedFromQuery] = useState(false); // Fix: track modal opening from query param
   const customerCount = filteredCustomers.length;
+const textareaRef = useRef(null);
 
   useEffect(() => {
     fetchCustomers();
   }, []);
+  
+useEffect(() => {
+  const textarea = textareaRef.current;
+  if (!textarea) return;
+
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
+}, [formData.exemptionCertNumber , formData.customerType]);
 
   // Fix: Open modal from query param reliably
   useEffect(() => {
@@ -354,11 +365,12 @@ function CustomersPageContent() {
 
   const updateServiceType = (customerType, gstNumber, formDataObj) => {
     let updated = { ...formDataObj };
-
+      updated.exemptionCertNumber=""; // reset exemption cert number
     // 1️⃣ Government → always "Exempted"
     if (customerType === 'Government') {
       updated.serviceType = 'Exempted';
-      updated.exemptionCertNumber = ''; // no notification needed
+      // updated.exemptionCertNumber = ''; // no notification needed
+        updated.exemptionCertNumber= "Exempted from GST :  under Entry 6 of Notification No. 12/2017-CT (Rate) — no GST";
       return updated;
     }
 
@@ -713,16 +725,24 @@ function CustomersPageContent() {
                   <label className="block text-sm mb-1">
                     Notification <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.exemptionCertNumber}
-                    onChange={(e) => setFormData({ ...formData, exemptionCertNumber: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg"
-                    placeholder="Enter notification"
-                    pattern="[A-Za-z0-9]*"
-                    required={formData.serviceType === 'Exempted' && formData.customerType !== 'Government'}
-                    disabled={formData.serviceType !== 'Exempted'}
-                  />
+               <textarea
+  ref={textareaRef}
+  value={formData.exemptionCertNumber}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      exemptionCertNumber: e.target.value.toUpperCase(),
+    })
+  }
+  className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg resize-none overflow-hidden"
+  placeholder="Enter notification"
+  rows={1}
+  required={formData.serviceType === "Exempted" && formData.customerType !== "Government"}
+  disabled={formData.serviceType !== "Exempted"}
+  // disabled
+/>
+
+
                 </div>
               )}
               {formData.serviceType === 'Exempted' && formData.customerType !== 'Government' && (
