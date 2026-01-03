@@ -135,14 +135,6 @@ export default function ProformaAdviceForm({
       // hasSignature,
       isValid
     });
-
-    
-          
-            
-    
-
-    
-  
   };
   const handleSaveWithValidationAndNavigate = () => {
     const isValid = validateAndSetErrors(lineItems);
@@ -157,8 +149,8 @@ export default function ProformaAdviceForm({
   };
   // Derive display GST rates from current calculation or HSN list (fallbacks)
   const latestCalc = gstCalculation || null;
-  const firstHSN = lineItems?.[0]?.hsnNumber;
-  const currentHsnDetails = firstHSN ? hsnList.find(h => h.hsnNumber === firstHSN || h.hsnCode === firstHSN || h.code === firstHSN) : null;
+  const firstHSN = lineItems?.[0]?.hsnCode;
+  const currentHsnDetails = firstHSN ? hsnList.find(h => h.hsnCode === firstHSN || h.hsnCode === firstHSN || h.code === firstHSN) : null;
   const fallbackGst = currentHsnDetails?.igst ?? currentHsnDetails?.gstRate ?? 18;
   const fallbackCgst = currentHsnDetails?.cgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
   const fallbackSgst = currentHsnDetails?.sgst ?? (currentHsnDetails?.gstRate ? currentHsnDetails.gstRate / 2 : 9);
@@ -231,7 +223,7 @@ export default function ProformaAdviceForm({
       <tr>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.serialNo}</td>
         <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${item.serviceName || ''}</td>
-        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.hsnNumber || ''}</td>
+        <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">${item.hsnCode || ''}</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">1</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">Nos</td>
         <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
@@ -824,16 +816,16 @@ export default function ProformaAdviceForm({
                         <td className="border border-[var(--color-border)] p-2 text-sm text-center mobile-text-xs mobile-xs-p-1">
                           {hsnList.length > 1 ? (
                             <select
-                              value={item.hsnNumber || (hsnList[0]?.hsnCode || '')}
+                              value={item.hsnCode || (hsnList[0]?.hsnCode || '')}
                               onChange={(e) => {
                                 const val = e.target.value;
-                                onLineItemChange(index, 'hsnNumber', val);
+                                onLineItemChange(index, 'hsnCode', val);
                               }}
                               className="w-full px-2 py-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded text-sm text-center text-[var(--color-primary)] font-semibold focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] mobile-text-xs"
                             >
                               {hsnList.map((hsn) => (
-                                <option key={hsn.id || hsn.hsnCode} value={hsn.hsnCode || hsn.hsnNumber || hsn.code}>
-                                  {hsn.hsnCode || hsn.hsnNumber || hsn.code}
+                                <option key={hsn.id || hsn.hsnCode} value={hsn.hsnCode || hsn.hsnCode || hsn.code}>
+                                  {hsn.hsnCode || hsn.hsnCode || hsn.code}
                                 </option>
                               ))}
                             </select>
@@ -1109,14 +1101,9 @@ export default function ProformaAdviceForm({
 
     
           
-            
-    
 
           
           Expand Down
-    
-    
-  
           </div>
         </>
       )}
@@ -1410,7 +1397,7 @@ export default function ProformaAdviceForm({
                     <tr key={index}>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.serialNo}</td>
                       <td className="border border-gray-400 p-2" style={{ fontSize: '11px' }}>{item.serviceName}</td>
-                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.hsnNumber}</td>
+                      <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>{item.hsnCode}</td>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>1</td>
                       <td className="border border-gray-400 p-2 text-center" style={{ fontSize: '11px' }}>Nos</td>
                       <td className="border border-gray-400 p-2 text-right" style={{ fontSize: '11px' }}>{formatCurrency(item.amount)}</td>
