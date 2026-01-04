@@ -1,18 +1,24 @@
+
 "use client";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import Button from "@/components/shared/Button";
 import Layout from "@/components/shared/Layout";
-import { Building2, Hash, IndianRupee } from "lucide-react";
+import { Building2, Hash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import ApiService from "@/components/api/api_service";
 import { t } from "@/lib/localization";
-import { useRouter } from 'next/navigation';
+import { useRouter,  } from "next/navigation";
 import { formatDateDDMMYYYY } from "@/components/utils/dateUtils";
+
 export default function GSTTDSMonthlyCreate() {
   const router = useRouter();
+  // const searchParams = useSearchParams();
+  // const editId = searchParams.get("id");
+
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [edit, setEdit] = useState(false);
   const [fyList, setFyList] = useState([]);
   const [monthList, setMonthList] = useState([]);
 
@@ -31,6 +37,7 @@ export default function GSTTDSMonthlyCreate() {
     amountPaid: "",
     penaltyAmount: "",
     ackFile: null,
+    existingFile: "",
     remark: "",
   });
 
@@ -38,9 +45,7 @@ export default function GSTTDSMonthlyCreate() {
   // Load DDO INFO
   // ------------------------------
   useEffect(() => {
-    const storedProfile = localStorage.getItem(
-      LOGIN_CONSTANT.USER_PROFILE_DATA
-    );
+    const storedProfile = localStorage.getItem(LOGIN_CONSTANT.USER_PROFILE_DATA);
     if (storedProfile) {
       const profile = JSON.parse(storedProfile);
       setDdoInfo({
@@ -57,7 +62,7 @@ export default function GSTTDSMonthlyCreate() {
   useEffect(() => {
     const current = new Date().getFullYear();
     const arr = [];
-    for (let i = 0; i >= 0; i--) {
+    for (let i = 1; i >= 0; i--) {
       let s = current - i;
       arr.push(`${s}-${String(s + 1).slice(2)}`);
     }
@@ -90,8 +95,20 @@ export default function GSTTDSMonthlyCreate() {
 
   const handleFYChange = (e) => {
     const fy = e.target.value;
+    const months = getMonthsForFY(fy);
+    setMonthList(months);
+
     setFormData({ ...formData, financialYear: fy, month: "" });
-    setMonthList(getMonthsForFY(fy));
+  };
+
+
+
+   const updateFy = (e) => {
+    const fy = e.target.value;
+    const months = getMonthsForFY(fy);
+    setMonthList(months);
+
+    setFormData({ ...formData, financialYear: fy, month: "" });
   };
 
   // ------------------------------
@@ -139,9 +156,111 @@ export default function GSTTDSMonthlyCreate() {
   };
 
   // ------------------------------
+  // Format Date for Input
+  // ------------------------------
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // ------------------------------
+  // EDIT MODE: Load Existing Data
+  // ------------------------------
+  // useEffect(() => {
+  //   if (!editId) return;
+
+  //   const savedData = sessionStorage.getItem(`gstTdsRow_${editId}`);
+  //   if (!savedData) return;
+
+  //   const row = JSON.parse(savedData);
+  //   console.log("Editing Row:", row);
+  //   console.log(" finacial year :: " ,  row.fy);
+    
+
+  //   // Compute financial year and month list
+  //   // let fy = "";
+  //   // let monthsForFY = [];
+
+  //   // if (row.filingMonth) {
+  //   //   const [month, yearSuffix] = row.filingMonth.split("/");
+  //   //   const startYear = Number("20" + yearSuffix);
+  //   //   fy = `${startYear}-${String(startYear + 1).slice(2)}`;
+  //   //   monthsForFY = getMonthsForFY(fy);
+  //   // }
+
+  //   // setMonthList(monthsForFY);
+  //      setFormData({ ...formData, financialYear: fy, month: "" });
+  //   setFormData({
+  //     financialYear: row.fy,
+  //     month: row.month || "",
+  //     arnNumber: row.arnNo || "",
+  //     arnDate: formatDateForInput(row.arnDate),
+  //     amountDeclared: String(row.tdsDeclared || ""),
+  //     amountPaid: String(row.tdsPaid || ""),
+  //     penaltyAmount: String(row.penalty || ""),
+  //     ackFile: row.ackDocument || "",
+  //     existingFile: row.ackDocument || "",
+  //     remark: row.remarks || "",
+  //   });
+
+  //   console.log(" formadata " , formData);
+    
+  // }, [editId]);
+
+useEffect(() => {
+  // if (!editId) return;
+
+  const savedData = sessionStorage.getItem(`gstTdsRow`);
+  if (!savedData) return;
+ 
+  const row = JSON.parse(savedData);
+  setEdit(true);
+  console.log("Editing Row:", row);
+
+  // ------------------------------
+  // Normalize FY to match dropdown options
+  // Replace en dash (–) with hyphen (-)
+  // ------------------------------
+  const fyNormalized = row.fy.replace("–", "-");
+
+  // ------------------------------
+  // Populate month list based on FY
+  // ------------------------------
+  const monthsForFY = getMonthsForFY(fyNormalized);
+  setMonthList(monthsForFY);
+
+  // ------------------------------
+  // Set form data including FY and month
+  // ------------------------------
+  setFormData({
+    financialYear: fyNormalized,      // FY matches dropdown value
+    month: row.month || "",            // Month dropdown will pre-select
+    arnNumber: row.arnNo || "",
+    arnDate: formatDateForInput(row.arnDate),
+    amountDeclared: String(row.tdsDeclared || ""),
+    amountPaid: String(row.tdsPaid || ""),
+    penaltyAmount: String(row.penalty || ""),
+    ackFile: row.ackDocument || null,
+    existingFile: row.ackDocument || "",
+    remark: row.remarks || "",
+  });
+}, []);
+
+
+
+  // ------------------------------
   // SUBMIT
   // ------------------------------
   const handleSubmit = async () => {
+
+     const savedData = sessionStorage.getItem(`gstTdsRow`);
+ 
+
+  const row = JSON.parse(savedData);
     try {
       const f = formData;
 
@@ -154,20 +273,22 @@ export default function GSTTDSMonthlyCreate() {
         return toast.show("Enter GST-TDS Declared Amount", "error");
       if (!f.amountPaid)
         return toast.show("Enter GST-TDS Paid Amount", "error");
-      if (!f.ackFile)
+      if (!f.ackFile && !f.existingFile)
         return toast.show("Upload Acknowledgement PDF", "error");
 
       setLoading(true);
 
       const requestPayload = {
         ddoId: Number(localStorage.getItem(LOGIN_CONSTANT.USER_ID)),
+        financialYear: f.financialYear,
         filingMonth: f.month,
         arnNo: f.arnNumber,
-        arnDate:formatDateDDMMYYYY( f.arnDate),
+        arnDate: formatDateDDMMYYYY(f.arnDate),
         declaredAmount: Number(f.amountDeclared),
         paidAmount: Number(f.amountPaid),
         penaltyAmount: Number(f.penaltyAmount || 0),
         remark: f.remark ?? "",
+        id: row.id ? Number(row.id) : undefined,
       };
 
       const data = await ApiService.handlePostMultiPartFileRequest(
@@ -191,6 +312,7 @@ export default function GSTTDSMonthlyCreate() {
         amountPaid: "",
         penaltyAmount: "",
         ackFile: null,
+        existingFile: "",
         remark: "",
       });
 
@@ -217,11 +339,6 @@ export default function GSTTDSMonthlyCreate() {
       value: ddoInfo.officeName || "—",
       icon: <Building2 className="text-green-500" size={20} />,
     },
-    // {
-    //   label: "GSTIN",
-    //   value: ddoInfo.gstId || "—",
-    //   icon: <IndianRupee className="text-purple-500" size={20} />,
-    // },
   ];
 
   return (
@@ -244,7 +361,6 @@ export default function GSTTDSMonthlyCreate() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between gap-6 items-start">
           <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
-            {/* LEFT */}
             <Button
               variant="outline"
               onClick={() => router.replace("/ddo/ddo_gstmonthlyreport_list")}
@@ -252,25 +368,15 @@ export default function GSTTDSMonthlyCreate() {
               ← Back to List
             </Button>
 
-            {/* RIGHT */}
-           <div className="flex flex-col items-start">
-  <h1 className="text-2xl lg:text-3xl font-extrabold">
-    {t("nav.gstmonthlyreports")}
-  </h1>
-  <span className="text-sm text-gray-500">
-    Submit monthly GST-TDS return details
-  </span>
-</div>
+            <div className="flex flex-col items-start">
+              <h1 className="text-2xl lg:text-3xl font-extrabold">
+                {t("nav.gstmonthlyreports")}
+              </h1>
+              <span className="text-sm text-gray-500">
+                {edit ? "Edit monthly GST-TDS return details" : "Submit monthly GST-TDS return details"}
+              </span>
+            </div>
           </div>
-
-          {/* <div>
-            <h1 className="text-2xl lg:text-3xl font-extrabold mb-2">
-              {t("nav.gstmonthlyreports")}
-            </h1>
-            <p className="text-sm text-gray-500">
-              Submit monthly GST-TDS return details
-            </p>
-          </div> */}
 
           {/* DDO INFO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -421,6 +527,11 @@ export default function GSTTDSMonthlyCreate() {
                 onChange={handleFile}
                 className="premium-input w-full px-4 py-3"
               />
+              {formData.existingFile && (
+                <p className="mt-1 text-xs text-gray-600">
+                  Existing file: {formData.existingFile}
+                </p>
+              )}
             </div>
 
             {/* REMARKS */}
@@ -445,7 +556,7 @@ export default function GSTTDSMonthlyCreate() {
               disabled={loading}
               onClick={handleSubmit}
             >
-              {loading ? "Submitting..." : "Submit Monthly Report"}
+              {loading ? "Submitting..." : edit ? "Update Monthly Report" : "Submit Monthly Report"}
             </Button>
           </div>
         </div>
