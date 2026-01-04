@@ -51,15 +51,22 @@ export default function GstTdsMonthlyReportPage() {
       );
 
       if (response?.status === "success") {
-        const mapped = response.data.map((item) => ({
-          month: item.filingMonth,
-          arnNo: item.arnNo,
-          arnDate: formatDate(item.arnDate),
-          tdsDeclared: item.declaredAmount,
-          tdsPaid: item.paidAmount,
-          penalty: item.penaltyAmount,
-          ackDocument: item.ackDocument,
-        }));
+       const mapped = response.data.map((item) => ({
+     
+  id: item.id,  
+   fy: item.financialYear,
+  month: item.filingMonth,
+  arnNo: item.arnNo,
+  arnDate: item.arnDate,   
+  tdsDeclared: item.declaredAmount,
+  tdsPaid: item.paidAmount,
+  penalty: item.penaltyAmount,
+  ackDocument: item.ackDocument,
+}));
+
+console.log(" mapped :: " ,mapped);
+
+
         setRecords(mapped);
         setFiltered(mapped);
       } else {
@@ -91,15 +98,51 @@ export default function GstTdsMonthlyReportPage() {
     }
   }, [searchTerm, records]);
 
+  const handleDelete = async (item) => {
+    console.log("handle delete item  ", item);
+     const url=`${API_ENDPOINTS.MONTHLY_GST_DELETE}${item.id}`;
+     console.log("handle delete url ", url);
+     
+  
+
+    if (!confirm('Are you sure you want to delete this record?')) return;
+
+    try {
+      const response = await ApiService.handlePostRequest(
+        `${url}`,
+        {}
+      );
+
+      if (response && response.status === 'success') {
+        toast.success(t('alert.success'));
+     fetchRecords();
+      } else {
+        toast.error(response?.message || t('alert.error'));
+      }
+    } catch (error) {
+      toast.error(t('alert.error'));
+    }
+  };
+
+  // Example in list screen
+const handleEdit = (row) => {
+  sessionStorage.setItem(`gstTdsRow`, JSON.stringify(row));
+  router.push(`/ddo/gstmonthlycreate`);
+};
+
+
 
   const tableActions = (row) => {
-    const isEditable = row.isEditable;
+    // const isEditable = row.isEditable;
+    // console.log("row  " ,row);
+    
     return (
       <>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            // handleEdit(row);
+            handleEdit(row);
+              // router.push(`/ddo/gstmonthlycreate?id=${row.id}`)
           }}
           className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
           aria-label="Edit"
@@ -109,7 +152,7 @@ export default function GstTdsMonthlyReportPage() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            // handleDelete(row);
+            handleDelete(row);
           }}
    
           className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer"

@@ -33,6 +33,8 @@ export default function GstTdsMonthlyReportPage() {
     fetchRecords();
   }, []);
 
+  
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -50,7 +52,7 @@ export default function GstTdsMonthlyReportPage() {
         const mapped = response.data.map((item) => {
           const declared = Number(item.declaredAmount || 0);
           const paid = Number(item.paidAmount || 0);
-          const penaltyAmount=Number(item.penaltyAmount||0);
+          const penaltyAmount = Number(item.penaltyAmount || 0);
           // Difference = Paid - Declared
           const difference = paid - declared;
 
@@ -58,17 +60,19 @@ export default function GstTdsMonthlyReportPage() {
           const remarks =
             difference >= 0 ? "Fully Compliance" : "Partial Compliance";
 
-         return {
-  month: item.filingMonth,
-  arnNo: item.arnNo,
-  arnDate: formatDate(item.arnDate),
-  tdsDeclared: declared,
-  tdsPaid: paid,
-  penaltyAmount: penaltyAmount, 
-  difference,
-  remarks,
-  ackDocument: item.ackDocument,
-};
+          return {
+            id: item.id,
+         
+            month: item.filingMonth,
+            arnNo: item.arnNo,
+            arnDate: formatDate(item.arnDate),
+            tdsDeclared: declared,
+            tdsPaid: paid,
+            penaltyAmount: penaltyAmount,
+            difference,
+            remarks,
+            ackDocument: item.ackDocument,
+          };
         });
 
         setRecords(mapped);
@@ -147,19 +151,19 @@ export default function GstTdsMonthlyReportPage() {
       ),
     },
     {
-  key: "penaltyAmount",
-  label: "Penalty",
-  style: {
-    minWidth: "160px",
-    textAlign: "right",
-    whiteSpace: "nowrap",
-  },
-  render: (v) => (
-    <span className="block w-full text-right text-red-600 font-medium">
-      {formatCurrency(v)}
-    </span>
-  ),
-},
+      key: "penaltyAmount",
+      label: "Penalty",
+      style: {
+        minWidth: "160px",
+        textAlign: "right",
+        whiteSpace: "nowrap",
+      },
+      render: (v) => (
+        <span className="block w-full text-right text-red-600 font-medium">
+          {formatCurrency(v)}
+        </span>
+      ),
+    },
 
     {
       key: "difference",
@@ -171,15 +175,14 @@ export default function GstTdsMonthlyReportPage() {
       },
       render: (value) => (
         <span
-          className={`block w-full text-right font-semibold ${
-            value >= 0 ? "text-green-600" : "text-red-600"
-          }`}
+          className={`block w-full text-right font-semibold ${value >= 0 ? "text-green-600" : "text-red-600"
+            }`}
         >
           {formatCurrency(value)}
         </span>
       ),
     },
-   
+
     {
       key: "ackDocument",
       label: "Acknowledgement File",
@@ -193,17 +196,16 @@ export default function GstTdsMonthlyReportPage() {
           <span className="text-red-500 italic">No file uploaded</span>
         ),
     },
-     {
+    {
       key: "remarks",
       label: "Status",
       style: { minWidth: "220px", whiteSpace: "nowrap" },
       render: (value) => (
         <span
           className={`px-3 py-1 rounded text-sm font-semibold
-            ${
-              value === "Fully Compliance"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
+            ${value === "Fully Compliance"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
             }`}
         >
           {value}
@@ -221,7 +223,7 @@ export default function GstTdsMonthlyReportPage() {
             {/* <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
               <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
             </h1> */}
-               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
               <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
               <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
                      bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
@@ -234,11 +236,11 @@ export default function GstTdsMonthlyReportPage() {
             </p>
           </div>
 
-         
+
         </div>
 
         {/* Search Bar */}
-           <div className="relative">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
           <input
             type="text"

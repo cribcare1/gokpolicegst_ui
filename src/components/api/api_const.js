@@ -116,6 +116,11 @@ export const API_ENDPOINTS = {
   DDO_MAPPING_UPDATE: `${API_BASE_URL}/gst/migrate-ddos`,
 
   FETCH_INVOICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?isShortfall=true&status=SAVED&ddoId=`, 
+
+  MONTHLY_GST_DELETE: `${API_BASE_URL}/monthly-gst-filing/delete/`,
+  QUATERLY_GST_DELETE: `${API_BASE_URL}/quarterly-income-tax/delete/`,
+  
+
   
 };
 
