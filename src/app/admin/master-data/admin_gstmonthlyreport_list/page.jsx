@@ -58,7 +58,7 @@ export default function GstTdsMonthlyReportPage() {
 
           // Compliance logic
           const remarks =
-            difference >= 0 ? "Fully Compliance" : "Partial Compliance";
+            difference === 0 ? "Fully Compliance" : "Partial Compliance";
 
           return {
             id: item.id,
@@ -159,7 +159,7 @@ export default function GstTdsMonthlyReportPage() {
         whiteSpace: "nowrap",
       },
       render: (v) => (
-        <span className="block w-full text-right text-red-600 font-medium">
+        <span className="block w-full text-right text-black-600 font-medium">
           {formatCurrency(v)}
         </span>
       ),
@@ -175,7 +175,7 @@ export default function GstTdsMonthlyReportPage() {
       },
       render: (value) => (
         <span
-          className={`block w-full text-right font-semibold ${value >= 0 ? "text-green-600" : "text-red-600"
+          className={`block w-full text-right font-semibold ${value >= 0 ? "text-black-600" : "text-red-600"
             }`}
         >
           {formatCurrency(value)}
@@ -183,19 +183,7 @@ export default function GstTdsMonthlyReportPage() {
       ),
     },
 
-    {
-      key: "ackDocument",
-      label: "Acknowledgement File",
-      style: { minWidth: "240px", whiteSpace: "nowrap" },
-      render: (_, row) =>
-        row.ackDocument ? (
-          <span className="text-green-700 font-medium truncate block max-w-[220px]">
-            {row.ackDocument}
-          </span>
-        ) : (
-          <span className="text-red-500 italic">No file uploaded</span>
-        ),
-    },
+    
     {
       key: "remarks",
       label: "Status",
@@ -211,6 +199,19 @@ export default function GstTdsMonthlyReportPage() {
           {value}
         </span>
       ),
+    },
+    {
+      key: "ackDocument",
+      label: "Acknowledgement File",
+      style: { minWidth: "240px", whiteSpace: "nowrap" },
+      render: (_, row) =>
+        row.ackDocument ? (
+          <span className="text-black-700 font-medium truncate block max-w-[220px]">
+            {row.ackDocument}
+          </span>
+        ) : (
+          <span className="text-red-500 italic">No file uploaded</span>
+        ),
     },
   ];
 

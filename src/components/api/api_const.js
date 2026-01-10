@@ -119,6 +119,9 @@ export const API_ENDPOINTS = {
 
   MONTHLY_GST_DELETE: `${API_BASE_URL}/monthly-gst-filing/delete/`,
   QUATERLY_GST_DELETE: `${API_BASE_URL}/quarterly-income-tax/delete/`,
+  CREDIT_NOTE_SAVE: `${API_BASE_URL}/invoices/saveOrUpdateCreditNote`,
+  GET_CREDIT_NOTES: `${API_BASE_URL}/invoices/getCreditNotes?ddoId=`,
+  GET_GSTINCREDIT_NOTES: `${API_BASE_URL}/invoices/getCreditNotes?gstId=`,
   
 
   

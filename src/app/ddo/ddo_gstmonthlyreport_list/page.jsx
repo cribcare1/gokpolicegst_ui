@@ -178,7 +178,7 @@ const handleEdit = (row) => {
       style: { minWidth: "200px" },
       render: (_, row) =>
         row.ackDocument ? (
-          <span className="text-green-700 font-medium whitespace-nowrap truncate block max-w-[200px]">
+          <span className="text-black-700 font-medium whitespace-nowrap truncate block max-w-[200px]">
             {row.ackDocument}
           </span>
         ) : (

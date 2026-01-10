@@ -52,6 +52,10 @@ export default function ReceiptListPage() {
         `${API_ENDPOINTS.INVOICE_LIST}${ddoId}&status=SUBMITTED`
       );
 
+
+      console.log(response  , "::: response in invoce");
+      
+
       if (response && response.success === "success") {
         const list = (response.data || []).map((invoice) => ({
           id: invoice.invoiceId,

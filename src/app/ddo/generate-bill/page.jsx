@@ -33,12 +33,12 @@ export default function GenerateBillPage() {
   
   // Bill Details
   const [billDetails, setBillDetails] = useState({
-    gstinNumber: '29AAAG01111W1ZB',
-    gstAddress: 'No.1, Police Head Quarters, Nrupathunga Road, Opp: Martha\'s Hospital, Bengaluru-560001',
-    ddoCode: '0200P00032',
-    billNumber: '1ZB/PO0032/0001',
+    gstinNumber: '',
+    gstAddress: 'null',
+    ddoCode: '',
+    billNumber: '',
     date: new Date().toISOString().split('T')[0],
-    placeOfSupply: 'Bengaluru',
+    placeOfSupply: '',
   });
   
   // Customer
@@ -581,7 +581,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
           customerType: c.customerType || c.type || 'Govt',
           mobile: c.mobile || '',
           email: c.email || c.customerEmail || '',
-          exemptionNumber: c.exemptionNumber || c.exemptionCertNumber || ''
+          exemptionNumber: c.exemptionNumber || c.exemptionCertNumber || '',
+          serviceType: c.serviceType || record.serviceType || ''
         };
         console.log('🏗️ Created customer object from raw data:', customerObj);
         setSelectedCustomer(customerObj);
@@ -638,8 +639,9 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
      
     const hasExemption = selectedCustomer?.exemptionNumber || selectedCustomer?.exemptionCertNumber;
     const isRCMExempted = invoiceType === 'RCM' && hasExemption;
+    
     const isFCMExempted = invoiceType === 'FCM' && hasExemption;
-    const supplierGSTIN = billDetails.gstinNumber;
+    const supplierGSTIN = gstDetails.gstNumber || '';
     const customerGSTIN = selectedCustomer.gstNumber || '';
     const customerPAN = selectedCustomer.pan || '';
     

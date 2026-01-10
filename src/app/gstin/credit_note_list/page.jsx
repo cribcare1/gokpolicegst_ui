@@ -34,7 +34,7 @@ export default function CreditNoteListPage() {
       if (!ddoId) return;
 
       const response = await ApiService.handleGetRequest(
-        `${API_ENDPOINTS.GET_CREDIT_NOTES}${ddoId}`
+       `${API_ENDPOINTS.GET_GSTINCREDIT_NOTES}${ddoId}`
       );
 
       if (response?.status === "success") {
@@ -126,7 +126,7 @@ export default function CreditNoteListPage() {
   ];
 
   return (
-    <Layout role="ddo">
+    <Layout role="gstin">
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -144,14 +144,14 @@ export default function CreditNoteListPage() {
             </p>
           </div>
 
-          <Button
+          {/* <Button
             onClick={() => router.push("/ddo/credit_note_create")}
             variant="primary"
             className="w-full sm:w-auto"
           >
             <Plus className="mr-2" size={18} />
             Add
-          </Button>
+          </Button> */}
         </div>
 
         {/* Search */}
