@@ -135,19 +135,7 @@ export default function AdminTDSQuarterlyListPage() {
       style: { minWidth: "150px" },
     },
     { key: "revision", label: "Any Revision Filed", style: { minWidth: "130px" } },
-    {
-      key: "ackFile",
-      label: "Acknowledgement File",
-      style: { minWidth: "220px" },
-      render: (_, row) =>
-        row.ackFile ? (
-          <span className="text-green-700 font-medium truncate block max-w-[200px]">
-            {row.ackFile}
-          </span>
-        ) : (
-          <span className="text-red-500 italic">No file uploaded</span>
-        ),
-    },
+   
     {
       key: "difference",
       label: "Difference in Reporting",
@@ -155,7 +143,7 @@ export default function AdminTDSQuarterlyListPage() {
       render: (value) => (
         <span
           className={`block w-full text-right font-semibold ${
-            value === 0 ? "text-green-600" : "text-red-600"
+            value === 0 ? "text-black-600" : "text-red-600"
           }`}
         >
           {formatCurrency(value)}
@@ -178,6 +166,19 @@ export default function AdminTDSQuarterlyListPage() {
           {value}
         </span>
       ),
+    },
+     {
+      key: "ackFile",
+      label: "Acknowledgement File",
+      style: { minWidth: "220px" },
+      render: (_, row) =>
+        row.ackFile ? (
+          <span className="text-black-700 font-medium truncate block max-w-[200px]">
+            {row.ackFile}
+          </span>
+        ) : (
+          <span className="text-black-500 italic">No file uploaded</span>
+        ),
     },
   ];
 

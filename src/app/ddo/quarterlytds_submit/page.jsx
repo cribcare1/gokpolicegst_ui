@@ -17,7 +17,8 @@ export default function TDSQuarterlyCreate() {
   const [loading, setLoading] = useState(false);
   const [ddoInfo, setDdoInfo] = useState({ ddoCode: "", gstin: "", officeName: "" });
   const [fyList, setFyList] = useState([]);
-
+const [isEditMode, setIsEditMode] = useState(false);
+const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({
     fy: "",
     returnType: "",
@@ -47,6 +48,32 @@ export default function TDSQuarterlyCreate() {
       });
     }
   }, []);
+ useEffect(() => {
+  const stored = sessionStorage.getItem("editRecord");
+  if (!stored) return;
+
+  const data = JSON.parse(stored);
+  console.log("EDIT DATA >>>", data);
+
+  setIsEditMode(true);          // ✅ IMPORTANT
+  setEditId(data.id);           // ✅ IMPORTANT
+
+  setFormData({
+    fy: data.fy ?? "",
+    returnType: data.returnType ?? "",
+    quarter: data.quarter ?? "",
+    filingDate: data.filingDate ?? "", // YYYY-MM-DD ✔
+    receiptNo: data.receiptNo ?? "",
+    deducteeCount: String(data.deducteeCount ?? ""),
+    challanAmount: String(data.challanAmount ?? ""),
+    taxDeducted: String(data.taxDeducted ?? ""),
+    revision: data.revision === "Yes" ? "Yes" : "No",
+    ackFile: data.ackFile,              // file cannot be prefilled
+    remarks: data.remarks ?? "",
+  });
+}, []);
+
+
 
   // Load FY list
   useEffect(() => {
@@ -129,19 +156,21 @@ export default function TDSQuarterlyCreate() {
 
       setLoading(true);
 
-      const requestPayload = {
-        ddoId: Number(localStorage.getItem(LOGIN_CONSTANT.USER_ID)),
-        fiscalYear: f.fy,
-        returnType: f.returnType,
-        quarter: f.quarter,
-        dateOfFiling:formatDateDDMMYYYY(f.filingDate),
-        provisionalReceiptNo: f.receiptNo,
-        deducteeCount: Number(f.deducteeCount),
-        totalChallanAmount: Number(f.challanAmount),
-        totalTaxDeducted: Number(f.taxDeducted),
-        anyRevisionFiled: (f.revision== "Yes" )? true :false ,
-        remarks: f.remarks ?? "",
-      };
+   const requestPayload = {
+  ...(isEditMode && { id: editId }), 
+  ddoId: Number(localStorage.getItem(LOGIN_CONSTANT.USER_ID)),
+  fiscalYear: f.fy,
+  returnType: f.returnType,
+  quarter: f.quarter,
+  dateOfFiling: formatDateDDMMYYYY(f.filingDate),
+  provisionalReceiptNo: f.receiptNo,
+  deducteeCount: Number(f.deducteeCount),
+  totalChallanAmount: Number(f.challanAmount),
+  totalTaxDeducted: Number(f.taxDeducted),
+  anyRevisionFiled: f.revision === "Yes",
+  remarks: f.remarks ?? "",
+};
+
 
       const data = await ApiService.handlePostMultiPartFileRequest(
         API_ENDPOINTS.TDS_QUARTERLY_SAVE,

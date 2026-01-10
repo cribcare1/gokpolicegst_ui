@@ -56,7 +56,7 @@ export default function GstTdsMonthlyReportPage() {
 
           // Compliance logic
           const remarks =
-            difference >= 0 ? "Fully Compliance" : "Partial Compliance";
+            difference === 0 ? "Fully Compliance" : "Partial Compliance";
 
         return {
   month: item.filingMonth,
@@ -181,19 +181,7 @@ export default function GstTdsMonthlyReportPage() {
       ),
     },
    
-    {
-      key: "ackDocument",
-      label: "Acknowledgement File",
-      style: { minWidth: "240px", whiteSpace: "nowrap" },
-      render: (_, row) =>
-        row.ackDocument ? (
-          <span className="text-green-700 font-medium truncate block max-w-[220px]">
-            {row.ackDocument}
-          </span>
-        ) : (
-          <span className="text-red-500 italic">No file uploaded</span>
-        ),
-    },
+   
      {
       key: "remarks",
       label: "Status",
@@ -210,6 +198,19 @@ export default function GstTdsMonthlyReportPage() {
           {value}
         </span>
       ),
+    },
+     {
+      key: "ackDocument",
+      label: "Acknowledgement File",
+      style: { minWidth: "240px", whiteSpace: "nowrap" },
+      render: (_, row) =>
+        row.ackDocument ? (
+          <span className="text-black-700 font-medium truncate block max-w-[220px]">
+            {row.ackDocument}
+          </span>
+        ) : (
+          <span className="text-red-500 italic">No file uploaded</span>
+        ),
     },
   ];
   

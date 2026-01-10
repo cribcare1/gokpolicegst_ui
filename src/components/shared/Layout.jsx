@@ -115,12 +115,12 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
     {
-      label: 'Sales',
+      label: 'Bandobasta Bill',
       icon: 'sales',
       children: [
         { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
         { href: '/ddo/proforma-advice', label: 'Receipts', icon: 'receipts' },
-        { href: '/ddo/shortfall_payment_list', label: 'Shortfall', icon: 'shortfall' },
+        { href: '/ddo/shortfall_payment_list', label: 'Shortfall List', icon: 'shortfall' },
         { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'invoices' },
         { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'credit-notes' },
       ],
@@ -133,9 +133,11 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/gstin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
     { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
+    { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
     { href: '/gstin/gstin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
     { href: '/gstin/gstin_quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreport' },
+
   ];
 
   const navItems = role === 'admin' ? adminNavItems : role === 'gstin' ? gstinNavItems : ddoNavItems;
@@ -162,7 +164,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
               {sidebarOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <Menu size={20} className="sm:w-6 sm:h-6" />}
             </button>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent truncate">
-              Karnataka state police {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? `- DDO/${ddoCode}/${gstinnum}` : ''}
+              Karnataka State Police {role === 'admin' ? '- Admin' : role === 'gstin' ? '- GSTIN' : role === 'ddo' ? `- ${ddoCode}/${gstinnum}` : ''}
             </h1>
           </div>
 
