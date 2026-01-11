@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "@/components/shared/Layout";
@@ -52,7 +53,6 @@ export default function ShortfallPaymentPage() {
     }
   };
 
-
   const fetchInvoices = async () => {
     try {
       setLoading(true);
@@ -84,7 +84,6 @@ export default function ShortfallPaymentPage() {
           amountPayable: invoice.grandTotal,
           amountReceived: 0,
           paymentMode: "Bank",
-
           paymentRef: "",
           paymentDate: invoice.invoiceDate,
         }));
@@ -138,12 +137,11 @@ export default function ShortfallPaymentPage() {
       return;
     }
 
-    // Validate selected rows
     for (const id of selectedReceipts) {
       const edited = editedValues[id] || {};
       const original = receiptsData.find((r) => r.id === id);
 
-      if (edited.amountReceived === undefined || edited.amountReceived === null || edited.amountReceived === "") {
+      if (edited.amountReceived === undefined || edited.amountReceived === "") {
         toast.error(`Amount Received is required for PA No: ${original.paNo}`);
         return;
       }
@@ -159,7 +157,6 @@ export default function ShortfallPaymentPage() {
       }
     }
 
-    // Prepare selected data
     const selectedData = selectedReceipts.map((id) => {
       const original = receiptsData.find((r) => r.id === id);
       const edited = editedValues[id] || {};
@@ -178,19 +175,16 @@ export default function ShortfallPaymentPage() {
       };
     });
 
-    // Store data in localStorage
     localStorage.setItem("shortfallData", JSON.stringify(selectedData));
-
-    // Navigate to preview page
     router.push("/ddo/receipt-preview");
   };
 
   const filteredReceipts = receiptsData.filter((r) => {
-    const matchesCustomer = selectedCustomer ? r.customerName === selectedCustomer.customerName : true;
     const paymentDate = new Date(r.paymentDate);
-    const matchesFrom = fromDate ? paymentDate >= new Date(fromDate) : true;
-    const matchesTo = toDate ? paymentDate <= new Date(toDate) : true;
-    return matchesCustomer && matchesFrom && matchesTo;
+    return (
+      (!fromDate || paymentDate >= new Date(fromDate)) &&
+      (!toDate || paymentDate <= new Date(toDate))
+    );
   });
 
   const receiptColumns = [
@@ -207,39 +201,46 @@ export default function ShortfallPaymentPage() {
     },
     { key: "paNo", label: "Proforma Number" },
     { key: "customerName", label: "Customer Name" },
-    { key: "amountPayable", label: "Amount Payable", render: (v) => formatCurrency(v, true) },
+    {
+      key: "amountPayable",
+      label: "Amount Payable",
+      render: (v) => (
+        <span className="block text-right">
+          {formatCurrency(v, true)}
+        </span>
+      ),
+    },
     {
       key: "amountReceived",
       label: "Amount Received",
       render: (v, row) => {
         const isChecked = selectedReceipts.includes(row.id);
         const edited = editedValues[row.id]?.amountReceived ?? v;
-        if (!isChecked) return <span>{formatCurrency(v, true)}</span>;
+
+        if (!isChecked) {
+          return (
+            <span className="block text-right">
+              {formatCurrency(v, true)}
+            </span>
+          );
+        }
 
         return (
-
-          // <input type="number" min="0" step="1" className="border rounded px-2 py-1 w-28" value={edited === 0 ? "" : edited} onChange={(e) => { const value = e.target.value; updateField( row.id, "amountReceived", value === "" ? "" : Number(value) ); }} />
           <input
             type="number"
             min="0"
-            max={row.amountPayable} // restrict max to amountPayable
+            max={row.amountPayable}
             step="1"
-            className="border rounded px-2 py-1 w-28"
+            className="border rounded px-2 py-1 w-full text-right appearance-none"
             value={edited === 0 ? "" : edited}
             onChange={(e) => {
               let value = e.target.value === "" ? "" : Number(e.target.value);
-
-              // Restrict value between 0 and amountPayable
               if (value !== "" && value < 0) value = 0;
-              if (value !== "" && value > row.amountPayable) value = row.amountPayable;
-
+              if (value !== "" && value > row.amountPayable)
+                value = row.amountPayable;
               updateField(row.id, "amountReceived", value);
             }}
           />
-
-
-
-
         );
       },
     },
@@ -248,10 +249,13 @@ export default function ShortfallPaymentPage() {
       label: "Difference",
       render: (v, row) => {
         const received = editedValues[row.id]?.amountReceived ?? row.amountReceived;
-        const diff =   row.amountPayable - received ;
+        const diff = row.amountPayable - received;
+
         return (
-          <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff , true)}
+          <span
+            className={`block text-right ${diff === 0 ? "text-green-600" : "text-red-600"}`}
+          >
+            {formatCurrency(diff, true)}
           </span>
         );
       },
@@ -272,44 +276,6 @@ export default function ShortfallPaymentPage() {
               {countrecords ?? 0}
             </span>
           </h1>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex flex-col">
-              <label>From Date</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="border px-3 py-2 rounded"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label>To Date</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="border px-3 py-2 rounded"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label>Select Customer</label>
-              <select
-                value={selectedCustomer?.id || ""}
-                onChange={(e) => {
-                  const customer = customers.find((c) => String(c.id) === e.target.value);
-                  setSelectedCustomer(customer || null);
-                }}
-                className="flex-1 px-3 py-2 border rounded-lg bg-white"
-              >
-                <option value="">All Customers</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.customerName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
 
         {/* Table */}
@@ -323,8 +289,6 @@ export default function ShortfallPaymentPage() {
               <Table columns={receiptColumns} data={filteredReceipts} itemsPerPage={10} />
             </div>
           )}
-
-
         </div>
 
         <div className="flex justify-end gap-4 mt-4">
