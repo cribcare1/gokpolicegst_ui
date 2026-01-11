@@ -30,7 +30,7 @@ export default function ProformaAdviceList({
   formatDate,
   gstDetails,
   ddoDetails,
-    onDeleteProforma,  // callback from parent
+  onDeleteProforma,  // callback from parent
   onCancelProforma,  // callback from parent
 }) {
   const router = useRouter();

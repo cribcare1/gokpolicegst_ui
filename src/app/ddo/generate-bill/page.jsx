@@ -560,9 +560,8 @@ console.log("proformaList ::::::::::::::::::: " ,proformaList);
       
       // First, try to find in customers list by GST or name
       const found = customers.find(x => 
-        (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) || 
-        (x.customerName && c.customerName && x.customerName === c.customerName) ||
-        (x.name && c.name && x.name === c.name)
+        (x.gstNumber && c.gstNumber && x.gstNumber === c.gstNumber) &&
+        (x.customerName && c.customerName && x.customerName === c.customerName) 
       );
       
       if (found) {
