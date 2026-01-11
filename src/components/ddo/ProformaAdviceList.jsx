@@ -776,6 +776,18 @@ export default function ProformaAdviceList({
     label: 'Service Type',
     render: (value) => value || '-',
   },
+  
+  {
+    key: 'proformaAmount',
+    label: 'Proforma Advice Amount',
+    render: (value) => formatCurrency(value || 0),
+  },
+  {
+    key: 'proformaDate',
+    label: 'Proforma Advice Date',
+    render: (value) =>
+      value ? formatDateDDMMYYYY(value) : '-',
+  },
   {
     key: 'proformaNumber',
     label: 'Proforma Advice',
@@ -792,17 +804,6 @@ export default function ProformaAdviceList({
         {value}
       </div>
     ),
-  },
-  {
-    key: 'proformaAmount',
-    label: 'Proforma Advice Amount',
-    render: (value) => formatCurrency(value || 0),
-  },
-  {
-    key: 'proformaDate',
-    label: 'Proforma Advice Date',
-    render: (value) =>
-      value ? formatDateDDMMYYYY(value) : '-',
   },
  
 ];

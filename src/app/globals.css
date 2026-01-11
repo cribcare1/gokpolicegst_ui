@@ -508,3 +508,14 @@ html[lang="kn"] {
 .compact-print h3 { font-size: 11px !important; }
 .compact-print .text-sm { font-size: 8px !important; }
 .compact-print .text-xs { font-size: 7px !important; }
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* REMOVE number input arrows - Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}

@@ -8,6 +8,7 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/shared/Button";
+import { formatCurrency } from "@/lib/gstUtils";
 
 export default function CreditNoteCreate() {
   const router = useRouter();
@@ -18,12 +19,13 @@ export default function CreditNoteCreate() {
   const [selectedInvoice, setSelectedInvoice] = useState(null); // store selected invoice
 
   const [formData, setFormData] = useState({
-    receiptInvoiceNo: "",  // show in dropdown
-    invoiceTotal: 0,       // grand total from API
+    receiptInvoiceNo: "",  
+    invoiceTotal: 0,       
     creditNoteValue: "",
     baseAmount: 0,
     taxAmount: 0,
     totalAmount: 0,
+    payableAmount: 0, // <-- new field
     remark: "",
   });
 
@@ -78,6 +80,7 @@ export default function CreditNoteCreate() {
         baseAmount: 0,
         taxAmount: 0,
         totalAmount: 0,
+        payableAmount: invoice.grandTotal, // set payable amount
         remark: "",
       });
       return;
@@ -94,8 +97,7 @@ export default function CreditNoteCreate() {
         totalAmount = Number(creditValue || 0);
 
       if (creditValue && totalPayable) {
-        // Assuming invoice tax rate = total - base (if available) or 18% as example
-        const taxRate = selectedInvoice.taxRate || 0.18; // adjust according to your API
+        const taxRate = selectedInvoice.taxRate || 0.18; // default 18%
         baseAmount = Number(creditValue) / (1 + taxRate);
         taxAmount = Number(creditValue) - baseAmount;
         totalAmount = Number(creditValue);
@@ -137,13 +139,13 @@ export default function CreditNoteCreate() {
 
       if (!f.receiptInvoiceNo) return toast.show("Select Receipt No", "error");
       if (!f.creditNoteValue) return toast.show("Enter Credit Note Value", "error");
-      if (Number(f.creditNoteValue) > Number(f.invoiceTotal))
-        return toast.show("Credit Note Value cannot exceed Total Payable Amount", "error");
+      if (Number(f.creditNoteValue) > Number(f.payableAmount))
+        return toast.show("Credit Note Value cannot exceed Payable Amount", "error");
 
       setLoading(true);
 
       const payload = {
-         invoiceId: selectedInvoice.invoiceId,
+        invoiceId: selectedInvoice.invoiceId,
         invoiceNo: f.receiptInvoiceNo,
         creditNoteDate: new Date().toISOString().split("T")[0],
         baseAmount: f.baseAmount,
@@ -199,6 +201,7 @@ export default function CreditNoteCreate() {
               update={update}
               options={invoiceList}
             />
+              <Input label="Payable Amount" value={formatCurrency(formData.payableAmount , true)} disabled /> {/* new field */}
             <Input
               label="Credit Note Value"
               name="creditNoteValue"
@@ -209,6 +212,7 @@ export default function CreditNoteCreate() {
             <Input label="Base Amount" value={formData.baseAmount} disabled />
             <Input label="Tax Amount" value={formData.taxAmount} disabled />
             <Input label="Total Amount" value={formData.totalAmount} disabled />
+          
           </div>
 
           <div>

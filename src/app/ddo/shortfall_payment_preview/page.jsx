@@ -1,5 +1,4 @@
 
-
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -33,31 +32,27 @@ export default function ReceiptPreviewPage() {
         initialEdits[item.invoiceId] = {
           amountReceived: item.amountReceived,
           differenceReason: item.differenceReason || "",
-          paymentMode: item.paymentMode || "Select",
-          paymentRef: item.paymentRef || "",
-          paymentDate: item.paymentDate || "",
-           remarks: item.remarks || "",
+          paymentMode: "",
+          paymentRef: "",
+          paymentDate: "",
+          remarks: "",
         };
       });
       setEditedValues(initialEdits);
-    } catch (error) {
+    } catch {
       toast.error("Invalid receipt data");
       router.push("/ddo/shortfall_payment_list");
     }
-  }, []);
+  }, [router]);
 
   const updateField = (id, field, value) => {
     setEditedValues((prev) => {
       const updated = { ...prev, [id]: { ...prev[id], [field]: value } };
-
       if (field === "amountReceived") {
         const row = data.find((r) => r.invoiceId === id);
         const diff = row.amountPayable - value;
-        if (diff <= 0) {
-          updated[id].differenceReason = "";
-        }
+        if (diff <= 0) updated[id].differenceReason = "";
       }
-
       return updated;
     });
   };
@@ -71,10 +66,14 @@ export default function ReceiptPreviewPage() {
         <input
           type="number"
           min="0"
-          className="border rounded px-2 py-1 w-28"
+          className={`border rounded px-2 py-1 w-28 text-right ${
+            (editedValues[row.invoiceId]?.amountReceived || 0) <= 0
+              ? "border-red-500"
+              : ""
+          }`}
           value={editedValues[row.invoiceId]?.amountReceived ?? v}
           onChange={(e) =>
-            updateField(row.invoiceId, "amountReceived", parseFloat(e.target.value) || 0)
+            updateField(row.invoiceId, "amountReceived", Number(e.target.value) || 0)
           }
         />
       ),
@@ -83,12 +82,15 @@ export default function ReceiptPreviewPage() {
       key: "difference",
       label: "Difference",
       render: (v, row) => {
-        const received = editedValues[row.invoiceId]?.amountReceived ?? v;
+        const received = editedValues[row.invoiceId]?.amountReceived ?? row.amountReceived;
         const diff = row.amountPayable - received;
         return (
-          <span className={diff === 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff, true)}
-          </span>
+          <div
+        style={{ textAlign: "right" }} // ensures alignment
+        className={diff === 0 ? "text-green-600" : "text-red-600"}
+      >
+        {formatCurrency(diff, true)}
+      </div>
         );
       },
     },
@@ -98,27 +100,23 @@ export default function ReceiptPreviewPage() {
       render: (v, row) => {
         const received = editedValues[row.invoiceId]?.amountReceived ?? row.amountReceived;
         const diff = row.amountPayable - received;
-
         if (diff > 0) {
-          const selectedReason = editedValues[row.invoiceId]?.differenceReason || "";
-          const isMandatoryEmpty = selectedReason === "";
-
+          const selected = editedValues[row.invoiceId]?.differenceReason || "";
           return (
             <select
-              className={`border rounded px-2 py-1 ${isMandatoryEmpty ? "border-red-500" : ""}`}
-              value={selectedReason}
+              className={`border rounded px-2 py-1 ${!selected ? "border-red-500" : ""}`}
+              value={selected}
               onChange={(e) =>
                 updateField(row.invoiceId, "differenceReason", e.target.value)
               }
             >
               <option value="">Select</option>
               <option value="Shortfall Payment">Shortfall Payment</option>
-              <option value="Discount Payment">Waver Amount</option>
+              <option value="Discount Payment">Waiver Amount</option>
             </select>
           );
-        } else {
-          return "-";
         }
+        return "-";
       },
     },
     {
@@ -126,13 +124,15 @@ export default function ReceiptPreviewPage() {
       label: "Payment Mode",
       render: (v, row) => (
         <select
-          className="border rounded px-2 py-1"
-          value={editedValues[row.invoiceId]?.paymentMode || "Select"}
+          className={`border rounded px-2 py-1 ${
+            !editedValues[row.invoiceId]?.paymentMode ? "border-red-500" : ""
+          }`}
+          value={editedValues[row.invoiceId]?.paymentMode}
           onChange={(e) =>
             updateField(row.invoiceId, "paymentMode", e.target.value)
           }
         >
-          <option value="Select">Select</option>
+          <option value="">Select</option>
           <option value="Bank/ DD/ Cheque">Bank/ DD/ Cheque</option>
           <option value="Other">Other</option>
         </select>
@@ -141,26 +141,18 @@ export default function ReceiptPreviewPage() {
     {
       key: "paymentRef",
       label: "Payment Ref No",
-      render: (v, row) => {
-        const paymentMode = editedValues[row.invoiceId]?.paymentMode || "Select";
-        // const isMandatory = paymentMode === "Bank/ DD/ Cheque";
-        const isMandatory = true;
-        return (
-          <input
-            type="text"
-            className={`border rounded px-2 py-1 w-32 ${
-              isMandatory && !editedValues[row.invoiceId]?.paymentRef?.trim()
-                ? "border-red-500"
-                : ""
-            }`}
-            placeholder={isMandatory ? "Required" : "Optional"}
-            value={editedValues[row.invoiceId]?.paymentRef || v || ""}
-            onChange={(e) =>
-              updateField(row.invoiceId, "paymentRef", e.target.value)
-            }
-          />
-        );
-      },
+      render: (v, row) => (
+        <input
+          type="text"
+          className={`border rounded px-2 py-1 w-32 ${
+            !editedValues[row.invoiceId]?.paymentRef?.trim() ? "border-red-500" : ""
+          }`}
+          value={editedValues[row.invoiceId]?.paymentRef}
+          onChange={(e) =>
+            updateField(row.invoiceId, "paymentRef", e.target.value)
+          }
+        />
+      ),
     },
     {
       key: "paymentDate",
@@ -168,8 +160,10 @@ export default function ReceiptPreviewPage() {
       render: (v, row) => (
         <input
           type="date"
-          className="border rounded px-2 py-1"
-          value={editedValues[row.invoiceId]?.paymentDate || v || ""}
+          className={`border rounded px-2 py-1 ${
+            !editedValues[row.invoiceId]?.paymentDate ? "border-red-500" : ""
+          }`}
+          value={editedValues[row.invoiceId]?.paymentDate}
           onChange={(e) =>
             updateField(row.invoiceId, "paymentDate", e.target.value)
           }
@@ -177,104 +171,72 @@ export default function ReceiptPreviewPage() {
       ),
     },
     {
-  key: "remarks",
-  label: "Remarks",
-  render: (v, row) => (
-    <input
-      type="text"
-      className="border rounded px-2 py-1 w-48"
-      placeholder="Enter remarks"
-      value={editedValues[row.invoiceId]?.remarks || ""}
-      onChange={(e) =>
-        updateField(row.invoiceId, "remarks", e.target.value)
-      }
-    />
-  ),
-},
+      key: "remarks",
+      label: "Remarks",
+      render: (v, row) => (
+        <input
+          type="text"
+          className="border rounded px-2 py-1 w-40"
+          placeholder="Enter remarks"
+          value={editedValues[row.invoiceId]?.remarks || ""}
+          onChange={(e) =>
+            updateField(row.invoiceId, "remarks", e.target.value)
+          }
+        />
+      ),
+    },
   ];
 
+  const isFormValid = () => {
+    if (!data.length) return false;
 
- const isFormValid = () => {
-  return data.every((item) => {
-    const edited = editedValues[item.invoiceId];
-    if (!edited) return false;
+    return data.every((item) => {
+      const edited = editedValues[item.invoiceId];
+      if (!edited) return false;
+      const diff = item.amountPayable - edited.amountReceived;
 
-    const diff = item.amountPayable - edited.amountReceived;
+      if (!edited.paymentMode) return false;
+      if (!edited.paymentRef?.trim()) return false;
+      if (!edited.paymentDate) return false;
+      if ((diff > 0 && !edited.differenceReason?.trim()) || edited.amountReceived <= 0)
+        return false;
 
-    // Payment Ref ALWAYS mandatory
-    if (!edited.paymentRef || !edited.paymentRef.trim()) return false;
-
-    // Payment mode mandatory
-    if (!edited.paymentMode || edited.paymentMode === "Select") return false;
-
-    // Payment date mandatory
-    if (!edited.paymentDate) return false;
-
-    // Difference reason mandatory if diff > 0
-    if (diff > 0 && !edited.differenceReason?.trim()) return false;
-
-    return true;
-  });
-};
-
-
+      return true;
+    });
+  };
 
   const handleSaveAndGenerate = async () => {
-  // validations (keep if required)
-  for (let item of data) {
-    const edited = editedValues[item.invoiceId];
+    const payload = {
+      receipts: data.map((item) => ({
+        invoiceId: item.invoiceId,
+        type: editedValues[item.invoiceId].paymentMode,
+        referenceNumber: editedValues[item.invoiceId].paymentRef,
+        amountPaid: Number(editedValues[item.invoiceId].amountReceived),
+        paymentDate: editedValues[item.invoiceId].paymentDate,
+        differenceAmount:
+          item.amountPayable - Number(editedValues[item.invoiceId].amountReceived),
+        differenceReason: editedValues[item.invoiceId].differenceReason || "",
+        remarks: editedValues[item.invoiceId].remarks || "",
+      })),
+    };
 
-    if (!edited || edited.amountReceived <= 0) {
-      toast.error(`Amount is required for invoice ${item.paNo}`);
-      return;
-    }
-  }
-
-  
-
-  const payload = {
-      
-    receipts: data.map((item) => ({
-      
-     
-      invoiceId: item.invoiceId,
-      type:
-        editedValues[item.invoiceId]?.paymentMode??"Other" 
-         ,
-      referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
-      amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
-      paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
-      differenceAmount: Number(item?.difference) || 0,
-      differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
-      shortfallRemark: editedValues[item.invoiceId]?.remarks || "",
-    })),
-  };
-  try {
-    setLoading(true);
-    await ApiService.handlePostRequest(
-      API_ENDPOINTS.CREATE_RECIEPT,
-      payload
-    );
-    toast.success("Shortfall invoice generated successfully");
+    try {
+      setLoading(true);
+      await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
+      toast.success("Receipts saved & invoice generated");
       router.replace("/ddo/credit-notes");
-  } catch (error) {
-    toast.error("Failed to generate shortfall invoice");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+    } catch {
+      toast.error("Failed to save receipts");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Layout role="ddo">
       <div className="space-y-6">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-          <span className="gradient-text">Shortfall Preview</span>
-          <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-              bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1">
-            {data.length}
-          </span>
+        <h1 className="text-3xl font-extrabold gradient-text">
+          Receipt Preview
         </h1>
 
         <div className="premium-card">
@@ -283,28 +245,31 @@ export default function ReceiptPreviewPage() {
 
         <div className="flex justify-end gap-4">
           <button
-            className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+            className="bg-gray-300 px-4 py-2 rounded"
             onClick={() => router.back()}
           >
             Back
           </button>
 
-        <button
-  disabled={loading || !isFormValid()}
-  className={`px-4 py-2 rounded text-white
-    ${loading || !isFormValid()
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-blue-600 hover:bg-blue-700"}
-  `}
-  onClick={() => {
-    if (window.confirm("Shortfall has been saved. Do you want to generate the invoice??")) {
-      handleSaveAndGenerate();
-    }
-  }}
->
-  Save & Generate Invoice
-</button>
-
+          <button
+            disabled={loading || !isFormValid()}
+            className={`px-4 py-2 rounded text-white ${
+              loading || !isFormValid()
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Receipt has been saved. Do you want to generate the invoice?"
+                )
+              ) {
+                handleSaveAndGenerate();
+              }
+            }}
+          >
+            Save & Generate Invoice
+          </button>
         </div>
       </div>
     </Layout>
