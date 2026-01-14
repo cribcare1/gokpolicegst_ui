@@ -1,7 +1,7 @@
 "use client"
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Eye, Printer, FileText, Edit, Download, X ,Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Printer, FileText, Edit, Download, X, Trash2 } from 'lucide-react';
 // import { Edit, Trash2, Eye } from 'lucide-react';
 import Button from '@/components/shared/Button';
 import Table from '@/components/shared/Table';
@@ -25,7 +25,7 @@ export default function ProformaAdviceList({
   gstCalculation,
   onUpdateProforma,
   // New required props for consistent preview
-  bankDetails ,
+  bankDetails,
   numberToWords,
   formatDate,
   gstDetails,
@@ -51,7 +51,7 @@ export default function ProformaAdviceList({
     console.log("bank details in use effect in proforma :", bankDetails);
     setListCount(filteredProformaList);
     console.log("bank details in use effect in filteredProformaList :", filteredProformaList);
-  }, [bankDetails,numberToWords,formatDate,gstDetails,ddoDetails]);
+  }, [bankDetails, numberToWords, formatDate, gstDetails, ddoDetails]);
   // Fix signature URL
   const getSignatureUrl = (signaturePath) => {
     if (!signaturePath) return null;
@@ -62,13 +62,13 @@ export default function ProformaAdviceList({
   // Extract data from previewData to match Form format
   const extractPreviewData = () => {
     if (!previewData) return null;
-    
+
     const raw = previewData.raw || previewData;
     const items = raw.items || [];
     const customerResponse = raw.customerResponse || raw.customer || {};
     console.log("previewData===", previewData);
-    
-    console.log('🧾 Extracting preview data:',  raw);
+
+    console.log('🧾 Extracting preview data:', raw);
     // Extract line items
     const lineItems = items.map((item, index) => ({
       serialNo: index + 1,
@@ -76,10 +76,10 @@ export default function ProformaAdviceList({
       hsnNumber: item.hsnCode || item.hsnNumber || '',
       amount: parseFloat(item.amount) || 0
     }));
-    
+
     const totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
     const totalQuantity = lineItems.length;
-    
+
     return {
       lineItems,
       totalAmount,
@@ -115,19 +115,19 @@ export default function ProformaAdviceList({
 
   const handlePrint = () => {
     if (!previewData) return;
-    
+
     const data = extractPreviewData();
     if (!data) return;
-    
+
     const printWindow = window.open('', '_blank', 'width=800,height=600');
-    
+
     const currentDate = formatDateLocal(previewData.proformaDate || data.billDetails.date);
     const signatureUrl = getSignatureUrl(data.signature);
-    
+
     // Get logo source
     const logoImg = document.querySelector('#proforma-preview-content img');
     const logoSrc = logoImg ? logoImg.src : '/1.png';
-    
+
     // Build line items HTML
     const lineItemsHTML = data.lineItems.map((item) => `
       <tr>
@@ -140,7 +140,7 @@ export default function ProformaAdviceList({
         <td style="border: 1px solid #000; padding: 4px; text-align: right; font-size: 10px;">${formatCurrency(item.amount)}</td>
       </tr>
     `).join('');
-    
+
     // Format percent helper
     const formatPercent = (val) => {
       if (val === null || val === undefined) return '';
@@ -150,16 +150,16 @@ export default function ProformaAdviceList({
       if (!/e/i.test(s) && s.includes('.')) {
         s = Number(num.toFixed(6)).toString();
       }
-      s = s.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/, '');
+      s = s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
       return s;
     };
-    
+
     // Calculate display rates
     const gstCalc = data.gstCalculation || {};
     const displayGstRate = gstCalc.gstRate || gstCalc.igst || 18;
     const displayCgstRate = gstCalc.cgstRate || (displayGstRate / 2);
     const displaySgstRate = gstCalc.sgstRate || (displayGstRate / 2);
-    
+
     // GST Calculation HTML
     let gstCalcHTML = '';
     if (data.invoiceType === 'FCM' && gstCalc) {
@@ -182,7 +182,7 @@ export default function ProformaAdviceList({
         </div>
       `;
     }
-    
+
     // RCM Tax Details
     let rcmHTML = '';
     if (data.invoiceType === 'RCM') {
@@ -196,79 +196,79 @@ export default function ProformaAdviceList({
         </div>
       `;
     }
-    
+
     // Amount in words
     const amountInWords = numberToWordsEnhanced(data.totalAdviceAmountReceivable);
-    
+
     // Enhanced number to words function
     const convertToWords = (num) => {
-      const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
-                   'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+        'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
       const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-      
+
       if (num === 0) return 'Zero';
       if (num > 9999999999999) return 'Number too large';
-      
+
       const convertLessThanOneThousand = (n) => {
         if (n === 0) return '';
-        
+
         let result = '';
-        
+
         if (n >= 100) {
           result += ones[Math.floor(n / 100)] + ' Hundred ';
           n %= 100;
         }
-        
+
         if (n >= 20) {
           result += tens[Math.floor(n / 10)] + ' ';
           n %= 10;
         }
-        
+
         if (n > 0) {
           result += ones[n] + ' ';
         }
-        
+
         return result.trim();
       };
-      
+
       let result = '';
       let remaining = Math.floor(num);
-      
+
       // Handle Crores
       const crore = Math.floor(remaining / 10000000);
       if (crore > 0) {
         result += convertLessThanOneThousand(crore) + ' Crore ';
         remaining %= 10000000;
       }
-      
+
       // Handle Lakhs
       const lakh = Math.floor(remaining / 100000);
       if (lakh > 0) {
         result += convertLessThanOneThousand(lakh) + ' Lakh ';
         remaining %= 100000;
       }
-      
+
       // Handle Thousands
       const thousand = Math.floor(remaining / 1000);
       if (thousand > 0) {
         result += convertLessThanOneThousand(thousand) + ' Thousand ';
         remaining %= 1000;
       }
-      
+
       // Handle Hundreds and below
       if (remaining > 0) {
         result += convertLessThanOneThousand(remaining);
       }
-      
+
       // Handle decimal part (paise)
       const decimal = Math.round((num - Math.floor(num)) * 100);
       if (decimal > 0) {
         result += ' and ' + convertLessThanOneThousand(decimal) + ' Paise';
       }
-      
+
       return result.trim() + (decimal === 0 ? ' Only' : '');
     };
-    
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -472,19 +472,19 @@ export default function ProformaAdviceList({
                     ${gstCalcHTML}
                     <div style="display: flex; justify-content: space-between; padding: 6px; background-color: #2C5F2D; color: white; border-radius: 3px; margin-top: 8px; font-weight: bold; font-size: 10px;">
                       <span>Total amount payable:</span>
-                      <span>${formatCurrency(data.totalAdviceAmountReceivable,true)}</span>
+                      <span>${formatCurrency(data.totalAdviceAmountReceivable, true)}</span>
                     </div>
                   
                     <div class="signature-box" 
      style="display: block; width: 100%; text-align: center; margin-top: 10px;">
-  ${signatureUrl 
-    ? `<img src="${signatureUrl}" 
+  ${signatureUrl
+        ? `<img src="${signatureUrl}" 
            alt="DDO Signature" 
            class="signature-image"
            style="max-height: 50px; max-width: 150px; object-fit: contain; margin-bottom: 4px;"
            onerror="this.style.display='none'; this.parentElement.innerHTML+='<div style=\'height:35px; width:140px; border-bottom:1px solid #000; margin-bottom:4px;\'></div>'">`
-    : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto 4px auto;"></div>`
-  }
+        : `<div style="height: 35px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto 4px auto;"></div>`
+      }
   <div style="font-weight: bold; font-size: 10px;">Signature of DDO</div>
   <div style="font-size: 10px;">${ddoDetails.fullName}</div>
 </div>
@@ -539,65 +539,65 @@ export default function ProformaAdviceList({
         </body>
       </html>
     `);
-    
+
     printWindow.document.close();
   };
 
   // Enhanced number to words function
   const numberToWordsEnhanced = (num) => {
-  if (numberToWords) return numberToWords(Math.round(num));
+    if (numberToWords) return numberToWords(Math.round(num));
 
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-  const roundedNum = Math.round(Number(num));
-  if (roundedNum === 0) return 'Zero Only';
-  if (roundedNum > 9999999999999) return 'Number too large';
+    const roundedNum = Math.round(Number(num));
+    if (roundedNum === 0) return 'Zero Only';
+    if (roundedNum > 9999999999999) return 'Number too large';
 
-  const convertLessThanOneThousand = (n) => {
+    const convertLessThanOneThousand = (n) => {
+      let result = '';
+      if (n >= 100) {
+        result += ones[Math.floor(n / 100)] + ' Hundred ';
+        n %= 100;
+      }
+      if (n >= 20) {
+        result += tens[Math.floor(n / 10)] + ' ';
+        n %= 10;
+      }
+      if (n > 0) {
+        result += ones[n] + ' ';
+      }
+      return result.trim();
+    };
+
     let result = '';
-    if (n >= 100) {
-      result += ones[Math.floor(n / 100)] + ' Hundred ';
-      n %= 100;
+    let remaining = roundedNum;
+
+    const crore = Math.floor(remaining / 10000000);
+    if (crore > 0) {
+      result += convertLessThanOneThousand(crore) + ' Crore ';
+      remaining %= 10000000;
     }
-    if (n >= 20) {
-      result += tens[Math.floor(n / 10)] + ' ';
-      n %= 10;
+
+    const lakh = Math.floor(remaining / 100000);
+    if (lakh > 0) {
+      result += convertLessThanOneThousand(lakh) + ' Lakh ';
+      remaining %= 100000;
     }
-    if (n > 0) {
-      result += ones[n] + ' ';
+
+    const thousand = Math.floor(remaining / 1000);
+    if (thousand > 0) {
+      result += convertLessThanOneThousand(thousand) + ' Thousand ';
+      remaining %= 1000;
     }
-    return result.trim();
+
+    if (remaining > 0) {
+      result += convertLessThanOneThousand(remaining);
+    }
+
+    return result.trim() + ' Only';
   };
-
-  let result = '';
-  let remaining = roundedNum;
-
-  const crore = Math.floor(remaining / 10000000);
-  if (crore > 0) {
-    result += convertLessThanOneThousand(crore) + ' Crore ';
-    remaining %= 10000000;
-  }
-
-  const lakh = Math.floor(remaining / 100000);
-  if (lakh > 0) {
-    result += convertLessThanOneThousand(lakh) + ' Lakh ';
-    remaining %= 100000;
-  }
-
-  const thousand = Math.floor(remaining / 1000);
-  if (thousand > 0) {
-    result += convertLessThanOneThousand(thousand) + ' Thousand ';
-    remaining %= 1000;
-  }
-
-  if (remaining > 0) {
-    result += convertLessThanOneThousand(remaining);
-  }
-
-  return result.trim() + ' Only';
-};
 
 
   // Print-specific styles for modal preview
@@ -718,7 +718,7 @@ export default function ProformaAdviceList({
   // Format date function
   const formatDateLocal = (dateString) => {
     if (formatDate) return formatDate(dateString);
-    
+
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -764,150 +764,126 @@ export default function ProformaAdviceList({
   //     label: 'Proforma Advice Date',
   //     render: (value) => value ?formatDateDDMMYYYY(value): '-',
   //   },
-    
+
   // ];
   const proformaColumns = [
-  {
-    key: 'customerName',
-    label: 'Customer Name',
-  },
-  {
-    key: 'serviceType',
-    label: 'Service Type',
-    render: (value) => value || '-',
-  },
+    {
+      key: 'customerName',
+      label: 'Customer Name',
+    },
+    {
+      key: 'serviceType',
+      label: 'Service Type',
+      render: (value) => value || '-',
+    },
+
+    {
+      key: 'proformaAmount',
+      label: 'Proforma Advice Amount',
+      render: (value) => formatCurrency(value || 0),
+    },
+    {
+      key: 'proformaDate',
+      label: 'Proforma Advice Date',
+      render: (value) =>
+        value ? formatDateDDMMYYYY(value) : '-',
+    },
+    {
+      key: 'proformaNumber',
+      label: 'Proforma Advice',
+      render: (value, row) => (
+        <div
+          className="cursor-pointer text-[var(--color-primary)] hover:underline font-medium flex items-center gap-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleProformaClick(row);
+          }}
+          title="Click to preview details"
+        >
+          <Eye size={16} />
+          {value}
+        </div>
+      ),
+    },
+
+  ];
   
-  {
-    key: 'proformaAmount',
-    label: 'Proforma Advice Amount',
-    render: (value) => formatCurrency(value || 0),
-  },
-  {
-    key: 'proformaDate',
-    label: 'Proforma Advice Date',
-    render: (value) =>
-      value ? formatDateDDMMYYYY(value) : '-',
-  },
-  {
-    key: 'proformaNumber',
-    label: 'Proforma Advice',
-    render: (value, row) => (
-      <div
-        className="cursor-pointer text-[var(--color-primary)] hover:underline font-medium flex items-center gap-2"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleProformaClick(row);
-        }}
-        title="Click to preview details"
-      >
-        <Eye size={16} />
-        {value}
+  const handleDeleteOrCancel = async (item, action) => {
+    const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
+    console.log('[DEBUG] Calling URL:', url);
+    if (!confirm(`Are you sure you want to ${action} this record?`)) return;
+    if (action === 'delete') {
+      onDeleteProforma(item);
+    } else {
+      onCancelProforma(item);
+    }
+
+  };
+
+  const renderProformaActions = (row) => {
+    const maxId = Math.max(...filteredProformaList.map((item) => item.id));
+    const isMaxId = row.id === maxId;
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onShowForm(row);
+          }}
+          className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition hover:scale-110"
+          title="Edit"
+          aria-label="Edit"
+        >
+          <Edit size={16} />
+        </button>
+        {isMaxId ? (
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteOrCancel(row, 'delete');
+            }}
+            className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition hover:scale-110"
+            title="Delete"
+            aria-label="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        ) : (
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteOrCancel(row, 'cancel');
+            }}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition hover:scale-110"
+            title="Cancel"
+            aria-label="Cancel"
+          >
+            <X size={20} />
+          </button>
+        )}
       </div>
-    ),
-  },
- 
-];
-// const handleDeleteOrCancel = async (item, action) => {
-//   // Validate action
-//   if (!['delete', 'cancle'].includes(action)) {
-//     console.error('Invalid action:', action);
-//     return;
-//   }
-//   // Confirm with user
-//   if (!confirm(`Are you sure you want to ${action} this record?`)) return;
-//   // Construct the URL
-//   const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
-//   console.log('[DEBUG] Calling URL:', url);
-//   try {
-//     const response = await ApiService.handlePostRequest(url, {});
-//     console.log('[DEBUG] Response:', response);
-//     if (response && response.status === 'success') {
-//       toast.success(t('alert.success'));
-//       fetchData(); // Refresh data
-//     } else {
-//       toast.error(response?.message || t('alert.error'));
-//     }
-//   } catch (error) {
-//     console.error('[ERROR] API call failed:', error);
-//     toast.error(t('alert.error'));
-//   }
-// };
-const handleDeleteOrCancel = async (item, action) => {
-  const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
-  console.log('[DEBUG] Calling URL:', url);
-  if (!confirm(`Are you sure you want to ${action} this record?`)) return;
-  if(action==='delete'){
-    onDeleteProforma(item);
-  }else{
-       onCancelProforma(item);
-  }
-  
-};
- 
-const renderProformaActions = (row) => {
-  const maxId = Math.max(...filteredProformaList.map((item) => item.id));
-  const isMaxId = row.id === maxId;
-  return (
-    <div className="flex items-center justify-end gap-2">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onShowForm(row);
-        }}
-        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition hover:scale-110"
-        title="Edit"
-        aria-label="Edit"
-      >
-        <Edit size={16} />
-      </button>
-      {isMaxId ? (
-     
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-        handleDeleteOrCancel(row, 'delete');
-          }}
-          className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition hover:scale-110"
-          title="Delete"
-          aria-label="Delete"
-        >
-          <Trash2 size={16} />
-        </button>
-      ) : (
-   
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-          handleDeleteOrCancel(row, 'cancel');
-          }}
-          className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition hover:scale-110"
-          title="Cancel"
-          aria-label="Cancel"
-        >
-          <X size={20} />
-        </button>
-      )}
-    </div>
-  );
-};
+    );
+  };
   return (
     <section className="space-y-4 sm:space-y-6">
       <PrintStyles />
-      
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-    <div className="flex-1 min-w-0">
-  <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 flex items-baseline gap-3 flex-wrap">
-    <span className="gradient-text">Proforma Advice List</span>
-    <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold 
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2 flex items-baseline gap-3 flex-wrap">
+            <span className="gradient-text">Proforma Advice List</span>
+            <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold 
                      rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] 
                      border border-[var(--color-primary)]/30 align-baseline">
-      {count ?? 0}
-    </span>
-  </h1>
-  <p className="text-sm text-[var(--color-text-secondary)]">
-    Search existing Proforma Advice entries and quickly jump back to the creation form.
-  </p>
-</div>
+              {count ?? 0}
+            </span>
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Search existing Proforma Advice entries and quickly jump back to the creation form.
+          </p>
+        </div>
         <Button
           onClick={() => onShowForm(null)}
           variant="primary"
@@ -928,7 +904,7 @@ const renderProformaActions = (row) => {
         />
       </div>
       <div className="premium-card overflow-hidden">
-        {proformaLoading  || loading? (
+        {proformaLoading || loading ? (
           <div className="p-8 sm:p-16">
             <LoadingProgressBar message="Loading proforma advices..." variant="primary" />
           </div>
@@ -974,22 +950,21 @@ const renderProformaActions = (row) => {
             </button>
           </div>
         </div>
-        
+
         <div className="flex flex-col h-full">
           {/* Preview Content - Same as Form */}
           {previewData && (() => {
             const data = extractPreviewData();
             if (!data) return null;
-            
+
             return (
-              <div 
+              <div
                 id="proforma-preview-content"
                 ref={printRef}
-                className={`flex-1 overflow-auto bg-white text-black p-6 print-content ${
-                  printOptimizedView ? 'print-optimized' : ''
-                }`}
-                style={{ 
-                  maxWidth: '210mm', 
+                className={`flex-1 overflow-auto bg-white text-black p-6 print-content ${printOptimizedView ? 'print-optimized' : ''
+                  }`}
+                style={{
+                  maxWidth: '210mm',
                   margin: '0 auto',
                   minHeight: '297mm',
                   fontFamily: 'Arial, sans-serif'
@@ -1094,7 +1069,7 @@ const renderProformaActions = (row) => {
                         <p className="font-semibold">Notification Details:</p>
                         <p className="mt-1 p-2 bg-gray-50 rounded border min-h-[40px]" style={{ fontSize: '11px' }}>{data.notificationDetails || '-'}</p>
                       </div>
-                      
+
                       {/* RCM specific fields in preview */}
                       {data.invoiceType === 'RCM' && (
                         <div>
@@ -1120,7 +1095,7 @@ const renderProformaActions = (row) => {
                         <span>Total Taxable Value:</span>
                         <span className="font-semibold">{formatCurrency(data.totalAmount)}</span>
                       </div>
-                      
+
                       {data.invoiceType === 'FCM' && data.gstCalculation && (() => {
                         const gstCalc = data.gstCalculation;
                         const displayGstRate = gstCalc.gstRate || gstCalc.igst || 18;
@@ -1134,88 +1109,88 @@ const renderProformaActions = (row) => {
                           if (!/e/i.test(s) && s.includes('.')) {
                             s = Number(num.toFixed(6)).toString();
                           }
-                          s = s.replace(/(\.\d*?)0+$/,'$1').replace(/\.$/, '');
+                          s = s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
                           return s;
                         };
-                        
+
                         return (
                           <>
                             <div className="flex justify-between border-b py-1">
                               <span>IGST @ {formatPercent(displayGstRate)}%:</span>
-                              <span>{data.rcmIgst>0 ? formatCurrency(data.rcmIgst) : '-'}</span>
+                              <span>{data.rcmIgst > 0 ? formatCurrency(data.rcmIgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1">
                               <span>CGST @ {formatPercent(displayCgstRate)}%:</span>
-                              <span>{data?.rcmCgst>0 ? formatCurrency(data.rcmCgst) : '-'}</span>
+                              <span>{data?.rcmCgst > 0 ? formatCurrency(data.rcmCgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1">
                               <span>SGST @ {formatPercent(displaySgstRate)}%:</span>
-                              <span>{data?.rcmSgst>0 ? formatCurrency(data.rcmSgst) : '-'}</span>
+                              <span>{data?.rcmSgst > 0 ? formatCurrency(data.rcmSgst) : '-'}</span>
                             </div>
                             <div className="flex justify-between border-b py-1 font-semibold">
                               <span>Total GST:</span>
-                              <span>{data.rcmIgst>0 ?formatCurrency(data.rcmIgst || 0):formatCurrency(data.rcmCgst+data.rcmSgst || 0)}</span>
+                              <span>{data.rcmIgst > 0 ? formatCurrency(data.rcmIgst || 0) : formatCurrency(data.rcmCgst + data.rcmSgst || 0)}</span>
                             </div>
                           </>
                         );
                       })()}
                       <div className="flex justify-between py-2 bg-[#2C5F2D] text-white rounded px-3 mt-3 font-bold" style={{ fontSize: '11px' }}>
                         <span>Total amount payable:</span>
-                        <span>{formatCurrency(Math.round(data.totalAdviceAmountReceivable),true)}</span>
+                        <span>{formatCurrency(Math.round(data.totalAdviceAmountReceivable), true)}</span>
                       </div>
-                       <div className="text-right">
-                      <div className="text-center inline-block">
-                        {(() => {
-                          const signaturePath = data.signature || (previewData.raw && previewData.raw.signature);
-                          const signatureUrl = getSignatureUrl(signaturePath);
-                          
-                          return signatureUrl ? (
-                            <div className="mb-2 p-2 border border-gray-300 bg-white inline-block">
-                              <img 
-                                src={signatureUrl} 
-                                alt="DDO Signature" 
-                                className="h-20 max-w-48 object-contain mx-auto"
-                                style={{ imageRendering: 'crisp-edges', maxHeight: '80px', maxWidth: '200px' }}
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.parentElement.innerHTML = `
+                      <div className="text-right">
+                        <div className="text-center inline-block">
+                          {(() => {
+                            const signaturePath = data.signature || (previewData.raw && previewData.raw.signature);
+                            const signatureUrl = getSignatureUrl(signaturePath);
+
+                            return signatureUrl ? (
+                              <div className="mb-2 p-2 border border-gray-300 bg-white inline-block">
+                                <img
+                                  src={signatureUrl}
+                                  alt="DDO Signature"
+                                  className="h-20 max-w-48 object-contain mx-auto"
+                                  style={{ imageRendering: 'crisp-edges', maxHeight: '80px', maxWidth: '200px' }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = `
                                     <div class="text-red-500 text-center py-4" style="font-size: 10px;">
                                       Signature Image Not Available
                                     </div>
                                   `;
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center inline-block">
-                              <span className="text-gray-500" style={{ fontSize: '10px' }}>No Signature Available</span>
-                            </div>
-                          );
-                        })()}
-                        <p className="font-semibold mt-1" style={{ fontSize: '11px' }}>Signature of DDO</p>
-                        <p style={{ fontSize: '11px' }}>{ddoDetails.fullName}</p>
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-20 border-2 border-dashed border-gray-400 mb-2 w-48 flex items-center justify-center inline-block">
+                                <span className="text-gray-500" style={{ fontSize: '10px' }}>No Signature Available</span>
+                              </div>
+                            );
+                          })()}
+                          <p className="font-semibold mt-1" style={{ fontSize: '11px' }}>Signature of DDO</p>
+                          <p style={{ fontSize: '11px' }}>{ddoDetails.fullName}</p>
+                        </div>
                       </div>
-                    </div>
                     </div>
                   </div>
                 </div>
-          {/* <h3>DD/Cheque Issued to </h3> */}
+                {/* <h3>DD/Cheque Issued to </h3> */}
                 {/* Bank Details and Signature */}
                 <div className="border border-gray-300 p-3 rounded mb-3 print-section" style={{ pageBreakInside: 'avoid' }}>
                   <div >
-                     {/* <div>
+                    {/* <div>
                                 
                       <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>DD / Cheque issued to : {defaultDdoDetails.fullName}</h3>
                      
                     </div> */}
                     <div>
-                        <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px'  , marginBottom: '10px' }}>
+                      <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px', marginBottom: '10px' }}>
                         <div><strong>{LOGIN_CONSTANT.DD_CHEQUE_ISSUED_TO}</strong>{ddoDetails.fullName}</div>
-                      
+
                       </div>
-                      
-                         
-                                
+
+
+
                       <h3 className="font-bold mb-2 text-gray-800 border-b pb-1" style={{ fontSize: '12px' }}>Details For Bank Transfer</h3>
                       <div className="grid grid-cols-2 gap-3" style={{ fontSize: '11px' }}>
                         <div><strong>Bank:</strong> {bankDetails.bankName}</div>
@@ -1224,8 +1199,8 @@ const renderProformaActions = (row) => {
                         <div><strong>Account No:</strong> {bankDetails.accountNumber}</div>
                       </div>
                     </div>
-                    
-                   
+
+
                   </div>
                   <div className="text-center mt-6 pt-2 border-t border-gray-300">
                     <p className="text-gray-600 italic" style={{ fontSize: '10px' }}>This is a computer generated document</p>

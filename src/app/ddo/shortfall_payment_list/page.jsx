@@ -221,7 +221,6 @@ export default function ShortfallPaymentPage() {
     },
     { key: "paNo", label: "Proforma Number" },
     { key: "customerName", label: "Customer Name" },
-
     {
       key: "amountPayable",
       label: "Amount Payable",
@@ -229,7 +228,6 @@ export default function ShortfallPaymentPage() {
         <div className="text-right">{formatCurrency(v, true)}</div>
       ),
     },
-
     {
       key: "amountReceived",
       label: "Amount Received",
@@ -252,17 +250,25 @@ export default function ShortfallPaymentPage() {
             value={edited === 0 ? "" : edited}
             onChange={(e) => {
               const value = e.target.value;
-              updateField(
-                row.id,
-                "amountReceived",
-                value === "" ? "" : Number(value)
-              );
+
+              if (value === "") {
+                updateField(row.id, "amountReceived", "");
+                return;
+              }
+
+              const numericValue = Number(value);
+
+              // ⛔ RESTRICT: cannot exceed payable (NO auto adjust)
+              if (numericValue > row.amountPayable) {
+                return;
+              }
+
+              updateField(row.id, "amountReceived", numericValue);
             }}
           />
         );
       },
     },
-
     {
       key: "difference",
       label: "Difference",
@@ -304,13 +310,11 @@ export default function ShortfallPaymentPage() {
               <LoadingProgressBar message="Loading receipts..." />
             </div>
           ) : (
-            <div className="min-w-max">
-              <Table
-                columns={receiptColumns}
-                data={filteredReceipts}
-                itemsPerPage={10}
-              />
-            </div>
+            <Table
+              columns={receiptColumns}
+              data={filteredReceipts}
+              itemsPerPage={10}
+            />
           )}
         </div>
 

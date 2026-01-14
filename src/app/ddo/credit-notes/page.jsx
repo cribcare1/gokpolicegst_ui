@@ -92,17 +92,7 @@ export default function ReceiptListPage() {
     return matchesCustomer && matchesFrom && matchesTo;
   });
 
-  // const receiptColumns = [
-  //   { key: "receiptNo", label: "Receipt Number" },
-  //   { key: "receiptDate", label: "Receipt Date" },
-  //   // { key: "paNumber", label: "Proforma Advice No" },
-  //   { key: "customerName", label: "Customer Name" },
-  //   { key: "amountPayable", label: "Amount Payable", render: v => formatCurrency(v) },
-  //   { key: "amountReceived", label: "Amount Received", render: v => formatCurrency(v) },
-  //   { key: "balance", label: "Balance", render: v => formatCurrency(v) },
-  //   { key: "paymentMode", label: "Payment Mode" },
-  //   { key: "paymentRef", label: "Reference No" }
-  // ];
+ 
 const receiptColumns = [
   { key: "receiptNo", label: "Invoice Number" },
   {
@@ -238,7 +228,11 @@ const receiptColumns = [
             </div>
           )}
         </div>
+        
       </div>
+
+
+
     </Layout>
   );
 }

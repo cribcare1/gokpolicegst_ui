@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   DDO_REFRESH_COUNT: `${API_BASE_URL}/user/viewDashboardData?tanNumber=`,
   DDO_DETAILS_EDITBUTTON: `${API_BASE_URL}/user/editDdo/`,
   INVOICE_LIST: `${API_BASE_URL}/invoices/invoiceListDetails?ddoId=`,
+  INVOICE_LIST_GSTIN: `${API_BASE_URL}/invoices/invoiceListDetails?gstInId=`,
   
   IMAGE_BASE_URL: `${API_BASE_URL}/auth/getImage/gst/`,
 
