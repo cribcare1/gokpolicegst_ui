@@ -115,7 +115,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/ddo/customers', label: 'nav.customers', icon: 'customers' },
     { href: '/ddo/bank', label: 'nav.bank', icon: 'bank' },
     {
-      label: 'Bandobasta Bill',
+      label: 'Bandobast Bill',
       icon: 'sales',
       children: [
         { href: '/ddo/generate-bill', label: 'nav.generateBill', icon: 'bill' },
@@ -133,7 +133,16 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/gstin_dashboard', label: 'nav.dashboard', icon: 'dashboard' },
     { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
     { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
-    { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
+    // { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
+     {
+      label: 'e- Invoice',
+      icon: 'invoice',
+      children: [
+         { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
+        { href: '/gstin/invoices', label: 'nav.invoiceList', icon: 'invoices' },
+      
+      ],
+    },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },
     { href: '/gstin/gstin_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'report' },
     { href: '/gstin/gstin_quarterly_tds_list', label: 'nav.tdsquarterlyreports', icon: 'quarterreport' },

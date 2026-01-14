@@ -36,7 +36,7 @@ export default function ReceiptPreviewPage() {
           paymentMode: "",
           paymentRef: "",
           paymentDate: "",
-          remark: "", // ✅ NEW
+          shortfallRemark: "", // ✅ NEW
         };
       });
       setEditedValues(initialEdits);
@@ -244,7 +244,7 @@ export default function ReceiptPreviewPage() {
           Number(editedValues[item.invoiceId].amountReceived),
         differenceReason:
           editedValues[item.invoiceId].differenceReason || "",
-        remark: editedValues[item.invoiceId].remark || "", // ✅ NEW
+        shortfallRemark: editedValues[item.invoiceId].remark || "", // ✅ NEW
       })),
     };
 

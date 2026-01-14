@@ -206,37 +206,55 @@ export default function ReceiptPreviewPage() {
   };
 
   const handleSaveAndGenerate = async () => {
-    const payload = {
-      receipts: data.map((item) => ({
-        invoiceId: item.invoiceId,
-        type: editedValues[item.invoiceId].paymentMode,
-        referenceNumber: editedValues[item.invoiceId].paymentRef,
-        amountPaid: Number(editedValues[item.invoiceId].amountReceived),
-        paymentDate: editedValues[item.invoiceId].paymentDate,
-        differenceAmount:
-          item.amountPayable - Number(editedValues[item.invoiceId].amountReceived),
-        differenceReason: editedValues[item.invoiceId].differenceReason || "",
-        remarks: editedValues[item.invoiceId].remarks || "",
-      })),
-    };
+  // validations (keep if required)
+  for (let item of data) {
+    const edited = editedValues[item.invoiceId];
 
-    try {
-      setLoading(true);
-      await ApiService.handlePostRequest(API_ENDPOINTS.CREATE_RECIEPT, payload);
-      toast.success("Receipts saved & invoice generated");
-      router.replace("/ddo/credit-notes");
-    } catch {
-      toast.error("Failed to save receipts");
-    } finally {
-      setLoading(false);
+    if (!edited || edited.amountReceived <= 0) {
+      toast.error(`Amount is required for invoice ${item.paNo}`);
+      return;
     }
+  }
+
+  
+
+  const payload = {
+      
+    receipts: data.map((item) => ({
+      
+     
+      invoiceId: item.invoiceId,
+      type:
+        editedValues[item.invoiceId]?.paymentMode??"Other" 
+         ,
+      referenceNumber: editedValues[item.invoiceId]?.paymentRef || "",
+      amountPaid: Number(editedValues[item.invoiceId]?.amountReceived) || 0,
+      paymentDate: editedValues[item.invoiceId]?.paymentDate || "",
+      differenceAmount: Number(item?.difference) || 0,
+      differenceReason: editedValues[item.invoiceId]?.differenceReason || "",
+      shortfallRemark: editedValues[item.invoiceId]?.remarks || "",
+    })),
   };
+  try {
+    setLoading(true);
+    await ApiService.handlePostRequest(
+      API_ENDPOINTS.CREATE_RECIEPT,
+      payload
+    );
+    toast.success("Shortfall invoice generated successfully");
+      router.replace("/ddo/credit-notes");
+  } catch (error) {
+    toast.error("Failed to generate shortfall invoice");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Layout role="ddo">
       <div className="space-y-6">
         <h1 className="text-3xl font-extrabold gradient-text">
-          Receipt Preview
+          Shortfall Preview
         </h1>
 
         <div className="premium-card">

@@ -1,221 +1,238 @@
 "use client";
-import { useState, useEffect } from 'react';
-import Layout from '@/components/shared/Layout';
-import Table from '@/components/shared/Table';
-import { API_ENDPOINTS } from '@/components/api/api_const';
-import ApiService from '@/components/api/api_service';
-import { t } from '@/lib/localization';
+import { useState, useEffect } from "react";
+import Layout from "@/components/shared/Layout";
+import Table from "@/components/shared/Table";
 import { formatCurrency } from '@/lib/gstUtils';
-import { Search, CheckCircle, Clock, FileText, Eye } from 'lucide-react';
-import { LoadingProgressBar } from '@/components/shared/ProgressBar';
-import { toast } from 'sonner';
-import Link from 'next/link';
+import { API_ENDPOINTS } from "@/components/api/api_const";
+import { LOGIN_CONSTANT } from "@/components/utils/constant";
+import ApiService from "@/components/api/api_service";
+import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 
-export default function GstinInvoiceListPage() {
-  const [bills, setBills] = useState([]);
-  const [filteredBills, setFilteredBills] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
+export default function ReceiptListPage() {
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [receiptsData, setReceiptsData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  const recordCount = receiptsData.length;
   useEffect(() => {
-    fetchBills();
+    fetchCustomers();
+    fetchReceipts();
   }, []);
 
-  useEffect(() => {
-    filterBills();
-  }, [searchTerm, statusFilter, bills]);
-
-  const fetchBills = async () => {
-    // Demo data for GSTIN - show immediately
-    const demoBills = [
-      {
-        id: '1',
-        invoiceNumber: '1ZB/PO0032/0001',
-        date: '2025-01-10',
-        ddoCode: '0200PO0032',
-        ddoName: 'DCP CAR HQ',
-        customerName: 'Karnataka Education Board',
-        amount: 700000,
-        gstAmount: 126000,
-        totalAmount: 826000,
-        status: 'submitted',
-      },
-      {
-        id: '2',
-        invoiceNumber: '1ZB/PO0033/0001',
-        date: '2025-01-11',
-        ddoCode: '0200PO0033',
-        ddoName: 'DCP South',
-        customerName: 'ABC Corporation',
-        amount: 500000,
-        gstAmount: 90000,
-        totalAmount: 590000,
-        status: 'pending',
-      },
-    ];
-    
-    // Show demo data immediately - UI ready instantly
-    setBills(demoBills);
-    setFilteredBills(demoBills);
-    setLoading(false);
-    
-    // Fetch real data in background (non-blocking)
+  const fetchCustomers = async () => {
     try {
-      // Try to fetch from API with timeout
-      const response = await ApiService.handleGetRequest(API_ENDPOINTS.BILL_LIST, 1500);
-      if (response?.status === 'success' && response?.data && !response.timeout) {
-        // Filter bills for this GSTIN
-        const gstinNumber = localStorage.getItem('gstinNumber');
-        const filtered = response.data.filter(bill => bill.gstinNumber === gstinNumber);
-        if (filtered.length > 0) {
-          setBills(filtered);
-          setFilteredBills(filtered);
-        }
+      setLoading(true);
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
+      if (!ddoId) return;
+
+      const response = await ApiService.handleGetRequest(
+        `${API_ENDPOINTS.CUSTOMER_ACTIVE_LIST}${ddoId}`
+      );
+
+      if (response && response.status === "success") {
+        setCustomers(response.data || []);
       }
     } catch (error) {
-      console.error('Error fetching bills:', error);
-      // Keep demo data on error
+      console.error("Error fetching customers:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filterBills = () => {
-    let filtered = [...bills];
+  const fetchReceipts = async () => {
+    try {
+      setLoading(true);
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(bill => bill.status === statusFilter);
-    }
+      const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (bill) =>
-          bill.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          bill.ddoName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          bill.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
+      const response = await ApiService.handleGetRequest(
+        `${API_ENDPOINTS.INVOICE_LIST_GSTIN}${ddoId}&status=SUBMITTED`
       );
-    }
 
-    setFilteredBills(filtered);
+
+      console.log(response  , "::: response in invoce");
+      
+
+      if (response && response.success === "success") {
+        const list = (response.data || []).map((invoice) => ({
+          id: invoice.invoiceId,
+          receiptNo: invoice.receiptInvoiceNumber,
+          receiptDate: invoice.receiptInvoiceDate,
+          paNumber: invoice.invoiceNumber,
+          customerName: invoice.customerResponse?.name || "",
+          amountPayable: invoice.grandTotal,
+          amountReceived: invoice.paidAmount,
+          balance: invoice.balanceAmount,
+          paymentMode: invoice.paymentType,
+          paymentRef: invoice.paymentReferenceNumber || "-",
+          status :invoice.status
+        }));
+
+        setReceiptsData(list);
+      }
+    } catch (error) {
+      console.error("Error fetching receipts:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const columns = [
-    {
-      key: 'invoiceNumber',
-      label: 'Invoice Number',
-      render: (invoiceNumber) => (
-        <span className="font-medium text-[var(--color-text-primary)]">{invoiceNumber}</span>
-      ),
+  const filteredReceipts = receiptsData.filter((r) => {
+    const matchesCustomer = selectedCustomer
+      ? r.customerName === selectedCustomer.customerName
+      : true;
+
+    const receiptDate = new Date(r.receiptDate);
+    const matchesFrom = fromDate ? receiptDate >= new Date(fromDate) : true;
+    const matchesTo = toDate ? receiptDate <= new Date(toDate) : true;
+
+    return matchesCustomer && matchesFrom && matchesTo;
+  });
+
+ 
+const receiptColumns = [
+  { key: "receiptNo", label: "Invoice Number" },
+  {
+    key: "receiptDate",
+    label: "Invoice Date",
+    render: (v) => {
+      if (!v) return "-";
+      const date = new Date(v);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     },
-    {
-      key: 'date',
-      label: 'Date',
-      render: (date) => new Date(date).toLocaleDateString('en-IN'),
+  },
+  // { key: "paNumber", label: "Proforma Advice No" },
+  { key: "customerName", label: "Customer Name" },
+  { key: "amountReceived", label: "Amount Payable", render: (v) => formatCurrency(v , true) },
+  { key: "amountReceived", label: "Amount Received", render: (v) => formatCurrency(v , true) },
+  // { key: "balance", label: "Balance", render: (v) => formatCurrency(v) },
+  { key: "paymentMode", label: "Payment Mode" },
+  { key: "paymentRef", label: "Reference No" },
+ {
+    key: "status",
+    label: "Status",
+  render: (status) => {
+  const statusMap = {
+    generated: {
+      label: "Generated" || "generated",
+      className:
+        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
     },
-    {
-      key: 'ddoCode',
-      label: 'DDO Code',
+    pending: {
+      label: "Pending" || "pending",
+      className:
+        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
     },
-    {
-      key: 'ddoName',
-      label: 'DDO Name',
+    failed: {
+      label: "Failed",
+      className:
+        "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
     },
-    {
-      key: 'customerName',
-      label: 'Customer',
-    },
-    {
-      key: 'totalAmount',
-      label: 'Total Amount',
-      render: (amount) => formatCurrency(amount),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (status) => (
-        <span
-          className={`px-2 py-1 rounded text-xs ${
-            status === 'submitted' || status === 'approved'
-              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-          }`}
-        >
-          {status === 'submitted' || status === 'approved' ? 'Approved' : 'Pending'}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_, row) => (
-        <Link
-          href={`/gstin/invoices/detail?id=${row.id}`}
-          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs sm:text-sm text-[var(--color-primary)] hover:underline rounded-lg hover:bg-[var(--color-muted)]"
-        >
-          <Eye size={14} />
-          <span className="hidden sm:inline">View</span>
-        </Link>
-      ),
-    },
-  ];
+  };
+
+  const config = statusMap[status] || {
+    label: status || "Unknown",
+    className:
+      "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
+  };
+
+  return (
+    <span
+      className={`px-2 py-1 rounded text-xs font-medium ${config.className}`}
+    >
+      {config.label}
+    </span>
+  );
+},
+
+
+  },
+];
 
   return (
     <Layout role="gstin">
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
-              <span className="gradient-text">{t('nav.invoiceList')}</span>
-            </h1>
-            <p className="text-sm sm:text-base text-[var(--color-text-secondary)]">
-              View and manage all invoices for your GSTIN
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
 
         {/* Filters */}
-        <div className="premium-card p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* <h1 className="text-2xl font-bold">
+            Invoice List</h1> */}
+  {/* <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2">
+              <span className="gradient-text"> Invoice List</span>
+            </h1> */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+              <span className="gradient-text">Invoice List</span>
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
+                     translate-y-1">
+                {recordCount ?? 0}
+              </span>
+            </h1>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex flex-col">
+              <label>From Date</label>
               <input
-                type="text"
-                placeholder="Search by invoice number, DDO, customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="border px-3 py-2 rounded"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="submitted">Approved</option>
-            </select>
+
+            <div className="flex flex-col">
+              <label>To Date</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="border px-3 py-2 rounded"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label>Select Customer</label>
+              <select
+                value={selectedCustomer?.id || ""}
+                onChange={(e) => {
+                  const customer = customers.find((c) => String(c.id) === e.target.value);
+                  setSelectedCustomer(customer || null);
+                }}
+                className="px-3 py-2 border rounded bg-white"
+              >
+                <option value="">All Customers</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.customerName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="premium-card overflow-hidden">
+        {/* List Table */}
+        <div className="premium-card overflow-x-auto w-full">
           {loading ? (
-            <div className="p-8 sm:p-16">
-              <LoadingProgressBar message="Loading invoices..." variant="primary" />
-            </div>
-          ) : filteredBills.length === 0 ? (
-            <div className="p-8 sm:p-16 text-center">
-              <FileText className="mx-auto text-[var(--color-text-secondary)] mb-4" size={48} />
-              <p className="text-[var(--color-text-secondary)]">No invoices found</p>
+            <div className="p-16">
+              <LoadingProgressBar message="Loading receipts..." />
             </div>
           ) : (
-            <Table columns={columns} data={filteredBills} />
+            <div className="min-w-max">
+              <Table columns={receiptColumns} data={filteredReceipts} itemsPerPage={10} />
+            </div>
           )}
         </div>
+        
       </div>
+
+
+
     </Layout>
   );
 }
-
