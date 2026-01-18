@@ -878,13 +878,64 @@
 //     </Layout>
 //   );
 // } 
+
+
+// "use client";
+// import { useEffect, useRef, useState } from "react";
+// import Layout from "@/components/shared/Layout";
+// import Table from "@/components/shared/Table";
+// import Modal from "@/components/shared/Modal";
+// import Image from "next/image";
+// import html2pdf from "html2pdf.js";
+// import { formatCurrency } from "@/lib/gstUtils";
+// import ApiService from "@/components/api/api_service";
+// import { API_ENDPOINTS } from "@/components/api/api_const";
+// import { LOGIN_CONSTANT } from "@/components/utils/constant";
+// import { LoadingProgressBar } from "@/components/shared/ProgressBar";
+// import { Eye, Printer, Download, X } from "lucide-react";
+
+// const LIST_COLUMNS = [
+//   { key: "receiptInvoiceNumber", label: "Invoice No" },
+//   {
+//     key: "receiptInvoiceDate",
+//     label: "Invoice Date",
+//     render: (v) => {
+//       if (!v) return "-";
+//       const d = new Date(v);
+//       return `${d.getDate().toString().padStart(2, "0")}/${(
+//         d.getMonth() + 1
+//       )
+//         .toString()
+//         .padStart(2, "0")}/${d.getFullYear()}`;
+//     },
+//   },
+//   { key: "customerName", label: "Customer Name" },
+//   {
+//     key: "grandTotal",
+//     label: "Amount Payable",
+//     render: (v) => formatCurrency(v, true),
+//   },
+//   {
+//     key: "paidAmount",
+//     label: "Amount Received",
+//     render: (v) => formatCurrency(v, true),
+//   },
+//   {
+//     key: "balanceAmount",
+//     label: "Balance Amount",
+//     render: (v) => formatCurrency(v, true),
+//   },
+//   { key: "paymentType", label: "Payment Mode" },
+// ];
+
+
+
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
 import Modal from "@/components/shared/Modal";
 import Image from "next/image";
-import html2pdf from "html2pdf.js";
 import { formatCurrency } from "@/lib/gstUtils";
 import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
@@ -1024,8 +1075,11 @@ export default function ReceiptListPage() {
   const recordCount = filteredData.length;
 
   /* ================= PDF ================= */
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!printRef.current) return;
+
+    // Dynamic import to prevent SSR errors
+    const html2pdf = (await import("html2pdf.js")).default;
 
     html2pdf()
       .set({
@@ -1045,9 +1099,11 @@ export default function ReceiptListPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold flex items-center gap-3 whitespace-nowrap">
           <span className="gradient-text">Receipt List</span>
-          <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+          <span
+            className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
             bg-[var(--color-primary)]/10 text-[var(--color-primary)]
-            border border-[var(--color-primary)]/30 translate-y-1">
+            border border-[var(--color-primary)]/30 translate-y-1"
+          >
             {recordCount}
           </span>
         </h1>
@@ -1127,7 +1183,11 @@ export default function ReceiptListPage() {
       </div>
 
       {/* ================= PREVIEW MODAL ================= */}
-      <Modal isOpen={previewOpen} onClose={() => setPreviewOpen(false)} size="full">
+      <Modal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        size="full"
+      >
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
           <h2 className="text-lg font-bold">Receipt Preview</h2>
           <div className="flex items-center gap-2">
@@ -1137,13 +1197,16 @@ export default function ReceiptListPage() {
             <button onClick={() => window.print()} className="p-2 hover:bg-gray-100 rounded">
               <Printer size={18} />
             </button>
-            <button onClick={() => setPreviewOpen(false)} className="p-2 hover:bg-red-500 hover:text-white rounded">
+            <button
+              onClick={() => setPreviewOpen(false)}
+              className="p-2 hover:bg-red-500 hover:text-white rounded"
+            >
               <X size={18} />
             </button>
           </div>
         </div>
 
-       {previewData && (
+        {previewData && (
           <div
             ref={printRef}
             className="bg-white p-6 print-content"
@@ -1166,9 +1229,7 @@ export default function ReceiptListPage() {
                 <p>Invoice No: {previewData.receiptInvoiceNumber}</p>
                 <p>
                   Date:{" "}
-                  {new Date(
-                    previewData.receiptInvoiceDate
-                  ).toLocaleDateString()}
+                  {new Date(previewData.receiptInvoiceDate).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -1178,10 +1239,7 @@ export default function ReceiptListPage() {
               <thead className="bg-green-800 text-white">
                 <tr>
                   {LIST_COLUMNS.map((col) => (
-                    <th
-                      key={col.key}
-                      className="border px-2 py-1 text-[9px]"
-                    >
+                    <th key={col.key} className="border px-2 py-1 text-[9px]">
                       {col.label}
                     </th>
                   ))}
@@ -1190,10 +1248,7 @@ export default function ReceiptListPage() {
               <tbody>
                 <tr>
                   {LIST_COLUMNS.map((col) => (
-                    <td
-                      key={col.key}
-                      className="border px-2 py-1 text-[9px]"
-                    >
+                    <td key={col.key} className="border px-2 py-1 text-[9px]">
                       {col.render
                         ? col.render(previewData[col.key])
                         : previewData[col.key] ?? "-"}
@@ -1216,9 +1271,7 @@ export default function ReceiptListPage() {
                 </div>
                 <div className="flex justify-between font-bold border-t mt-1 pt-1">
                   <span>Balance</span>
-                  <span>
-                    {formatCurrency(previewData.balanceAmount, true)}
-                  </span>
+                  <span>{formatCurrency(previewData.balanceAmount, true)}</span>
                 </div>
               </div>
             </div>
