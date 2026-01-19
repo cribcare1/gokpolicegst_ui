@@ -807,7 +807,7 @@ export default function ProformaAdviceList({
     },
 
   ];
-  
+
   const handleDeleteOrCancel = async (item, action) => {
     const url = `${API_ENDPOINTS.PORFORMA_DELETE_CANCEL}${item.id}/${action}`;
     console.log('[DEBUG] Calling URL:', url);
