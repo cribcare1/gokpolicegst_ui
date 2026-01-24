@@ -727,45 +727,7 @@ export default function ProformaAdviceList({
       year: 'numeric'
     });
   };
-  // const proformaColumns = [
-  //   { 
-  //     key: 'customerName', 
-  //     label: 'Customer Name' 
-  //   },
-  //   {
-  //     key: 'serviceType',
-  //     label: 'Service Type',
-  //     render: (value) => value || '-',
-  //   },
-  //   {
-  //     key: 'proformaNumber',
-  //     label: 'Proforma Advice',
-  //     render: (value, row) => (
-  //       <div 
-  //         className="cursor-pointer text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 hover:underline font-medium flex items-center gap-2"
-  //         onClick={(e) => {
-  //           e.stopPropagation();
-  //           handleProformaClick(row);
-  //         }}
-  //         title="Click to preview details"
-  //       >
-  //         <Eye size={16} />
-  //         {value}
-  //       </div>
-  //     ),
-  //   },
-  //   {
-  //     key: 'proformaAmount',
-  //     label: 'Proforma Advice Amount',
-  //     render: (value) => formatCurrency(value || 0),
-  //   },
-  //   {
-  //     key: 'proformaDate',
-  //     label: 'Proforma Advice Date',
-  //     render: (value) => value ?formatDateDDMMYYYY(value): '-',
-  //   },
 
-  // ];
   const proformaColumns = [
     {
       key: 'customerName',
