@@ -994,6 +994,7 @@ export default function CreditNoteCreate() {
   const [invoiceList, setInvoiceList] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
+  
 
   const [taxBreakup, setTaxBreakup] = useState({
     cgst: 0,
@@ -1195,7 +1196,7 @@ export default function CreditNoteCreate() {
         <div className="premium-card p-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Select
-              label="Receipt Invoice No"
+              label="Invoice No"
               name="receiptInvoiceNo"
               value={formData.receiptInvoiceNo}
               update={update}
