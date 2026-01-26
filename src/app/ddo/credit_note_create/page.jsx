@@ -176,8 +176,8 @@ export default function CreditNoteCreate() {
   const round2 = (n) => Number(n.toFixed(2));
 
   /* ===== GST-INCLUSIVE CALCULATION ===== */
-  const baseAmount = round2(creditValue / (1 + GST_RATE / 100));
-  let taxAmount = round2(creditValue - baseAmount);
+  const baseAmount = Math.round(creditValue / (1 + GST_RATE / 100));
+  let taxAmount = Math.round(creditValue - baseAmount);
 
   let cgst = 0,
     sgst = 0,
