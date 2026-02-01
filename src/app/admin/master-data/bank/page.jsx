@@ -644,7 +644,7 @@ export default function BankDetailsPage() {
     // Delete button is disabled if isEditable is false or if invoices exist
     const canDelete = isEditable && !hasInvoices;
 
-    return (
+   return    (row.status == "Active") ? (
       <>
         <button
           onClick={(e) => {
@@ -654,7 +654,7 @@ export default function BankDetailsPage() {
           className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
           aria-label="Edit"
         >
-          <Edit size={18} />
+       <Edit size={18} />
         </button>
         {/* <button
           onClick={(e) => {
@@ -674,7 +674,7 @@ export default function BankDetailsPage() {
           <Trash2 size={18} />
         </button> */}
       </>
-    );
+    ) : <h1 className='p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400'>-</h1>;
   };
 
   return (

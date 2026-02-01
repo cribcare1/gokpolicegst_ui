@@ -359,8 +359,8 @@ export const validateName = (name, fieldName = 'Name') => {
   if (cleaned.length < 2) {
     return { valid: false, message: `${fieldName} must be at least 2 characters` };
   }
-  if (cleaned.length > 200) {
-    return { valid: false, message: `${fieldName} must be less than 200 characters` };
+  if (cleaned.length > 100) {
+    return { valid: false, message: `${fieldName} must be less than 100 characters` };
   }
   // Allow letters, spaces, hyphens, apostrophes, and common punctuation
   if (!/^[a-zA-Z\s\-'.,()&]+$/.test(cleaned)) {

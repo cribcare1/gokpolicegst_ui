@@ -438,7 +438,6 @@ export default function GSTMasterPage() {
       const headers = [
         'GSTIN Number',
         'GST Holder Name',
-        // 'Name',
         'Address',
         'City',
         'PIN',
@@ -454,7 +453,7 @@ export default function GSTMasterPage() {
         return [
           item.gstNumber || '',
           item.gstHolderName || '',
-          item.gstName || item.name || '',
+          // item.gstName || item.name || '',
           item.address || '',
           item.city || '',
           item.pinCode || item.pin || '',

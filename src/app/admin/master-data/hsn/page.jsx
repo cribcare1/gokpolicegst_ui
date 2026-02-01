@@ -1196,6 +1196,8 @@ const fetchGSTINList = async () => {
                     <>
                       <input
                         type="date"
+                           min={new Date().toISOString().split('T')[0]}
+                        max={new Date().toISOString().split('T')[0]}
                         value={formData[field.key] || ''}
                         onChange={(e) => updateFormData(field.key, e.target.value)}
                         onBlur={(e) => validateField(field.key, e.target.value, field)}
