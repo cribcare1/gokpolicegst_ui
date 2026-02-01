@@ -60,17 +60,7 @@ export default function GstinDDORegistrationPage() {
     setLoading(true);
     try {
       const demoDDOs = [
-        {
-          id: '1',
-          ddoCode: '0200PO0032',
-          ddoName: 'DCP CAR HQ',
-          area: 'Mysore Road',
-          address: 'DCP Office, Mysore Road',
-          city: 'Bengaluru',
-          pinCode: '560018',
-          mobile: '9902991313',
-          email: 'Dcpadmin@ksp.gov.in',
-        },
+      
       ];
 
       setDdos(demoDDOs);
@@ -159,16 +149,18 @@ export default function GstinDDORegistrationPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this DDO?')) return;
-
+    setLoading(true);
     try {
       const response = await ApiService.handlePostRequest(`${API_ENDPOINTS.DDO_DELETE}${id}`);
       if (response?.status === 'success') {
         toast.success('DDO deleted successfully');
-        fetchDDOs();
+        fetchDDOs(gstId);
       } else {
+              setLoading(false);
         toast.error(response?.message || 'Failed to delete DDO');
       }
     } catch (error) {
+      setLoading(false);
       toast.error('Error deleting DDO');
     }
   };

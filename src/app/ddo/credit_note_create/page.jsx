@@ -14,7 +14,6 @@ import { formatCurrency } from "@/lib/gstUtils";
 export default function CreditNoteCreate() {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
-
   const [invoiceList, setInvoiceList] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
