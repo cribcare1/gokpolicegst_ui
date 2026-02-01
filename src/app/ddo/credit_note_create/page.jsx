@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Layout from "@/components/shared/Layout";
@@ -17,7 +18,8 @@ export default function CreditNoteCreate() {
   const [invoiceList, setInvoiceList] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
+  const [creditError, setCreditError] = useState("");
 
   const [taxBreakup, setTaxBreakup] = useState({
     cgst: 0,
@@ -54,21 +56,17 @@ export default function CreditNoteCreate() {
         `${API_ENDPOINTS.INVOICE_LIST}${ddoId}&status=SUBMITTED`
       );
 
-      // if (res?.success === "success") {
-      //   setInvoiceList(res.data || []);
-      // }
       if (res?.success === "success") {
-  const usedInvoices = JSON.parse(
-    localStorage.getItem("USED_CREDIT_NOTE_INVOICES") || "[]"
-  );
+        const usedInvoices = JSON.parse(
+          localStorage.getItem("USED_CREDIT_NOTE_INVOICES") || "[]"
+        );
 
-  const filteredInvoices = (res.data || []).filter(
-    (inv) => !usedInvoices.includes(inv.receiptInvoiceNumber)
-  );
+        const filteredInvoices = (res.data || []).filter(
+          (inv) => !usedInvoices.includes(inv.receiptInvoiceNumber)
+        );
 
-  setInvoiceList(filteredInvoices);
-}
-
+        setInvoiceList(filteredInvoices);
+      }
     } catch {
       alert("Failed to fetch invoices");
     }
@@ -87,12 +85,13 @@ export default function CreditNoteCreate() {
 
       setSelectedInvoice(invoice);
       setTaxBreakup({ cgst: 0, sgst: 0, igst: 0 });
+      setCreditError("");
 
       setFormData({
         receiptInvoiceNo: value,
         customerName: invoice.customerResponse?.name || "",
-        customerGstin: invoice.customerResponse?.gstNumber || "NA",
-        serviceType: invoice.customerResponse?.type || "FCM", // direct type
+        customerGstin: invoice.customerResponse?.gstNumber || "",
+        serviceType: invoice.customerResponse?.type || "",
         creditNoteDate: today,
         creditNoteValue: "",
         baseAmount: 0,
@@ -106,112 +105,71 @@ export default function CreditNoteCreate() {
     }
 
     /* ---- Credit Note Value ---- */
-    // if (name === "creditNoteValue") {
-    //   if (!selectedInvoice) return;
-
-    //   const creditValue = Number(value.replace(/[^0-9.]/g, ""));
-    //   const invoiceTotal = Number(selectedInvoice.grandTotal || 0);
-
-    //   if (creditValue > invoiceTotal) return;
-
-    //   const invoiceCgst = Number(selectedInvoice.totalCgst || 0);
-    //   const invoiceSgst = Number(selectedInvoice.totalSgst || 0);
-    //   const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
-
-    //   const invoiceTaxTotal = invoiceCgst + invoiceSgst + invoiceIgst;
-    //   const invoiceBase = invoiceTotal - invoiceTaxTotal;
-
-    //   let baseAmount = 0,
-    //     cgst = 0,
-    //     sgst = 0,
-    //     igst = 0;
-
-    //   if (creditValue > 0 && invoiceTotal > 0) {
-    //     baseAmount = (creditValue / invoiceTotal) * invoiceBase;
-    //     cgst = invoiceBase ? (invoiceCgst / invoiceBase) * baseAmount : 0;
-    //     sgst = invoiceBase ? (invoiceSgst / invoiceBase) * baseAmount : 0;
-    //     igst = invoiceBase ? (invoiceIgst / invoiceBase) * baseAmount : 0;
-    //   }
-
-    //   /* ===== ROUND OFF ===== */
-    //   const roundedBase = Math.round(baseAmount);
-    //   const roundedCgst = Math.round(cgst);
-    //   const roundedSgst = Math.round(sgst);
-    //   const roundedIgst = Math.round(igst);
-    //   const roundedTax = roundedCgst + roundedSgst + roundedIgst;
-
-    //   setTaxBreakup({
-    //     cgst: roundedCgst,
-    //     sgst: roundedSgst,
-    //     igst: roundedIgst,
-    //   });
-
-    //   setFormData((prev) => ({
-    //     ...prev,
-    //     creditNoteValue: creditValue,
-    //     baseAmount: roundedBase,
-    //     taxAmount: roundedTax,
-    //     totalAmount: creditValue,
-    //     isExempted: roundedTax === 0 && creditValue > 0,
-    //   }));
-    //   return;
-    // }
-
-
     if (name === "creditNoteValue") {
-  if (!selectedInvoice) return;
+      if (!selectedInvoice) return;
 
-  const creditValue = Number(value.replace(/[^0-9.]/g, ""));
-  const invoiceTotal = Number(selectedInvoice.grandTotal || 0);
+      // allow empty
+      if (value === "") {
+        setFormData((prev) => ({
+          ...prev,
+          creditNoteValue: "",
+          baseAmount: 0,
+          taxAmount: 0,
+          totalAmount: 0,
+          isExempted: false,
+        }));
+        setTaxBreakup({ cgst: 0, sgst: 0, igst: 0 });
+        setCreditError("");
+        return;
+      }
 
-  if (creditValue <= 0 || creditValue > invoiceTotal) return;
+      // allow numbers + decimal only
+      if (!/^\d*\.?\d*$/.test(value)) return;
 
-  const invoiceCgst = Number(selectedInvoice.totalCgst || 0);
-  const invoiceSgst = Number(selectedInvoice.totalSgst || 0);
-  const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
+      const creditValue = Number(value);
+      const invoiceTotal = Number(selectedInvoice.grandTotal || 0);
 
-  const GST_RATE =
-    invoiceIgst > 0 ? 18 : 18; // extendable if needed later
+      if (creditValue > invoiceTotal) {
+        setCreditError(
+          `Credit Note value cannot exceed Invoice Total (₹${invoiceTotal})`
+        );
+        return;
+      }
 
-  const round2 = (n) => Number(n.toFixed(2));
+      setCreditError("");
 
-  /* ===== GST-INCLUSIVE CALCULATION ===== */
-  const baseAmount = Math.round(creditValue / (1 + GST_RATE / 100));
-  let taxAmount = Math.round(creditValue - baseAmount);
+      const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
+      const GST_RATE = 18;
+      const round2 = (n) => Number(n.toFixed(2));
 
-  let cgst = 0,
-    sgst = 0,
-    igst = 0;
+      const baseAmount = Math.round(creditValue / (1 + GST_RATE / 100));
+      let taxAmount = Math.round(creditValue - baseAmount);
 
-  if (invoiceIgst > 0) {
-    igst = taxAmount;
-  } else {
-    cgst = round2(taxAmount / 2);
-    sgst = round2(taxAmount / 2);
+      let cgst = 0,
+        sgst = 0,
+        igst = 0;
 
-    // Fix rounding diff (₹0.01 case)
-    const diff = round2(taxAmount - (cgst + sgst));
-    sgst = round2(sgst + diff);
-  }
+      if (invoiceIgst > 0) {
+        igst = taxAmount;
+      } else {
+        cgst = round2(taxAmount / 2);
+        sgst = round2(taxAmount / 2);
+        const diff = round2(taxAmount - (cgst + sgst));
+        sgst = round2(sgst + diff);
+      }
 
-  setTaxBreakup({
-    cgst,
-    sgst,
-    igst,
-  });
+      setTaxBreakup({ cgst, sgst, igst });
 
-  setFormData((prev) => ({
-    ...prev,
-    creditNoteValue: creditValue,
-    baseAmount,
-    taxAmount,
-    totalAmount: creditValue,
-    isExempted: taxAmount === 0,
-  }));
-
-  return;
-}
-
+      setFormData((prev) => ({
+        ...prev,
+        creditNoteValue: value,
+        baseAmount,
+        taxAmount,
+        totalAmount: creditValue,
+        isExempted: taxAmount === 0,
+      }));
+      return;
+    }
 
     setFormData({ ...formData, [name]: value });
   };
@@ -228,7 +186,7 @@ export default function CreditNoteCreate() {
         invoiceId: selectedInvoice.invoiceId,
         invoiceNo: formData.receiptInvoiceNo,
         creditNoteDate: formData.creditNoteDate,
-         creditNoteAmount:formData.creditNoteValue,
+        creditNoteAmount: Number(formData.creditNoteValue),
         baseAmount: formData.baseAmount,
         taxAmount: formData.taxAmount,
         totalAmount: formData.totalAmount,
@@ -252,44 +210,24 @@ export default function CreditNoteCreate() {
   };
 
   const getTaxPercent = (tax) => {
-  if (!formData.baseAmount || tax === 0) return 0;
-  return   Math.round( ((tax / formData.baseAmount) * 100));
-};
-
+    if (!formData.baseAmount || tax === 0) return 0;
+    return Math.round((tax / formData.baseAmount) * 100);
+  };
 
   /* ================= UI ================= */
   return (
     <Layout role="ddo">
       <div className="space-y-6">
+        <Button variant="outline" onClick={() => router.back()} className="w-40">
+          ← Back to List
+        </Button>
 
-        {/* HEADER WITH DATE */}
-        {/* <div className="flex justify-between items-center">
-          
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-extrabold">Create Credit Note</h1>
           <span className="text-sm font-semibold text-gray-600">
             Date: {today}
           </span>
-        </div> */}
-
-        <div className="flex flex-col space-y-2">
-          {/* Back Button */}
-          <Button
-  variant="outline"
-  onClick={() => router.back()}
- className="w-40" 
->
-  ← Back to List
-</Button>
-
-          {/* Header and Date */}
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-extrabold">Create Credit Note</h1>
-            <span className="text-sm font-semibold text-gray-600">
-              Date: {today}
-            </span>
-          </div>
         </div>
-
 
         <div className="premium-card p-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -302,12 +240,8 @@ export default function CreditNoteCreate() {
             />
 
             <Input label="Customer Name" value={formData.customerName} disabled />
-
             <Input label="Customer GSTIN" value={formData.customerGstin} disabled />
-
             <Input label="Service Type" value={formData.serviceType} disabled />
-
-            {/* Removed Credit Note Date input */}
 
             <Input
               label="Invoice Total Amount"
@@ -315,13 +249,21 @@ export default function CreditNoteCreate() {
               disabled
             />
 
-            <Input
-              label="Credit Note Value"
-              name="creditNoteValue"
-              value={formData.creditNoteValue}
-              update={update}
-              placeholder="Enter credit amount"
-            />
+            {/* Credit Note Value + Error */}
+            <div>
+              <Input
+                label="Credit Note Value"
+                name="creditNoteValue"
+                value={formData.creditNoteValue}
+                update={update}
+                placeholder="Enter credit amount"
+              />
+              {creditError && (
+                <p className="mt-1 text-sm text-red-600 font-medium">
+                  {creditError}
+                </p>
+              )}
+            </div>
 
             <Input label="Base Amount" value={formData.baseAmount} disabled />
 
@@ -330,48 +272,34 @@ export default function CreditNoteCreate() {
                 <label className="block text-sm font-semibold mb-2">
                   Tax Amount
                 </label>
-
                 <input
                   value={formData.taxAmount}
                   disabled
                   className="premium-input w-full px-4 py-3"
                 />
-
-                {/* <div className="mt-1 text-sm text-gray-700 flex gap-4 flex-wrap">
+                <div className="mt-1 text-sm text-gray-700 flex gap-4 flex-wrap">
                   {formData.isExempted ? (
                     <span>Tax: ₹0 (Exempted)</span>
                   ) : (
                     <>
-                      {taxBreakup.cgst > 0 && <span>CGST: ₹{taxBreakup.cgst} </span>}
-                      {taxBreakup.sgst > 0 && <span>SGST: ₹{taxBreakup.sgst}</span>}
-                      {taxBreakup.igst > 0 && <span>IGST: ₹{taxBreakup.igst}</span>}
+                      {taxBreakup.cgst > 0 && (
+                        <span>
+                          CGST: ₹{taxBreakup.cgst} ({getTaxPercent(taxBreakup.cgst)}%)
+                        </span>
+                      )}
+                      {taxBreakup.sgst > 0 && (
+                        <span>
+                          SGST: ₹{taxBreakup.sgst} ({getTaxPercent(taxBreakup.sgst)}%)
+                        </span>
+                      )}
+                      {taxBreakup.igst > 0 && (
+                        <span>
+                          IGST: ₹{taxBreakup.igst} ({getTaxPercent(taxBreakup.igst)}%)
+                        </span>
+                      )}
                     </>
                   )}
-                </div> */}
-                <div className="mt-1 text-sm text-gray-700 flex gap-4 flex-wrap">
-  {formData.isExempted ? (
-    <span>Tax: ₹0 (Exempted)</span>
-  ) : (
-    <>
-      {taxBreakup.cgst > 0 && (
-        <span>
-          CGST: ₹{taxBreakup.cgst} ({getTaxPercent(taxBreakup.cgst)}%)
-        </span>
-      )}
-      {taxBreakup.sgst > 0 && (
-        <span>
-          SGST: ₹{taxBreakup.sgst} ({getTaxPercent(taxBreakup.sgst)}%)
-        </span>
-      )}
-      {taxBreakup.igst > 0 && (
-        <span>
-          IGST: ₹{taxBreakup.igst} ({getTaxPercent(taxBreakup.igst)}%)
-        </span>
-      )}
-    </>
-  )}
-</div>
-
+                </div>
               </div>
             )}
 
