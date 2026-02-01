@@ -123,6 +123,7 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
         { href: '/ddo/shortfall_payment_list', label: 'Shortfall List', icon: 'shortfall' },
         { href: '/ddo/credit-notes', label: 'nav.invoiceList', icon: 'invoices' },
         { href: '/ddo/invoices', label: 'nav.creditNote', icon: 'credit-notes' },
+        { href: '/ddo/report', label: 'Report', icon: 'report' },
       ],
     },
     { href: '/ddo/ddo_gstmonthlyreport_list', label: 'nav.gstmonthlyreports', icon: 'reports' },

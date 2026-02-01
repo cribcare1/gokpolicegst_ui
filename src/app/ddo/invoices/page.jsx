@@ -105,21 +105,52 @@ export default function CreditNoteListPage() {
         `${API_ENDPOINTS.GET_CREDIT_NOTES}${ddoId}`
       );
 
-      if (response?.status === "success") {
-        const tableData = response.data.map((cn) => ({
-          id: cn.id,
-          creditNoteDate: cn.creditNoteDate,
-          creditNoteNo: cn.creditNoteNumber,
-          customerName: cn.customerName || "N/A",
-          creditNoteAmount: cn.creditNoteAmount ?? 0,
-          eInvoiceStatus: cn.einvoiceStatus || "Pending",
-          irnStatus: cn.irnStatus || "Pending",
-          eInvoicePreview: cn.einvoicePreView || "Pending",
-        }));
+      // if (response?.status === "success") {
+      //   const tableData = response.data.map((cn) => ({
+      //     id: cn.id,
+      //     creditNoteDate: cn.creditNoteDate,
+      //     creditNoteNo: cn.creditNoteNumber,
+      //     customerName: cn.customerName || "N/A",
+      //     creditNoteAmount: cn.creditNoteAmount ?? 0,
+      //     eInvoiceStatus: cn.einvoiceStatus || "Pending",
+      //     irnStatus: cn.irnStatus || "Pending",
+      //     eInvoicePreview: cn.einvoicePreView || "Pending",
+      //   }));
 
-        setRecords(tableData);
-        setFiltered(tableData);
-      }
+      //   setRecords(tableData);
+      //   setFiltered(tableData);
+      // }
+
+
+      if (response?.status === "success") {
+
+  // ✅ STORE FINAL INVOICE NUMBERS IN LOCAL STORAGE
+  const usedInvoiceNumbers = response.data
+    .map((cn) => cn.finalInvoiceNumber)
+    .filter(Boolean);
+    console.log(usedInvoiceNumbers ,"usedInvoiceNumbers");
+    
+
+  localStorage.setItem(
+    "USED_CREDIT_NOTE_INVOICES",
+    JSON.stringify(usedInvoiceNumbers)
+  );
+
+  const tableData = response.data.map((cn) => ({
+    id: cn.id,
+    creditNoteDate: cn.creditNoteDate,
+    creditNoteNo: cn.creditNoteNumber,
+    customerName: cn.customerName || "N/A",
+    creditNoteAmount: cn.creditNoteAmount ?? cn.baseAmount ?? 0,
+    eInvoiceStatus: cn.einvoiceStatus || "Pending",
+    irnStatus: cn.irnStatus || "Pending",
+    eInvoicePreview: cn.einvoicePreView || "Pending",
+  }));
+
+  setRecords(tableData);
+  setFiltered(tableData);
+}
+
     } catch (err) {
       console.error("Failed to fetch credit notes", err);
     } finally {
