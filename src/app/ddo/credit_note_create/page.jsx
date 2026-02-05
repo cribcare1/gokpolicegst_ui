@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Layout from "@/components/shared/Layout";
@@ -14,10 +13,10 @@ import { formatCurrency } from "@/lib/gstUtils";
 export default function CreditNoteCreate() {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
+
   const [invoiceList, setInvoiceList] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const [creditError, setCreditError] = useState("");
 
   const [taxBreakup, setTaxBreakup] = useState({
@@ -82,6 +81,9 @@ export default function CreditNoteCreate() {
       );
       if (!invoice) return;
 
+      const isExemptedService =
+        invoice.customerResponse?.type === "Exempted";
+
       setSelectedInvoice(invoice);
       setTaxBreakup({ cgst: 0, sgst: 0, igst: 0 });
       setCreditError("");
@@ -98,7 +100,7 @@ export default function CreditNoteCreate() {
         totalAmount: 0,
         payableAmount: invoice.grandTotal,
         remark: "",
-        isExempted: invoice.customerResponse?.type === "Exempted",
+        isExempted: isExemptedService,
       });
       return;
     }
@@ -107,7 +109,6 @@ export default function CreditNoteCreate() {
     if (name === "creditNoteValue") {
       if (!selectedInvoice) return;
 
-      // allow empty
       if (value === "") {
         setFormData((prev) => ({
           ...prev,
@@ -115,14 +116,12 @@ export default function CreditNoteCreate() {
           baseAmount: 0,
           taxAmount: 0,
           totalAmount: 0,
-          isExempted: false,
         }));
         setTaxBreakup({ cgst: 0, sgst: 0, igst: 0 });
         setCreditError("");
         return;
       }
 
-      // allow numbers + decimal only
       if (!/^\d*\.?\d*$/.test(value)) return;
 
       const creditValue = Number(value);
@@ -137,24 +136,31 @@ export default function CreditNoteCreate() {
 
       setCreditError("");
 
-      const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
-      const GST_RATE = 18;
-      const round2 = (n) => Number(n.toFixed(2));
+      const isExemptedService =
+        selectedInvoice.customerResponse?.type === "Exempted";
 
-      const baseAmount = Math.round(creditValue / (1 + GST_RATE / 100));
-      let taxAmount = Math.round(creditValue - baseAmount);
-
+      let baseAmount = 0;
+      let taxAmount = 0;
       let cgst = 0,
         sgst = 0,
         igst = 0;
 
-      if (invoiceIgst > 0) {
-        igst = taxAmount;
+      if (isExemptedService) {
+        baseAmount = Math.round(creditValue);
+        taxAmount = 0;
       } else {
-        cgst = round2(taxAmount / 2);
-        sgst = round2(taxAmount / 2);
-        const diff = round2(taxAmount - (cgst + sgst));
-        sgst = round2(sgst + diff);
+        const GST_RATE = 18;
+        const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
+
+        baseAmount = Math.round(creditValue / (1 + GST_RATE / 100));
+        taxAmount = Math.round(creditValue - baseAmount);
+
+        if (invoiceIgst > 0) {
+          igst = taxAmount;
+        } else {
+          cgst = Number((taxAmount / 2).toFixed(2));
+          sgst = Number((taxAmount / 2).toFixed(2));
+        }
       }
 
       setTaxBreakup({ cgst, sgst, igst });
@@ -165,7 +171,7 @@ export default function CreditNoteCreate() {
         baseAmount,
         taxAmount,
         totalAmount: creditValue,
-        isExempted: taxAmount === 0,
+        isExempted: isExemptedService,
       }));
       return;
     }
@@ -248,7 +254,6 @@ export default function CreditNoteCreate() {
               disabled
             />
 
-            {/* Credit Note Value + Error */}
             <div>
               <Input
                 label="Credit Note Value"
