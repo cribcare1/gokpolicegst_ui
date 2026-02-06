@@ -135,13 +135,14 @@ const Layout = memo(function Layout({ children, role = 'admin' }) {
     { href: '/gstin/profile', label: 'Profile', icon: 'profile' },
     { href: '/gstin/ddo-registration', label: 'DDO Registration', icon: 'ddo' },
     // { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
-     {
+    {
       label: 'e- Invoice',
       icon: 'invoice',
       children: [
-         { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
         { href: '/gstin/invoices', label: 'nav.invoiceList', icon: 'invoices' },
-      
+        { href: '/gstin/credit_note_list', label: 'nav.creditNote', icon: 'credit-notes' },
+
+
       ],
     },
     { href: '/gstin/reports', label: 'nav.reports', icon: 'reports' },

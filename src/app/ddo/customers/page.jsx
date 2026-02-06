@@ -133,6 +133,7 @@ useEffect(() => {
           exemptionCertNumber: customer.exemptionNumber || '',
           mobile: customer.mobile || '',
           email: customer.customerEmail || '',
+          isDeleteAllowed:customer.isDeleteAllowed|| ""
         }));
 
         setCustomers(mappedCustomers);
@@ -529,11 +530,15 @@ useEffect(() => {
         <Edit size={16} />
       </button>
       <button
+          disabled={row.isDeleteAllowed==true}
         onClick={(e) => {
           e.stopPropagation();
           handleDelete(row);
         }}
-        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-600"
+        className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md ${row.isDeleteAllowed
+            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+            }`}
         aria-label="Delete"
       >
         <Trash2 size={16} />
