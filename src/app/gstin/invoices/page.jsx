@@ -147,13 +147,13 @@ export default function ReceiptListPage() {
       label: "Amount Payable",
       render: (v) => formatCurrency(v, true),
     },
-    {
-      key: "amountReceived",
-      label: "Amount Received",
-      render: (v) => formatCurrency(v, true),
-    },
-    { key: "paymentMode", label: "Payment Mode" },
-    { key: "paymentRef", label: "Reference No" },
+    // {
+    //   key: "amountReceived",
+    //   label: "Amount Received",
+    //   render: (v) => formatCurrency(v, true),
+    // },
+    // { key: "paymentMode", label: "Payment Mode" },
+    // { key: "paymentRef", label: "Reference No" },
     {
       key: "status",
       label: "Status",

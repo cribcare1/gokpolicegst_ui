@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,11 +10,14 @@ import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
 import { formatCurrency } from "@/lib/gstUtils";
+import Button from "@/components/shared/Button";
 
 export default function GstTdsMonthlyReportPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState(""); // ➕ added
+  const [toDate, setToDate] = useState("");     // ➕ added
   const [loading, setLoading] = useState(true);
 
   const countrecords = filtered.length;
@@ -32,8 +34,6 @@ export default function GstTdsMonthlyReportPage() {
   useEffect(() => {
     fetchRecords();
   }, []);
-
-  
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -53,24 +53,19 @@ export default function GstTdsMonthlyReportPage() {
           const declared = Number(item.declaredAmount || 0);
           const paid = Number(item.paidAmount || 0);
           const penaltyAmount = Number(item.penaltyAmount || 0);
-          // Difference = Paid - Declared
           const difference = paid - declared;
-
-          // Compliance logic
-          const remarks =
-            difference === 0 ? "Fully Compliance" : "Partial Compliance";
 
           return {
             id: item.id,
-         
             month: item.filingMonth,
             arnNo: item.arnNo,
             arnDate: formatDate(item.arnDate),
             tdsDeclared: declared,
             tdsPaid: paid,
-            penaltyAmount: penaltyAmount,
+            penaltyAmount,
             difference,
-            remarks,
+            remarks:
+              difference === 0 ? "Fully Compliance" : "Partial Compliance",
             ackDocument: item.ackDocument,
           };
         });
@@ -92,19 +87,39 @@ export default function GstTdsMonthlyReportPage() {
     }
   };
 
+  // 🔍 Search + 📅 Date filter
   useEffect(() => {
+    let data = [...records];
+
     if (searchTerm) {
-      setFiltered(
-        records.filter(
-          (r) =>
-            r.arnNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.month?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+      data = data.filter(
+        (r) =>
+          r.arnNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.month?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    } else {
-      setFiltered(records);
     }
-  }, [searchTerm, records]);
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((r) => {
+        if (!r.arnDate) return false;
+        const [dd, mm, yyyy] = r.arnDate.split("-");
+        return new Date(`${yyyy}-${mm}-${dd}`) >= from;
+      });
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((r) => {
+        if (!r.arnDate) return false;
+        const [dd, mm, yyyy] = r.arnDate.split("-");
+        return new Date(`${yyyy}-${mm}-${dd}`) <= to;
+      });
+    }
+
+    setFiltered(data);
+  }, [searchTerm, fromDate, toDate, records]);
 
   const columns = [
     {
@@ -125,76 +140,50 @@ export default function GstTdsMonthlyReportPage() {
     {
       key: "tdsDeclared",
       label: "GST-TDS Declared",
-      style: {
-        minWidth: "180px",
-        textAlign: "right",
-        whiteSpace: "nowrap",
-      },
-      render: (v) => (
-        <span className="block w-full text-right">
-          {formatCurrency(v)}
-        </span>
-      ),
+      style: { minWidth: "180px", textAlign: "right", whiteSpace: "nowrap" },
+      render: (v) => <span className="block w-full text-right">{formatCurrency(v)}</span>,
     },
     {
       key: "tdsPaid",
       label: "GST-TDS Paid",
-      style: {
-        minWidth: "180px",
-        textAlign: "right",
-        whiteSpace: "nowrap",
-      },
-      render: (v) => (
-        <span className="block w-full text-right">
-          {formatCurrency(v)}
-        </span>
-      ),
+      style: { minWidth: "180px", textAlign: "right", whiteSpace: "nowrap" },
+      render: (v) => <span className="block w-full text-right">{formatCurrency(v)}</span>,
     },
     {
       key: "penaltyAmount",
       label: "Penalty",
-      style: {
-        minWidth: "160px",
-        textAlign: "right",
-        whiteSpace: "nowrap",
-      },
+      style: { minWidth: "160px", textAlign: "right", whiteSpace: "nowrap" },
       render: (v) => (
-        <span className="block w-full text-right text-black-600 font-medium">
+        <span className="block w-full text-right font-medium">
           {formatCurrency(v)}
         </span>
       ),
     },
-
     {
       key: "difference",
       label: "Difference",
-      style: {
-        minWidth: "200px",
-        textAlign: "right",
-        whiteSpace: "nowrap",
-      },
+      style: { minWidth: "200px", textAlign: "right", whiteSpace: "nowrap" },
       render: (value) => (
         <span
-          className={`block w-full text-right font-semibold ${value >= 0 ? "text-black-600" : "text-red-600"
-            }`}
+          className={`block w-full text-right font-semibold ${
+            value >= 0 ? "text-black-600" : "text-red-600"
+          }`}
         >
           {formatCurrency(value)}
         </span>
       ),
     },
-
-    
     {
       key: "remarks",
       label: "Status",
       style: { minWidth: "220px", whiteSpace: "nowrap" },
       render: (value) => (
         <span
-          className={`px-3 py-1 rounded text-sm font-semibold
-            ${value === "Fully Compliance"
+          className={`px-3 py-1 rounded text-sm font-semibold ${
+            value === "Fully Compliance"
               ? "bg-green-100 text-green-700"
               : "bg-yellow-100 text-yellow-700"
-            }`}
+          }`}
         >
           {value}
         </span>
@@ -206,7 +195,7 @@ export default function GstTdsMonthlyReportPage() {
       style: { minWidth: "240px", whiteSpace: "nowrap" },
       render: (_, row) =>
         row.ackDocument ? (
-          <span className="text-black-700 font-medium truncate block max-w-[220px]">
+          <span className="font-medium truncate block max-w-[220px]">
             {row.ackDocument}
           </span>
         ) : (
@@ -221,14 +210,12 @@ export default function GstTdsMonthlyReportPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            {/* <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
-              <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
-            </h1> */}
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
               <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
-                     translate-y-1">
+              <span
+                className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1"
+              >
                 {countrecords ?? 0}
               </span>
             </h1>
@@ -237,12 +224,48 @@ export default function GstTdsMonthlyReportPage() {
             </p>
           </div>
 
+          {/* 📅 Date Filter – RIGHT SIDE */}
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg bg-[var(--color-surface)]"
+              />
+            </div>
 
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg bg-[var(--color-surface)]"
+              />
+            </div>
+
+            {(fromDate || toDate) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]"
+            size={20}
+          />
           <input
             type="text"
             placeholder="Search ARN NO..."

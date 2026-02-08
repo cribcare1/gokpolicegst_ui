@@ -180,6 +180,7 @@ export default function DDOMappingPage() {
               onChange={(e) => handleCurrentGSTINChange(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-background)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
+              <option value="">Select from GSTIN</option>
               {transformedGstinList.map((gstin) => (
                 <option key={gstin.id} value={gstin.gstNumber}>
                   {gstin.gstNumber} - {gstin.name}
