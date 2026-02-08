@@ -32,8 +32,9 @@ export default function DDOMappingPage() {
 
   useEffect(() => {
     if (gstinList && gstinList.length > 0 && !sourceGSTIN) {
-      const firstGSTIN = gstinList[0].gstNumber || gstinList[0].value || '';
-      const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
+      const firstGSTIN =  'Select from GSTIN'  || '';
+      // const secondGSTIN = gstinList.length > 1 ? (gstinList[1].gstNumber || gstinList[1].value || '') : '';
+      const secondGSTIN = 'Select Target GSTIN' || '';
       
       if (firstGSTIN) {
         setSourceGSTIN(firstGSTIN);
@@ -274,6 +275,7 @@ export default function DDOMappingPage() {
                 onChange={(e) => handleSourceGSTINChange(e.target.value)}
                 className="w-full px-4 py-3 bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-text-primary)] transition-colors"
               >
+                <option value="">Select from GSTIN</option>
                 {transformedGstinList.map((gstin) => (
                   <option key={gstin.id} value={gstin.gstNumber}>
                     {gstin.gstNumber} - {gstin.name}

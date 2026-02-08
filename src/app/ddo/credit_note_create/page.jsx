@@ -38,12 +38,14 @@ export default function CreditNoteCreate() {
     payableAmount: 0,
     remark: "",
     isExempted: false,
+    fromDate: "",
+    toDate: "",
   });
 
   /* ================= FETCH INVOICES ================= */
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [formData.fromDate, formData.toDate]);
 
   const fetchInvoices = async () => {
     try {
@@ -59,9 +61,23 @@ export default function CreditNoteCreate() {
           localStorage.getItem("USED_CREDIT_NOTE_INVOICES") || "[]"
         );
 
-        const filteredInvoices = (res.data || []).filter(
+        let filteredInvoices = (res.data || []).filter(
           (inv) => !usedInvoices.includes(inv.receiptInvoiceNumber)
         );
+
+        const { fromDate, toDate } = formData;
+
+        if (fromDate) {
+          filteredInvoices = filteredInvoices.filter(
+            (inv) => inv.invoiceDate >= fromDate
+          );
+        }
+
+        if (toDate) {
+          filteredInvoices = filteredInvoices.filter(
+            (inv) => inv.invoiceDate <= toDate
+          );
+        }
 
         setInvoiceList(filteredInvoices);
       }
@@ -81,18 +97,19 @@ export default function CreditNoteCreate() {
       );
       if (!invoice) return;
 
-      const isExemptedService =
-        invoice.customerResponse?.type === "Exempted";
+      const serviceType = invoice.customerResponse?.type || "";
+      const isExemptedService = serviceType === "Exempted";
 
       setSelectedInvoice(invoice);
       setTaxBreakup({ cgst: 0, sgst: 0, igst: 0 });
       setCreditError("");
 
       setFormData({
+        ...formData,
         receiptInvoiceNo: value,
         customerName: invoice.customerResponse?.name || "",
         customerGstin: invoice.customerResponse?.gstNumber || "",
-        serviceType: invoice.customerResponse?.type || "",
+        serviceType: serviceType,
         creditNoteDate: today,
         creditNoteValue: "",
         baseAmount: 0,
@@ -136,19 +153,15 @@ export default function CreditNoteCreate() {
 
       setCreditError("");
 
-      const isExemptedService =
-        selectedInvoice.customerResponse?.type === "Exempted";
-
+      const serviceType = selectedInvoice.customerResponse?.type || "";
       let baseAmount = 0;
       let taxAmount = 0;
       let cgst = 0,
         sgst = 0,
         igst = 0;
 
-      if (isExemptedService) {
-        baseAmount = Math.round(creditValue);
-        taxAmount = 0;
-      } else {
+      // ===== Only FCM has tax =====
+      if (serviceType === "FCM") {
         const GST_RATE = 18;
         const invoiceIgst = Number(selectedInvoice.totalIgst || 0);
 
@@ -161,6 +174,10 @@ export default function CreditNoteCreate() {
           cgst = Number((taxAmount / 2).toFixed(2));
           sgst = Number((taxAmount / 2).toFixed(2));
         }
+      } else {
+        // RCM or Exempted: credit amount = base amount, tax = 0
+        baseAmount = Math.round(creditValue);
+        taxAmount = 0;
       }
 
       setTaxBreakup({ cgst, sgst, igst });
@@ -171,7 +188,7 @@ export default function CreditNoteCreate() {
         baseAmount,
         taxAmount,
         totalAmount: creditValue,
-        isExempted: isExemptedService,
+        isExempted: serviceType === "Exempted",
       }));
       return;
     }
@@ -227,11 +244,35 @@ export default function CreditNoteCreate() {
           ← Back to List
         </Button>
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <h1 className="text-3xl font-extrabold">Create Credit Note</h1>
-          <span className="text-sm font-semibold text-gray-600">
-            Date: {today}
-          </span>
+
+          {/* ===== Date Filters ===== */}
+          <div className="flex items-end gap-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1">From</label>
+              <input
+                type="date"
+                value={formData.fromDate}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, fromDate: e.target.value }))
+                }
+                className="premium-input px-2 py-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-1">To</label>
+              <input
+                type="date"
+                value={formData.toDate}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, toDate: e.target.value }))
+                }
+                className="premium-input px-2 py-1"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="premium-card p-6 space-y-6">
@@ -263,49 +304,46 @@ export default function CreditNoteCreate() {
                 placeholder="Enter credit amount"
               />
               {creditError && (
-                <p className="mt-1 text-sm text-red-600 font-medium">
-                  {creditError}
-                </p>
+                <p className="mt-1 text-sm text-red-600 font-medium">{creditError}</p>
               )}
             </div>
 
             <Input label="Base Amount" value={formData.baseAmount} disabled />
 
-            {(formData.taxAmount > 0 || formData.isExempted) && (
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Tax Amount
-                </label>
-                <input
-                  value={formData.taxAmount}
-                  disabled
-                  className="premium-input w-full px-4 py-3"
-                />
-                <div className="mt-1 text-sm text-gray-700 flex gap-4 flex-wrap">
-                  {formData.isExempted ? (
-                    <span>Tax: ₹0 (Exempted)</span>
-                  ) : (
-                    <>
-                      {taxBreakup.cgst > 0 && (
-                        <span>
-                          CGST: ₹{taxBreakup.cgst} ({getTaxPercent(taxBreakup.cgst)}%)
-                        </span>
-                      )}
-                      {taxBreakup.sgst > 0 && (
-                        <span>
-                          SGST: ₹{taxBreakup.sgst} ({getTaxPercent(taxBreakup.sgst)}%)
-                        </span>
-                      )}
-                      {taxBreakup.igst > 0 && (
-                        <span>
-                          IGST: ₹{taxBreakup.igst} ({getTaxPercent(taxBreakup.igst)}%)
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+            {/* ==== TAX AMOUNT SECTION ==== */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">Tax Amount</label>
+              <input
+                value={formData.taxAmount}
+                disabled
+                className="premium-input w-full px-4 py-3"
+              />
+              <div className="mt-1 text-sm text-gray-700 flex gap-4 flex-wrap">
+                {formData.isExempted ? (
+                  <span>Tax: ₹0 (Exempted)</span>
+                ) : selectedInvoice?.customerResponse?.type === "RCM" ? (
+                  <span>Tax: ₹0 (RCM)</span>
+                ) : (
+                  <>
+                    {taxBreakup.cgst > 0 && (
+                      <span>
+                        CGST: ₹{taxBreakup.cgst} ({getTaxPercent(taxBreakup.cgst)}%)
+                      </span>
+                    )}
+                    {taxBreakup.sgst > 0 && (
+                      <span>
+                        SGST: ₹{taxBreakup.sgst} ({getTaxPercent(taxBreakup.sgst)}%)
+                      </span>
+                    )}
+                    {taxBreakup.igst > 0 && (
+                      <span>
+                        IGST: ₹{taxBreakup.igst} ({getTaxPercent(taxBreakup.igst)}%)
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
-            )}
+            </div>
 
             <Input label="Total Amount" value={formData.totalAmount} disabled />
           </div>
@@ -330,15 +368,7 @@ export default function CreditNoteCreate() {
 }
 
 /* ================= REUSABLE COMPONENTS ================= */
-const Input = ({
-  label,
-  name,
-  value,
-  update,
-  disabled,
-  placeholder,
-  type = "text",
-}) => (
+const Input = ({ label, name, value, update, disabled, placeholder, type = "text" }) => (
   <div>
     <label className="block text-sm font-semibold mb-2">{label}</label>
     <input

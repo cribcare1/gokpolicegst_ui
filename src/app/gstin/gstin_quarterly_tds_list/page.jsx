@@ -1,14 +1,13 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
-import Button from "@/components/shared/Button";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import ApiService from "@/components/api/api_service";
-import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
@@ -19,18 +18,27 @@ export default function AdminTDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const countrecords = filtered.length;
 
+  // Format date as DD-MM-YYYY
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${String(d.getDate()).padStart(2, "0")}-${String(
+      d.getMonth() + 1
+    ).padStart(2, "0")}-${d.getFullYear()}`;
+  };
+
+  // Parse DD-MM-YYYY to Date
+  const parseDisplayDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [dd, mm, yyyy] = dateStr.split("-");
+    return new Date(`${yyyy}-${mm}-${dd}`);
   };
 
   useEffect(() => {
@@ -54,12 +62,7 @@ export default function AdminTDSQuarterlyListPage() {
         const mapped = response.data.map((item) => {
           const challanAmount = Number(item.totalChallanAmount || 0);
           const taxDeducted = Number(item.totalTaxDeducted || 0);
-
           const difference = challanAmount - taxDeducted;
-
-          // 🔴 ONLY STATUS TEXT CHANGED
-          const remarks =
-            difference === 0 ? "Fully Compliance" : "Partial Compliance";
 
           return {
             fy: item.fiscalYear,
@@ -71,7 +74,8 @@ export default function AdminTDSQuarterlyListPage() {
             challanAmount,
             taxDeducted,
             difference,
-            remarks,
+            remarks:
+              difference === 0 ? "Fully Compliance" : "Partial Compliance",
             revision: item.anyRevisionFiled ? "Yes" : "No",
             ackFile: item.ackDocument,
           };
@@ -85,7 +89,6 @@ export default function AdminTDSQuarterlyListPage() {
         setFiltered([]);
       }
     } catch (err) {
-      console.error(err);
       toast.error("Error loading Quarterly TDS report");
       setRecords([]);
       setFiltered([]);
@@ -94,127 +97,146 @@ export default function AdminTDSQuarterlyListPage() {
     }
   };
 
+  // Filters
   useEffect(() => {
+    let data = [...records];
+
     if (searchTerm) {
-      setFiltered(
-        records.filter(
-          (r) =>
-            r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+      data = data.filter(
+        (r) =>
+          r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    } else {
-      setFiltered(records);
     }
-  }, [searchTerm, records]);
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((r) => {
+        const d = parseDisplayDate(r.filingDate);
+        return d && d >= from;
+      });
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((r) => {
+        const d = parseDisplayDate(r.filingDate);
+        return d && d <= to;
+      });
+    }
+
+    setFiltered(data);
+  }, [searchTerm, fromDate, toDate, records]);
 
   const columns = [
-    { key: "fy", label: "Financial Year", style: { minWidth: "120px" } },
-    { key: "returnType", label: "Return Type", style: { minWidth: "100px" } },
-    { key: "quarter", label: "Quarter", style: { minWidth: "80px" } },
-    { key: "filingDate", label: "Filing Date", style: { minWidth: "120px" } },
-    { key: "receiptNo", label: "Receipt No.", style: { minWidth: "160px" } },
+    { key: "fy", label: "Financial Year" },
+    { key: "returnType", label: "Return Type" },
+    { key: "quarter", label: "Quarter" },
+    { key: "filingDate", label: "Filing Date" },
+    { key: "receiptNo", label: "Receipt No." },
     {
       key: "deducteeCount",
       label: "Deductee Count",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "120px" },
     },
     {
       key: "challanAmount",
       label: "Total Challan Amount",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "150px" },
     },
     {
       key: "taxDeducted",
       label: "Total Tax Deducted",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "150px" },
     },
-    { key: "revision", label: "Any Revision Filed", style: { minWidth: "130px" } },
-   
+    { key: "revision", label: "Any Revision Filed" },
     {
       key: "difference",
       label: "Difference in Reporting",
-      style: { minWidth: "180px", textAlign: "right" }, // 🔴 ALIGN RIGHT ONLY
-      render: (value) => (
-        <span
-          className={`block w-full text-right font-semibold ${
-            value === 0 ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {formatCurrency(value)}
+      render: (v) => (
+        <span className={v === 0 ? "text-green-600" : "text-red-600"}>
+          {formatCurrency(v)}
         </span>
       ),
     },
-    {
-      key: "remarks",
-      label: "Status",
-      style: { minWidth: "200px" },
-      render: (value) => (
-        <span
-          className={`px-3 py-1 rounded text-sm font-semibold whitespace-nowrap
-            ${
-              value === "Fully Compliance"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-     {
-      key: "ackFile",
-      label: "Acknowledgement File",
-      style: { minWidth: "220px" },
-      render: (_, row) =>
-        row.ackFile ? (
-          <span className="text-green-700 font-medium truncate block max-w-[200px]">
-            {row.ackFile}
-          </span>
-        ) : (
-          <span className="text-red-500 italic">No file uploaded</span>
-        ),
-    },
+    { key: "remarks", label: "Status" },
+    { key: "ackFile", label: "Acknowledgement File" },
   ];
 
   return (
     <Layout role="gstin">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold flex items-center gap-3">
               <span className="gradient-text">
                 {t("nav.tdsquarterlyreports")}
               </span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1">
+              <span className="px-3 py-1 text-sm font-semibold rounded-full 
+                bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 {countrecords ?? 0}
               </span>
             </h1>
             <p className="text-sm text-gray-500">
-              View all submitted quarterly TDS filings and acknowledgement documents
+              View all submitted quarterly TDS filings
             </p>
+          </div>
+
+          {/* Date filters beside title */}
+          <div className="flex gap-3 items-end">
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">From Date</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">To Date</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+            </div>
+
+            {(fromDate || toDate) && (
+              <button
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="text-sm text-red-500 underline"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
+        {/* Full-width Search */}
+        <div className="relative w-full">
           <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]"
-            size={20}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
           />
           <input
             type="text"
-            placeholder="Search by FY, Return Type, Quarter, or Receipt No..."
+            placeholder="Search by FY, Return Type, Quarter, Receipt No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="w-full pl-9 pr-4 py-2 border rounded-lg
+                       bg-[var(--color-surface)]
+                       border-[var(--color-border)]
+                       focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           />
         </div>
 
@@ -225,9 +247,7 @@ export default function AdminTDSQuarterlyListPage() {
               <LoadingProgressBar message="Loading Quarterly TDS records..." />
             </div>
           ) : (
-            <div className="min-w-max">
-              <Table columns={columns} data={filtered} />
-            </div>
+            <Table columns={columns} data={filtered} />
           )}
         </div>
       </div>

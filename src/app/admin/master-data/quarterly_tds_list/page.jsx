@@ -19,9 +19,11 @@ export default function AdminTDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
+  const router = useRouter();
   const countrecords = filtered.length;
 
   const formatDate = (dateStr) => {
@@ -47,19 +49,14 @@ export default function AdminTDSQuarterlyListPage() {
       }
 
       const response = await ApiService.handleGetRequest(
-        `https://api.gokpolicegst.com:8443/tds/quarterly-income-tax/all`
+        "https://api.gokpolicegst.com:8443/tds/quarterly-income-tax/all"
       );
 
       if (response?.status === "success") {
         const mapped = response.data.map((item) => {
           const challanAmount = Number(item.totalChallanAmount || 0);
           const taxDeducted = Number(item.totalTaxDeducted || 0);
-
           const difference = challanAmount - taxDeducted;
-
-          // 🔴 ONLY STATUS TEXT CHANGED
-          const remarks =
-            difference === 0 ? "Fully Compliance" : "Partial Compliance";
 
           return {
             fy: item.fiscalYear,
@@ -71,7 +68,8 @@ export default function AdminTDSQuarterlyListPage() {
             challanAmount,
             taxDeducted,
             difference,
-            remarks,
+            remarks:
+              difference === 0 ? "Fully Compliance" : "Partial Compliance",
             revision: item.anyRevisionFiled ? "Yes" : "No",
             ackFile: item.ackDocument,
           };
@@ -87,28 +85,46 @@ export default function AdminTDSQuarterlyListPage() {
     } catch (err) {
       console.error(err);
       toast.error("Error loading Quarterly TDS report");
-      setRecords([]);
-      setFiltered([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔍 Search + 📅 Date filter
   useEffect(() => {
+    let data = [...records];
+
     if (searchTerm) {
-      setFiltered(
-        records.filter(
-          (r) =>
-            r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+      data = data.filter(
+        (r) =>
+          r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    } else {
-      setFiltered(records);
     }
-  }, [searchTerm, records]);
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((r) => {
+        if (!r.filingDate) return false;
+        const [dd, mm, yyyy] = r.filingDate.split("-");
+        return new Date(`${yyyy}-${mm}-${dd}`) >= from;
+      });
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((r) => {
+        if (!r.filingDate) return false;
+        const [dd, mm, yyyy] = r.filingDate.split("-");
+        return new Date(`${yyyy}-${mm}-${dd}`) <= to;
+      });
+    }
+
+    setFiltered(data);
+  }, [searchTerm, fromDate, toDate, records]);
 
   const columns = [
     { key: "fy", label: "Financial Year", style: { minWidth: "120px" } },
@@ -120,64 +136,57 @@ export default function AdminTDSQuarterlyListPage() {
       key: "deducteeCount",
       label: "Deductee Count",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "120px" },
     },
     {
       key: "challanAmount",
       label: "Total Challan Amount",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "150px" },
     },
     {
       key: "taxDeducted",
       label: "Total Tax Deducted",
       render: (v) => formatCurrency(v),
-      style: { minWidth: "150px" },
     },
-    { key: "revision", label: "Any Revision Filed", style: { minWidth: "130px" } },
-   
     {
       key: "difference",
       label: "Difference in Reporting",
-      style: { minWidth: "180px", textAlign: "right" }, // 🔴 ALIGN RIGHT ONLY
-      render: (value) => (
+      style: { textAlign: "right" },
+      render: (v) => (
         <span
-          className={`block w-full text-right font-semibold ${
-            value === 0 ? "text-black-600" : "text-red-600"
+          className={`font-semibold ${
+            v === 0 ? "text-black" : "text-red-600"
           }`}
         >
-          {formatCurrency(value)}
+          {formatCurrency(v)}
         </span>
       ),
     },
     {
       key: "remarks",
       label: "Status",
-      style: { minWidth: "200px" },
-      render: (value) => (
+      render: (v) => (
         <span
-          className={`px-3 py-1 rounded text-sm font-semibold whitespace-nowrap
-            ${
-              value === "Fully Compliance"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
+          className={`px-3 py-1 rounded text-sm font-semibold whitespace-nowrap ${
+            v === "Fully Compliance"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
         >
-          {value}
+          {v}
         </span>
       ),
     },
-     {
+    { key: "revision", label: "Any Revision Filed" },
+    {
       key: "ackFile",
       label: "Acknowledgement File",
-      style: { minWidth: "220px" },
-      render: (_, row) =>
-        row.ackFile ? (
-          <span className="text-black-700 font-medium truncate block max-w-[200px]">
-            {row.ackFile}
+      render: (v) =>
+        v ? (
+          <span className="font-medium truncate block max-w-[200px]">
+            {v}
           </span>
         ) : (
-          <span className="text-black-500 italic">No file uploaded</span>
+          <span className="italic text-gray-500">No file uploaded</span>
         ),
     },
   ];
@@ -192,14 +201,51 @@ export default function AdminTDSQuarterlyListPage() {
               <span className="gradient-text">
                 {t("nav.tdsquarterlyreports")}
               </span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1">
+              <span
+                className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
+                bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1"
+              >
                 {countrecords ?? 0}
               </span>
             </h1>
             <p className="text-sm text-gray-500">
               View all submitted quarterly TDS filings and acknowledgement documents
             </p>
+          </div>
+
+          {/* 📅 Date Filter – RIGHT SIDE */}
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg bg-[var(--color-surface)]"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-500 mb-1">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg bg-[var(--color-surface)]"
+              />
+            </div>
+
+            {(fromDate || toDate) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </div>
 

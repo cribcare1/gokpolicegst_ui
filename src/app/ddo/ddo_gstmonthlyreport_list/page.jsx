@@ -1,37 +1,31 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
 import Button from "@/components/shared/Button";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
-import { Edit, Trash2 } from 'lucide-react';
-import { calculateGST, validateBillDate, formatCurrency, validateGSTIN, validateEmail, validateMobile, validatePIN, validateBillNumber, validateAmount, validateDescription, validateName, validateAddress, validateCity, validateStateCode, isGovernmentGSTIN, isGovernmentPAN } from '@/lib/gstUtils';
+import { formatCurrency } from "@/lib/gstUtils";
+
 export default function GstTdsMonthlyReportPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
+  const router = useRouter();
   const countrecords = filtered.length;
 
-  // Format date DD-MM-YYYY
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
-
+  // ---------------- FETCH RECORDS ----------------
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -42,7 +36,6 @@ export default function GstTdsMonthlyReportPage() {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       if (!ddoId) {
         toast.error(LOGIN_CONSTANT.DDO_ID_NOTFOUND);
-        setLoading(false);
         return;
       }
 
@@ -51,21 +44,16 @@ export default function GstTdsMonthlyReportPage() {
       );
 
       if (response?.status === "success") {
-       const mapped = response.data.map((item) => ({
-     
-  id: item.id,  
-   fy: item.financialYear,
-  month: item.filingMonth,
-  arnNo: item.arnNo,
-  arnDate: item.arnDate,   
-  tdsDeclared: item.declaredAmount,
-  tdsPaid: item.paidAmount,
-  penalty: item.penaltyAmount,
-  ackDocument: item.ackDocument,
-}));
-
-console.log(" mapped :: " ,mapped);
-
+        const mapped = response.data.map((item) => ({
+          id: item.id,
+          month: item.filingMonth,
+          arnNo: item.arnNo,
+          arnDate: item.arnDate,
+          tdsDeclared: item.declaredAmount,
+          tdsPaid: item.paidAmount,
+          penalty: item.penaltyAmount,
+          ackDocument: item.ackDocument,
+        }));
 
         setRecords(mapped);
         setFiltered(mapped);
@@ -84,94 +72,104 @@ console.log(" mapped :: " ,mapped);
     }
   };
 
+  // ---------------- FILTER LOGIC ----------------
   useEffect(() => {
+    let data = [...records];
+
     if (searchTerm) {
-      setFiltered(
-        records.filter(
-          (r) =>
-            r.arnNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.month?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+      data = data.filter(
+        (r) =>
+          r.arnNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.month?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    } else {
-      setFiltered(records);
     }
-  }, [searchTerm, records]);
 
-  const handleDelete = async (item) => {
-    console.log("handle delete item  ", item);
-     const url=`${API_ENDPOINTS.MONTHLY_GST_DELETE}${item.id}`;
-     console.log("handle delete url ", url);
-     
-  
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((r) => r.arnDate && new Date(r.arnDate) >= from);
+    }
 
-    if (!confirm('Are you sure you want to delete this record?')) return;
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((r) => r.arnDate && new Date(r.arnDate) <= to);
+    }
+
+    setFiltered(data);
+  }, [searchTerm, fromDate, toDate, records]);
+
+  // ---------------- ACTIONS ----------------
+  const handleEdit = (row) => {
+    sessionStorage.setItem("gstTdsRow", JSON.stringify(row));
+    router.push("/ddo/gstmonthlycreate");
+  };
+
+  const handleDelete = async (row) => {
+    if (!confirm("Are you sure you want to delete this record?")) return;
 
     try {
       const response = await ApiService.handlePostRequest(
-        `${url}`,
+        `${API_ENDPOINTS.MONTHLY_GST_DELETE}${row.id}`,
         {}
       );
 
-      if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
-     fetchRecords();
+      if (response?.status === "success") {
+        toast.success(t("alert.success"));
+        fetchRecords();
       } else {
-        toast.error(response?.message || t('alert.error'));
+        toast.error(response?.message || t("alert.error"));
       }
-    } catch (error) {
-      toast.error(t('alert.error'));
+    } catch {
+      toast.error(t("alert.error"));
     }
   };
 
-  // Example in list screen
-const handleEdit = (row) => {
-  sessionStorage.setItem(`gstTdsRow`, JSON.stringify(row));
-  router.push(`/ddo/gstmonthlycreate`);
-};
+  const tableActions = (row) => (
+    <>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleEdit(row);
+        }}
+        className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all text-blue-600"
+        aria-label="Edit"
+      >
+        <Edit size={18} />
+      </button>
 
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDelete(row);
+        }}
+        className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all text-red-600"
+        aria-label="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </>
+  );
 
-
-  const tableActions = (row) => {
-    // const isEditable = row.isEditable;
-    // console.log("row  " ,row);
-    
-    return (
-      <>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEdit(row);
-              // router.push(`/ddo/gstmonthlycreate?id=${row.id}`)
-          }}
-          className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
-          aria-label="Edit"
-        >
-          <Edit size={18} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDelete(row);
-          }}
-   
-          className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer"
-          aria-label="Delete"
-         
-        >
-          <Trash2 size={18} />
-        </button>
-      </>
-    );
-  };
-
+  // ---------------- TABLE COLUMNS ----------------
   const columns = [
     { key: "month", label: "Month of Filing", style: { minWidth: "150px" } },
     { key: "arnNo", label: "ARN No", style: { minWidth: "180px" } },
-    { key: "arnDate", label: "ARN Date", style: { minWidth: "180px" } },
-    { key: "tdsDeclared", label: "GST-TDS Declared", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
-    { key: "tdsPaid", label: "GST-TDS Paid", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
-    { key: "penalty", label: "Penalty & Interest", render: (value) => formatCurrency(value || 0), style: { minWidth: "140px" } },
+    { key: "arnDate", label: "ARN Date", style: { minWidth: "160px" } },
+    {
+      key: "tdsDeclared",
+      label: "GST-TDS Declared",
+      render: (v) => formatCurrency(v || 0),
+    },
+    {
+      key: "tdsPaid",
+      label: "GST-TDS Paid",
+      render: (v) => formatCurrency(v || 0),
+    },
+    {
+      key: "penalty",
+      label: "Penalty & Interest",
+      render: (v) => formatCurrency(v || 0),
+    },
     {
       key: "ackDocument",
       label: "Acknowledgement File",
@@ -182,57 +180,77 @@ const handleEdit = (row) => {
             {row.ackDocument}
           </span>
         ) : (
-          <span className="text-red-500 italic whitespace-nowrap">No file uploaded</span>
+          <span className="text-red-500 italic whitespace-nowrap">
+            No file uploaded
+          </span>
         ),
     },
   ];
 
   return (
     <Layout role="ddo">
-      <div className="space-y-4 sm:space-y-6">
-
-        {/* Page Title + Add Button */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            {/* <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold mb-2">
+      <div className="space-y-4 sm:space-y-6 w-full">
+        {/* Top row: Title + Filters + Add button */}
+        <div className="flex flex-wrap items-end justify-between gap-4 w-full">
+          {/* Title + Count */}
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold flex items-center gap-3 whitespace-nowrap">
               <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
-            </h1> */}
-               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-              <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
-                     translate-y-1">
+              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30 translate-y-1">
                 {countrecords ?? 0}
               </span>
             </h1>
-            <p className="text-sm text-gray-500">
-              View monthly GST-TDS filings and acknowledgement documents
-            </p>
           </div>
 
-          <Button
-            onClick={() => router.push("/ddo/gstmonthlycreate")}
-            variant="primary"
-            className="w-full sm:w-auto"
-          >
-            <Plus className="mr-2" size={18} />
-            Add
-          </Button>
+          {/* From/To Filters + Add button */}
+          <div className="flex flex-wrap items-end gap-3">
+            {/* From Date */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg"
+              />
+            </div>
+
+            {/* To Date */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg"
+              />
+            </div>
+
+            {/* Add Button at far right */}
+            <Button
+              onClick={() => router.push("/ddo/gstmonthlycreate")}
+              variant="primary"
+            >
+              <Plus className="mr-2" size={18} /> Add
+            </Button>
+          </div>
         </div>
 
-        {/* Search Bar */}
-           <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
-          <input
-            type="text"
-            placeholder="Search ARN NO..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-          />
+        {/* Second row: Search bar full width */}
+        <div className="w-full">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
+            <input
+              type="text"
+              placeholder="Search ARN NO..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            />
+          </div>
         </div>
 
-        {/* Table with horizontal scroll */}
+        {/* Table */}
         <div className="premium-card overflow-x-auto w-full">
           {loading ? (
             <div className="p-16">
@@ -240,7 +258,7 @@ const handleEdit = (row) => {
             </div>
           ) : (
             <div className="min-w-max">
-              <Table columns={columns} data={filtered}  actions={tableActions} />
+              <Table columns={columns} data={filtered} actions={tableActions} />
             </div>
           )}
         </div>

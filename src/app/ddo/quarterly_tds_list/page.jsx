@@ -12,26 +12,28 @@ import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
-import { formatCurrency } from '@/lib/gstUtils';
+import { formatCurrency } from "@/lib/gstUtils";
 
 export default function TDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
+  const router = useRouter();
   const countrecords = filtered.length;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${year}-${month}-${day}`; // Use YYYY-MM-DD for date input
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
   };
 
+  // ---------------- FETCH RECORDS ----------------
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -42,7 +44,6 @@ export default function TDSQuarterlyListPage() {
       const ddoId = localStorage.getItem(LOGIN_CONSTANT.USER_ID);
       if (!ddoId) {
         toast.error(LOGIN_CONSTANT.DDO_ID_NOTFOUND);
-        setLoading(false);
         return;
       }
 
@@ -63,8 +64,8 @@ export default function TDSQuarterlyListPage() {
           taxDeducted: item.totalTaxDeducted,
           revision: item.anyRevisionFiled ? "Yes" : "No",
           ackFile: item.ackDocument,
-          remarks: item.remarks || "",
         }));
+
         setRecords(mapped);
         setFiltered(mapped);
       } else {
@@ -82,48 +83,58 @@ export default function TDSQuarterlyListPage() {
     }
   };
 
+  // ---------------- FILTER LOGIC ----------------
   useEffect(() => {
-    if (searchTerm) {
-      setFiltered(
-        records.filter(
-          (r) =>
-            r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    } else {
-      setFiltered(records);
-    }
-  }, [searchTerm, records]);
+    let data = [...records];
 
-  const handleDelete = async (item) => {
-    if (!confirm('Are you sure you want to delete this record?')) return;
+    if (searchTerm) {
+      data = data.filter(
+        (r) =>
+          r.receiptNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.fy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.returnType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.quarter?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((r) => r.filingDate && new Date(r.filingDate) >= from);
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((r) => r.filingDate && new Date(r.filingDate) <= to);
+    }
+
+    setFiltered(data);
+  }, [searchTerm, fromDate, toDate, records]);
+
+  // ---------------- ACTIONS ----------------
+  const handleEdit = (row) => {
+    sessionStorage.setItem("editRecord", JSON.stringify(row));
+    router.push("/ddo/quarterlytds_submit");
+  };
+
+  const handleDelete = async (row) => {
+    if (!confirm("Are you sure you want to delete this record?")) return;
 
     try {
       const response = await ApiService.handlePostRequest(
-        `${API_ENDPOINTS.QUATERLY_GST_DELETE}${item.id}`,
+        `${API_ENDPOINTS.QUATERLY_GST_DELETE}${row.id}`,
         {}
       );
 
-      if (response && response.status === 'success') {
-        toast.success(t('alert.success'));
+      if (response?.status === "success") {
+        toast.success(t("alert.success"));
         fetchRecords();
       } else {
-        toast.error(response?.message || t('alert.error'));
+        toast.error(response?.message || t("alert.error"));
       }
-    } catch (error) {
-      toast.error(t('alert.error'));
+    } catch {
+      toast.error(t("alert.error"));
     }
-  };
-
-  const handleEdit = (row) => {
-    // Store the row in sessionStorage
-    console.log("row " , row);
-    
-    sessionStorage.setItem("editRecord", JSON.stringify(row));
-    router.push(`/ddo/quarterlytds_submit`);
   };
 
   const tableActions = (row) => (
@@ -133,8 +144,7 @@ export default function TDSQuarterlyListPage() {
           e.stopPropagation();
           handleEdit(row);
         }}
-        className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-md text-blue-600 dark:text-blue-400"
-        aria-label="Edit"
+        className="p-2.5 hover:bg-blue-50 rounded-xl text-blue-600"
       >
         <Edit size={18} />
       </button>
@@ -143,31 +153,43 @@ export default function TDSQuarterlyListPage() {
           e.stopPropagation();
           handleDelete(row);
         }}
-        className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 cursor-pointer"
-        aria-label="Delete"
+        className="p-2.5 hover:bg-red-50 rounded-xl text-red-600"
       >
         <Trash2 size={18} />
       </button>
     </>
   );
 
+  // ---------------- TABLE COLUMNS ----------------
   const columns = [
     { key: "fy", label: "Financial Year", style: { minWidth: "120px" } },
     { key: "returnType", label: "Return Type", style: { minWidth: "100px" } },
     { key: "quarter", label: "Quarter", style: { minWidth: "80px" } },
     { key: "filingDate", label: "Filing Date", style: { minWidth: "120px" } },
     { key: "receiptNo", label: "Receipt No.", style: { minWidth: "150px" } },
-    { key: "deducteeCount", label: "Deductee Count", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
-    { key: "challanAmount", label: "Challan Amount", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
-    { key: "taxDeducted", label: "Tax Deducted", render: (value) => formatCurrency(value || 0), style: { minWidth: "120px" } },
-    { key: "revision", label: "Revision", style: { minWidth: "100px" } },
+    {
+      key: "deducteeCount",
+      label: "Deductee Count",
+      render: (v) => formatCurrency(v || 0),
+    },
+    {
+      key: "challanAmount",
+      label: "Challan Amount",
+      render: (v) => formatCurrency(v || 0),
+    },
+    {
+      key: "taxDeducted",
+      label: "Tax Deducted",
+      render: (v) => formatCurrency(v || 0),
+    },
+    { key: "revision", label: "Revision" },
     {
       key: "ackFile",
       label: "Acknowledgement File",
       style: { minWidth: "200px" },
       render: (_, row) =>
         row.ackFile ? (
-          <span className="text-green-700 font-medium whitespace-nowrap truncate block max-w-[200px]">
+          <span className="font-medium truncate block max-w-[200px]">
             {row.ackFile}
           </span>
         ) : (
@@ -176,54 +198,69 @@ export default function TDSQuarterlyListPage() {
     },
   ];
 
+  // ---------------- UI ----------------
   return (
     <Layout role="ddo">
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-2 flex items-center gap-3 whitespace-nowrap">
-              <span className="gradient-text">{t("nav.tdsquarterlyreports")}</span>
-              <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
-                     bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30
-                     translate-y-1">
-                {countrecords ?? 0}
-              </span>
-            </h1>
-            <p className="text-sm text-gray-500">
-              View all submitted quarterly TDS filings and acknowledgement documents
-            </p>
-          </div>
+      <div className="space-y-6">
 
-          <Button
-            onClick={() => router.push("/ddo/quarterlytds_submit")}
-            variant="primary"
-            className="w-full sm:w-auto"
-          >
-            <Plus className="mr-2" size={18} />
-            Add
-          </Button>
+        {/* TITLE + FILTERS */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold flex items-center gap-3">
+            <span className="gradient-text">
+              {t("nav.tdsquarterlyreports")}
+            </span>
+            <span className="px-3 py-1 text-sm rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+              {countrecords}
+            </span>
+          </h1>
+
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col">
+              <label className="text-xs mb-1">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs mb-1">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+            </div>
+
+            <Button onClick={() => router.push("/ddo/quarterlytds_submit")}>
+              <Plus size={18} className="mr-2" /> Add
+            </Button>
+          </div>
         </div>
 
+        {/* SEARCH */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-secondary)]" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={20} />
           <input
             type="text"
             placeholder="Search by FY, Return Type, Quarter, or Receipt No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg"
           />
         </div>
 
-        <div className="premium-card overflow-x-auto w-full">
+        {/* TABLE */}
+        <div className="premium-card overflow-x-auto">
           {loading ? (
             <div className="p-16">
               <LoadingProgressBar message="Loading Quarterly TDS records..." />
             </div>
           ) : (
-            <div className="min-w-max">
-              <Table columns={columns} data={filtered} actions={tableActions} />
-            </div>
+            <Table columns={columns} data={filtered} actions={tableActions} />
           )}
         </div>
       </div>
