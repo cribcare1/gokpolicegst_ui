@@ -330,5 +330,49 @@ static async handlePostDownloadZipRequest(url, requestData, fileType = "pdf") {
   }
 }
 
+
+static async downloadFile(url, fileName) {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("User not authenticated");
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error(`Failed to download file. Status: ${response.status}`);
+
+    const blob = await response.blob();
+    if (blob.size === 0) throw new Error("Empty file received");
+
+    // Try to get filename from Content-Disposition header if fileName not provided
+    if (!fileName) {
+      const contentDisposition = response.headers.get("Content-Disposition");
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n\r]+)["']?/i);
+        if (match && match[1]) fileName = decodeURIComponent(match[1]);
+      } else {
+        fileName = "downloaded_file";
+      }
+    }
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    console.log("Download triggered:", fileName);
+    return true;
+  } catch (err) {
+    console.error("Download failed:", err);
+    throw err;
+  }
+}
+
+
 }
 export default ApiService;

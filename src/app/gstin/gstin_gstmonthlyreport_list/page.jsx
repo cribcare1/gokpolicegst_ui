@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
-import { Search } from "lucide-react";
+import { Search, Download, Loader } from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
@@ -19,25 +19,25 @@ export default function GstTdsMonthlyReportPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const [downloadingFile, setDownloadingFile] = useState(null);
 
   const countrecords = filtered.length;
 
-  // Format date DD-MM-YYYY
+  // Format date as DD-MM-YYYY
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
-    return `${String(d.getDate()).padStart(2, "0")}-${String(
-      d.getMonth() + 1
-    ).padStart(2, "0")}-${d.getFullYear()}`;
+    return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
   };
 
-  // Parse DD-MM-YYYY → Date
+  // Parse DD-MM-YYYY to Date
   const parseDisplayDate = (dateStr) => {
     if (!dateStr) return null;
     const [dd, mm, yyyy] = dateStr.split("-");
     return new Date(`${yyyy}-${mm}-${dd}`);
   };
 
+  // Fetch records on component mount
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -70,8 +70,7 @@ export default function GstTdsMonthlyReportPage() {
             tdsPaid: paid,
             penaltyAmount,
             difference,
-            remarks:
-              difference === 0 ? "Fully Compliance" : "Partial Compliance",
+            remarks: difference === 0 ? "Fully Compliance" : "Partial Compliance",
             ackDocument: item.ackDocument,
           };
         });
@@ -92,7 +91,7 @@ export default function GstTdsMonthlyReportPage() {
     }
   };
 
-  // ---------------- FILTER LOGIC ----------------
+  // Filter and search logic
   useEffect(() => {
     let data = [...records];
 
@@ -124,6 +123,22 @@ export default function GstTdsMonthlyReportPage() {
     setFiltered(data);
   }, [searchTerm, fromDate, toDate, records]);
 
+ 
+  const handleDownload = async (fileName) => {
+    if (!fileName) return;
+    setDownloadingFile(fileName);
+
+    try {
+      const url = `https://api.gokpolicegst.com:8443/tds/auth/downloadImage/gst/${fileName}`;
+      await ApiService.downloadFile(url, fileName);
+      toast.success("Download started!");
+    } catch (err) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
   const columns = [
     { key: "month", label: "Month of Filing", style: { minWidth: "160px" } },
     { key: "arnNo", label: "ARN No", style: { minWidth: "200px" } },
@@ -142,9 +157,7 @@ export default function GstTdsMonthlyReportPage() {
       key: "penaltyAmount",
       label: "Penalty",
       render: (v) => (
-        <span className="block w-full text-right text-red-600 font-medium">
-          {formatCurrency(v)}
-        </span>
+        <span className="block w-full text-right text-red-600 font-medium">{formatCurrency(v)}</span>
       ),
     },
     {
@@ -152,9 +165,7 @@ export default function GstTdsMonthlyReportPage() {
       label: "Difference",
       render: (v) => (
         <span
-          className={`block w-full text-right font-semibold ${
-            v >= 0 ? "text-green-600" : "text-red-600"
-          }`}
+          className={`block w-full text-right font-semibold ${v >= 0 ? "text-green-600" : "text-red-600"}`}
         >
           {formatCurrency(v)}
         </span>
@@ -166,9 +177,7 @@ export default function GstTdsMonthlyReportPage() {
       render: (v) => (
         <span
           className={`px-3 py-1 rounded text-sm font-semibold ${
-            v === "Fully Compliance"
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
+            v === "Fully Compliance" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
           }`}
         >
           {v}
@@ -180,9 +189,22 @@ export default function GstTdsMonthlyReportPage() {
       label: "Acknowledgement File",
       render: (_, row) =>
         row.ackDocument ? (
-          <span className="font-medium truncate block max-w-[220px]">
-            {row.ackDocument}
-          </span>
+          <div className="flex items-center gap-2 max-w-[220px]">
+            <span className="font-medium truncate text-sm" title={row.ackDocument}>
+              {row.ackDocument}
+            </span>
+            <button
+              className="text-green-600 hover:text-green-800 flex items-center"
+              onClick={() => handleDownload(row.ackDocument)}
+              aria-label={`Download ${row.ackDocument}`}
+            >
+              {downloadingFile === row.ackDocument ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+            </button>
+          </div>
         ) : (
           <span className="text-red-500 italic">No file uploaded</span>
         ),
@@ -196,9 +218,7 @@ export default function GstTdsMonthlyReportPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold flex items-center gap-3">
-              <span className="gradient-text">
-                {t("nav.gstmonthlyreports")}
-              </span>
+              <span className="gradient-text">{t("nav.gstmonthlyreports")}</span>
               <span className="inline-flex items-center px-3 py-1 text-xs sm:text-sm font-semibold rounded-full 
                 bg-[var(--color-primary)]/10 text-[var(--color-primary)]
                 border border-[var(--color-primary)]/30 translate-y-1">
@@ -210,7 +230,6 @@ export default function GstTdsMonthlyReportPage() {
             </p>
           </div>
 
-          {/* Date filters beside title */}
           <div className="flex gap-3 items-end">
             <div className="flex flex-col">
               <label className="text-xs text-gray-500 mb-1">From Date</label>
@@ -246,12 +265,9 @@ export default function GstTdsMonthlyReportPage() {
           </div>
         </div>
 
-        {/* Full-width Search */}
+        {/* Search Input */}
         <div className="relative w-full">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
-            size={18}
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" size={18} />
           <input
             type="text"
             placeholder="Search ARN No or Month..."

@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
-import { Search } from "lucide-react";
+import { Search, Download, Loader } from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
@@ -22,7 +22,7 @@ export default function AdminTDSQuarterlyListPage() {
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
+const [downloadingFile, setDownloadingFile] = useState(null);
   const countrecords = filtered.length;
 
   // Format date as DD-MM-YYYY
@@ -97,6 +97,21 @@ export default function AdminTDSQuarterlyListPage() {
     }
   };
 
+  const handleDownload = async (fileName) => {
+    if (!fileName) return;
+    setDownloadingFile(fileName);
+
+    try {
+      const url = `https://api.gokpolicegst.com:8443/tds/auth/downloadImage/gst/${fileName}`;
+      await ApiService.downloadFile(url, fileName);
+      toast.success("Download started!");
+    } catch (err) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
   // Filters
   useEffect(() => {
     let data = [...records];
@@ -163,7 +178,31 @@ export default function AdminTDSQuarterlyListPage() {
       ),
     },
     { key: "remarks", label: "Status" },
-    { key: "ackFile", label: "Acknowledgement File" },
+    { key: "ackFile", label: "Acknowledgement File",
+      render: (_, row) =>
+        row.ackFile ? (
+          <div className="flex items-center gap-2 max-w-[220px]">
+            <span className="font-medium truncate text-sm" title={row.ackFile}>
+              {row.ackFile}
+            </span>
+            <button
+              className="text-green-600 hover:text-green-800 flex items-center"
+              onClick={() => handleDownload(row.ackFile)}
+              aria-label={`Download ${row.ackFile}`}
+            >
+              {downloadingFile === row.ackFile ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+            </button>
+          </div>
+        ) : (
+          <span className="text-red-500 italic">No file uploaded</span>
+        ),
+
+
+     },
   ];
 
   return (
