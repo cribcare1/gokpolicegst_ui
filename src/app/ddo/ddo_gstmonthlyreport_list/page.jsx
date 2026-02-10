@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
 import Button from "@/components/shared/Button";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2 ,Download, Loader } from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
@@ -13,6 +13,7 @@ import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
 import { formatCurrency } from "@/lib/gstUtils";
+import { formatDateDDMMYYYY } from "@/components/utils/dateUtils";
 
 export default function GstTdsMonthlyReportPage() {
   const [records, setRecords] = useState([]);
@@ -21,7 +22,7 @@ export default function GstTdsMonthlyReportPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
-
+  const [downloadingFile, setDownloadingFile] = useState(null);
   const router = useRouter();
   const countrecords = filtered.length;
 
@@ -124,6 +125,21 @@ export default function GstTdsMonthlyReportPage() {
     }
   };
 
+  const handleDownload = async (fileName) => {
+    if (!fileName) return;
+    setDownloadingFile(fileName);
+
+    try {
+      const url = `https://api.gokpolicegst.com:8443/tds/auth/downloadImage/gst/${fileName}`;
+      await ApiService.downloadFile(url, fileName);
+      toast.success("Download started!");
+    } catch (err) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
   const tableActions = (row) => (
     <>
       <button
@@ -154,7 +170,7 @@ export default function GstTdsMonthlyReportPage() {
   const columns = [
     { key: "month", label: "Month of Filing", style: { minWidth: "150px" } },
     { key: "arnNo", label: "ARN No", style: { minWidth: "180px" } },
-    { key: "arnDate", label: "ARN Date", style: { minWidth: "160px" } },
+    { key: "arnDate", label: "ARN Date", style: { minWidth: "160px" } ,   render: (value) => formatDateDDMMYYYY(value),},
     {
       key: "tdsDeclared",
       label: "GST-TDS Declared",
@@ -174,15 +190,26 @@ export default function GstTdsMonthlyReportPage() {
       key: "ackDocument",
       label: "Acknowledgement File",
       style: { minWidth: "200px" },
-      render: (_, row) =>
+     render: (_, row) =>
         row.ackDocument ? (
-          <span className="text-black-700 font-medium whitespace-nowrap truncate block max-w-[200px]">
-            {row.ackDocument}
-          </span>
+          <div className="flex items-center gap-2 max-w-[220px]">
+            <span className="font-medium truncate text-sm" title={row.ackDocument}>
+              {row.ackDocument}
+            </span>
+            <button
+              className="text-green-600 hover:text-green-800 flex items-center"
+              onClick={() => handleDownload(row.ackDocument)}
+              aria-label={`Download ${row.ackDocument}`}
+            >
+              {downloadingFile === row.ackDocument ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+            </button>
+          </div>
         ) : (
-          <span className="text-red-500 italic whitespace-nowrap">
-            No file uploaded
-          </span>
+          <span className="text-red-500 italic">No file uploaded</span>
         ),
     },
   ];

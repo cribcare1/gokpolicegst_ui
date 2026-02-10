@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
 import Button from "@/components/shared/Button";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2 , Download, Loader} from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { API_ENDPOINTS } from "@/components/api/api_const";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
@@ -13,7 +13,7 @@ import { LoadingProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { t } from "@/lib/localization";
 import { formatCurrency } from "@/lib/gstUtils";
-
+import { formatDateDDMMYYYY } from "@/components/utils/dateUtils";
 export default function TDSQuarterlyListPage() {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -21,7 +21,7 @@ export default function TDSQuarterlyListPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(true);
-
+  const [downloadingFile, setDownloadingFile] = useState(null);
   const router = useRouter();
   const countrecords = filtered.length;
 
@@ -31,6 +31,22 @@ export default function TDSQuarterlyListPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
       d.getDate()
     ).padStart(2, "0")}`;
+  };
+
+
+  const handleDownload = async (fileName) => {
+    if (!fileName) return;
+    setDownloadingFile(fileName);
+
+    try {
+      const url = `https://api.gokpolicegst.com:8443/tds/auth/downloadImage/gst/${fileName}`;
+      await ApiService.downloadFile(url, fileName);
+      toast.success("Download started!");
+    } catch (err) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadingFile(null);
+    }
   };
 
   // ---------------- FETCH RECORDS ----------------
@@ -165,7 +181,7 @@ export default function TDSQuarterlyListPage() {
     { key: "fy", label: "Financial Year", style: { minWidth: "120px" } },
     { key: "returnType", label: "Return Type", style: { minWidth: "100px" } },
     { key: "quarter", label: "Quarter", style: { minWidth: "80px" } },
-    { key: "filingDate", label: "Filing Date", style: { minWidth: "120px" } },
+    { key: "filingDate", label: "Filing Date", style: { minWidth: "120px" } ,  render: (value) => formatDateDDMMYYYY(value),},
     { key: "receiptNo", label: "Receipt No.", style: { minWidth: "150px" } },
     {
       key: "deducteeCount",
@@ -189,9 +205,22 @@ export default function TDSQuarterlyListPage() {
       style: { minWidth: "200px" },
       render: (_, row) =>
         row.ackFile ? (
-          <span className="font-medium truncate block max-w-[200px]">
-            {row.ackFile}
-          </span>
+          <div className="flex items-center gap-2 max-w-[220px]">
+            <span className="font-medium truncate text-sm" title={row.ackFile}>
+              {row.ackFile}
+            </span>
+            <button
+              className="text-green-600 hover:text-green-800 flex items-center"
+              onClick={() => handleDownload(row.ackFile)}
+              aria-label={`Download ${row.ackFile}`}
+            >
+              {downloadingFile === row.ackFile ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+            </button>
+          </div>
         ) : (
           <span className="text-red-500 italic">No file uploaded</span>
         ),

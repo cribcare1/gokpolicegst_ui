@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/shared/Layout";
 import Table from "@/components/shared/Table";
-import { Search } from "lucide-react";
+import { Search, Download, Loader } from "lucide-react";
 import ApiService from "@/components/api/api_service";
 import { LOGIN_CONSTANT } from "@/components/utils/constant";
 import { LoadingProgressBar } from "@/components/shared/ProgressBar";
@@ -19,7 +19,7 @@ export default function GstTdsMonthlyReportPage() {
   const [fromDate, setFromDate] = useState(""); // ➕ added
   const [toDate, setToDate] = useState("");     // ➕ added
   const [loading, setLoading] = useState(true);
-
+ const [downloadingFile, setDownloadingFile] = useState(null);
   const countrecords = filtered.length;
 
   // Format date DD-MM-YYYY
@@ -34,7 +34,20 @@ export default function GstTdsMonthlyReportPage() {
   useEffect(() => {
     fetchRecords();
   }, []);
+const handleDownload = async (fileName) => {
+    if (!fileName) return;
+    setDownloadingFile(fileName);
 
+    try {
+      const url = `https://api.gokpolicegst.com:8443/tds/auth/downloadImage/gst/${fileName}`;
+      await ApiService.downloadFile(url, fileName);
+      toast.success("Download started!");
+    } catch (err) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -195,9 +208,22 @@ export default function GstTdsMonthlyReportPage() {
       style: { minWidth: "240px", whiteSpace: "nowrap" },
       render: (_, row) =>
         row.ackDocument ? (
-          <span className="font-medium truncate block max-w-[220px]">
-            {row.ackDocument}
-          </span>
+          <div className="flex items-center gap-2 max-w-[220px]">
+            <span className="font-medium truncate text-sm" title={row.ackDocument}>
+              {row.ackDocument}
+            </span>
+            <button
+              className="text-green-600 hover:text-green-800 flex items-center"
+              onClick={() => handleDownload(row.ackDocument)}
+              aria-label={`Download ${row.ackDocument}`}
+            >
+              {downloadingFile === row.ackDocument ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+            </button>
+          </div>
         ) : (
           <span className="text-red-500 italic">No file uploaded</span>
         ),
